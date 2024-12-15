@@ -78,7 +78,7 @@ namespace qASIC.QML
 
             if (isArrayStart)
             {
-                relativePath = line.TrimEnd();
+                relativePath = line.Trim();
                 relativePath = relativePath.Substring(0, relativePath.Length - 1);
             }
 
@@ -89,7 +89,7 @@ namespace qASIC.QML
                     return;
 
                 relativePath = processed.PreviousEntry.RelativePath;
-                txt = line.TrimStart();
+                txt = line.Trim();
                 txt = txt.Substring(1, txt.Length - 1)
                     .Trim();
             }
@@ -97,7 +97,7 @@ namespace qASIC.QML
             if (!isArrayStart && !isArrayItem)
             {
                 var mainLineParts = line.Split("=");
-                relativePath = mainLineParts[0];
+                relativePath = mainLineParts[0].Trim();
                 txt = string.Join("=", mainLineParts.Skip(1))
                     .Trim();
             }
@@ -114,19 +114,7 @@ namespace qASIC.QML
             processed.PreviousEntry = el;
         }
 
-        public override string ToString()
-        {
-            var txt = new StringBuilder("QML Entry");
-
-            txt.Append((IsArrayStart, IsArrayItem) switch
-            {
-                (true, false) => $" '{RelativePath}|'",
-                (false, true) => $" '* {Value}'",
-                _ => $" '{RelativePath} = {Value}'",
-            });
-
-            txt.Append($" (fullPath: {Path})");
-            return txt.ToString();
-        }
+        public override string ToString() =>
+            $"QML Entry '{CreateContent().Trim()}' (fullPath: {Path})";
     }
 }

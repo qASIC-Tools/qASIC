@@ -38,5 +38,8 @@ namespace qASIC.QML
             var txt = comment.ToString();
             doc.AddElement(new QmlComment(txt.Substring(1, txt.Length - 1)));
         }
+
+        public override string ToString() =>
+            $"QML Entry '{CreateContent().Trim()}'";
     }
 }

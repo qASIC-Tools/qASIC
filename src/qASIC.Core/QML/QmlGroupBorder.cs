@@ -1,4 +1,6 @@
-﻿namespace qASIC.QML
+﻿using System.Text;
+
+namespace qASIC.QML
 {
     public class QmlGroupBorder : QmlElement
     {
@@ -46,5 +48,8 @@
 
             doc.AddElement(new QmlGroupBorder(path, relativePath));
         }
+
+        public override string ToString() =>
+            $"QML Group Border '{CreateContent().Trim()}' (fullPath: {Path})";
     }
 }

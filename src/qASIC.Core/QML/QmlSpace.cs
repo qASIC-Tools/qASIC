@@ -33,5 +33,8 @@ namespace qASIC.QML
 
             doc.AddElement(new QmlSpace(i));
         }
+
+        public override string ToString() =>
+            $"QML Entry (spaceCount: {count})";
     }
 }
