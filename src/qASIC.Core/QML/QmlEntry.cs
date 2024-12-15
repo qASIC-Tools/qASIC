@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace qASIC.QML
@@ -57,13 +58,13 @@ namespace qASIC.QML
             if (IsArrayItem)
                 return $"* {QmlUtility.PrepareValueStringForExport(Value)}\n";
 
-            return $"{RelativePath}: {QmlUtility.PrepareValueStringForExport(Value)}\n";
+            return $"{RelativePath} = {QmlUtility.PrepareValueStringForExport(Value)}\n";
         }
 
         public override bool ShouldParse(QmlProcessedDocument processed, QmlDocument doc)
         {
             var line = processed.PeekLine();
-            return line.Contains(':') || line.TrimEnd().EndsWith('|') || line.TrimStart().StartsWith('*');
+            return line.Contains('=') || line.TrimEnd().EndsWith('|') || line.TrimStart().StartsWith('*');
         }
 
         public override void Parse(QmlProcessedDocument processed, QmlDocument doc)
@@ -100,9 +101,9 @@ namespace qASIC.QML
 
             if (!isArrayStart && !isArrayItem)
             {
-                var mainLineParts = line.Split(":");
+                var mainLineParts = line.Split("=");
                 relativePath = mainLineParts[0];
-                txt = string.Join(":", mainLineParts.Skip(1))
+                txt = string.Join("=", mainLineParts.Skip(1))
                     .Trim();
             }
 
@@ -110,6 +111,8 @@ namespace qASIC.QML
 
             if (group != null && !group.IsEnding)
                 path = $"{group.Path}.{relativePath}";
+
+            path = processed.FormatPath(path);
 
             doc.AddElement(new QmlEntry(path, relativePath, isArrayStart ? string.Empty : GetValue(processed, txt))
             {
@@ -190,6 +193,21 @@ namespace qASIC.QML
             }
 
             return value.ToString();
+        }
+
+        public override string ToString()
+        {
+            var txt = new StringBuilder("QML Entry");
+
+            txt.Append((IsArrayStart, IsArrayItem) switch
+            {
+                (true, false) => $" '{RelativePath}|'",
+                (false, true) => $" '* {Value}'",
+                _ => $" '{RelativePath} = {Value}'",
+            });
+
+            txt.Append($" (fullPath: {Path})");
+            return txt.ToString();
         }
     }
 }
