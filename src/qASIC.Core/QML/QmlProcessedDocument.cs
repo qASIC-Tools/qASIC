@@ -16,6 +16,8 @@ namespace qASIC.QML
         public int Position { get; set; }
         public string Prefix { get; set;}
 
+        public QmlEntry PreviousEntry { get; set; } = null;
+
         public Dictionary<string, int> InsertPaths { get; set; } = new Dictionary<string, int>();
 
         public bool FinishedReading =>
@@ -33,6 +35,8 @@ namespace qASIC.QML
 
         public string FormatPath(string path)
         {
+            path = $"{Prefix}{path}";
+
             var parts = path.Split('.');
             StringBuilder txt = new StringBuilder();
             for (int i = 0; i < parts.Length; i++)
@@ -53,7 +57,7 @@ namespace qASIC.QML
                 txt.Append(part);
             }
 
-            return $"{Prefix}{txt}";
+            return txt.ToString();
         }
 
         private int GetPathInsertIndex(string path)
@@ -75,6 +79,80 @@ namespace qASIC.QML
 
             InsertPaths[path]++;
             return InsertPaths[path];
+        }
+
+        public string GetValue(string currentLine)
+        {
+            var quoteCount = 0;
+            while (quoteCount < currentLine.Length && currentLine[quoteCount] == '\"')
+                quoteCount++;
+
+            //If it doesn't start with an odd amount of quotations,
+            //we can just skip the rest and replace double quotations
+            //with single ones
+            if (quoteCount % 2 == 0)
+                return currentLine.Replace("\"\"", "\"");
+
+            currentLine = currentLine.Substring(1, currentLine.Length - 1);
+
+            var value = new StringBuilder();
+            while (true)
+            {
+                int emptyCount = 0;
+                var txtParts = currentLine.Split('\"');
+
+                for (int i = 0; i < txtParts.Length; i++)
+                {
+                    bool empty = string.IsNullOrEmpty(txtParts[i]);
+
+                    if (empty)
+                    {
+                        emptyCount++;
+
+                        //If two empty parts are after each other,
+                        //we can reset the count and add a "
+                        if (emptyCount == 2)
+                        {
+                            value.Append('\"');
+                            emptyCount = 0;
+                        }
+
+                        continue;
+                    }
+
+                    //If it's not empty
+                    
+                    if (i != 0) //Ignore if first
+                    {
+                        //If two non-empty parts were after each other,
+                        //it means there was a single quotation mark
+                        //between them that marks the end
+                        if (emptyCount == 0)
+                        {
+                            //Add empty count to properly exit loop
+                            emptyCount++;
+                            break;
+                        }
+
+                        value.Append('\"');
+                    }
+
+                    emptyCount = 0;
+                    value.Append(txtParts[i]);
+                }
+
+                if (emptyCount == 1)
+                    break;
+
+                if (FinishedReading)
+                    break;
+
+                //Move to the next line
+                value.Append('\n');
+                currentLine = GetLine();
+            }
+
+            return value.ToString();
         }
 
         public IEnumerator<string> GetEnumerator() =>

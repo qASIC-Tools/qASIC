@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace qASIC.QML
@@ -76,7 +75,6 @@ namespace qASIC.QML
 
             var relativePath = string.Empty;
             var txt = string.Empty;
-            var group = doc.GetLastElementOfType<QmlGroupBorder>();
 
             if (isArrayStart)
             {
@@ -86,14 +84,11 @@ namespace qASIC.QML
 
             if (!isArrayStart && isArrayItem)
             {
-                var item = doc.Where(x => x is QmlEntry e && !e.IsArrayItem)
-                    .LastOrDefault() as QmlEntry;
-
                 //If there is no array start or any entry before, ignore
-                if (item == null)
+                if (processed.PreviousEntry == null)
                     return;
 
-                relativePath = item.RelativePath;
+                relativePath = processed.PreviousEntry.RelativePath;
                 txt = line.TrimStart();
                 txt = txt.Substring(1, txt.Length - 1)
                     .Trim();
@@ -107,92 +102,16 @@ namespace qASIC.QML
                     .Trim();
             }
 
-            var path = relativePath;
+            var path = processed.FormatPath(relativePath);
 
-            if (group != null && !group.IsEnding)
-                path = $"{group.Path}.{relativePath}";
-
-            path = processed.FormatPath(path);
-
-            doc.AddElement(new QmlEntry(path, relativePath, isArrayStart ? string.Empty : GetValue(processed, txt))
+            var el = new QmlEntry(path, relativePath, isArrayStart ? string.Empty : processed.GetValue(txt))
             {
                 IsArrayStart = isArrayStart,
                 IsArrayItem = isArrayItem,
-            });
-        }
+            };
 
-        string GetValue(QmlProcessedDocument processed, string txt)
-        {
-            var quoteCount = 0;
-            while (quoteCount < txt.Length && txt[quoteCount] == '\"')
-                quoteCount++;
-
-            //If it doesn't start with an odd amount of quotations,
-            //we can just skip the rest and replace double quotations
-            //with single ones
-            if (quoteCount % 2 == 0)
-                return txt.Replace("\"\"", "\"");
-
-            txt = txt.Substring(1, txt.Length - 1);
-
-            var value = new StringBuilder();
-            while (true)
-            {
-                int emptyCount = 0;
-                var txtParts = txt.Split('\"');
-
-                for (int i = 0; i < txtParts.Length; i++)
-                {
-                    bool empty = string.IsNullOrEmpty(txtParts[i]);
-
-                    if (empty)
-                    {
-                        emptyCount++;
-
-                        //If two empty parts are after each other,
-                        //we can reset the count and add a "
-                        if (emptyCount == 2)
-                        {
-                            value.Append('\"');
-                            emptyCount = 0;
-                        }
-
-                        continue;
-                    }
-
-                    //If it's not empty
-
-                    if (i != 0) //Ignore if first
-                    {
-                        //If two non-empty parts were after each other,
-                        //it means there was a single quotation mark
-                        //between them that marks the end
-                        if (emptyCount == 0)
-                        {
-                            //Add empty count to properly exit loop
-                            emptyCount++;
-                            break;
-                        }
-
-                        value.Append('\"');
-                    }
-
-                    emptyCount = 0;
-                    value.Append(txtParts[i]);
-                }
-
-                if (emptyCount == 1)
-                    break;
-
-                if (processed.FinishedReading)
-                    break;
-
-                //Move to the next line
-                value.Append('\n');
-                txt = processed.GetLine();
-            }
-
-            return value.ToString();
+            doc.AddElement(el);
+            processed.PreviousEntry = el;
         }
 
         public override string ToString()

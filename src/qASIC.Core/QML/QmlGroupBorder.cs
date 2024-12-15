@@ -32,7 +32,8 @@
                 .Trim('-')
                 .Trim();
 
-            //TODO: change prefix
+            processed.Prefix = string.Empty;
+            processed.PreviousEntry = null;
             var path = processed.FormatPath(relativePath);
 
             if (string.IsNullOrEmpty(relativePath))
@@ -40,6 +41,8 @@
                 doc.AddElement(new QmlGroupBorder());
                 return;
             }
+
+            processed.Prefix = $"{path}.";
 
             doc.AddElement(new QmlGroupBorder(path, relativePath));
         }
