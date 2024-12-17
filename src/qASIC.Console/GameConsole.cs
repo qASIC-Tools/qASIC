@@ -307,6 +307,7 @@ namespace qASIC.Console
                 commandName = CurrentCommand?.CommandName ?? (args.Length == 0 ? null : args[0].arg),
                 args = args,
                 console = this,
+                Logs = Logs,
             };
 
             return commandArgs;
