@@ -19,17 +19,18 @@ namespace qASIC.Core.QML
                 .ToDictionary(x => x.Key, x => x.ToList());
         }
 
+        protected virtual string PathPrefix => string.Empty;
         protected List<QmlElement> Elements { get; set; } = new List<QmlElement>();
         protected Dictionary<string, List<QmlEntry>> Entries { get; set; } = new Dictionary<string, List<QmlEntry>>();
 
         #region Entries
         public QmlEntry GetEntry(string path) =>
-            Entries.TryGetValue(path, out var val) ?
+            Entries.TryGetValue($"{PathPrefix}{path}", out var val) ?
             val.Where(x => !x.IsArrayStart).FirstOrDefault() :
             null;
 
         public QmlEntry[] GetEntries(string path) =>
-            Entries.TryGetValue(path, out var val) ?
+            Entries.TryGetValue($"{PathPrefix}{path}", out var val) ?
             val.Where(x => !x.IsArrayStart).ToArray() :
             new QmlEntry[0];
 
@@ -48,6 +49,21 @@ namespace qASIC.Core.QML
         {
             Elements.Add(element);
             if (element is QmlEntry entry)
+            {
+                if (!Entries.ContainsKey(entry.Path))
+                    Entries.Add(entry.Path, new List<QmlEntry>());
+
+                Entries[entry.Path].Add(entry);
+            }
+        }
+
+        public void AddRange(IEnumerable<QmlElement> elements)
+        {
+            Elements.AddRange(elements);
+            var entries = elements.Where(x => x is QmlEntry)
+                .Select(x => x as QmlEntry);
+
+            foreach (var entry in entries)
             {
                 if (!Entries.ContainsKey(entry.Path))
                     Entries.Add(entry.Path, new List<QmlEntry>());
@@ -78,11 +94,11 @@ namespace qASIC.Core.QML
 
         public QmlObject GetObject(string path)
         {
-            var obj = new QmlObject(path);
+            var obj = new QmlObject($"{PathPrefix}{path}");
 
             foreach (var item in Entries)
-                if (item.Key.StartsWith(path))
-                    obj.Elements.AddRange(item.Value);
+                if (item.Key.StartsWith($"{PathPrefix}{path}"))
+                    obj.AddRange(item.Value);
 
             return obj;
         }
@@ -100,7 +116,7 @@ namespace qASIC.Core.QML
         public List<object> GetValueArray(Type type, string path)
         {
             List<object> list = new List<object>();
-            foreach (var entry in GetEntries(path))
+            foreach (var entry in GetEntries($"{PathPrefix}{path}"))
                 if (entry.TryGetValue(type, out object obj))
                     list.Add(obj);
 
@@ -111,11 +127,11 @@ namespace qASIC.Core.QML
         {
             var dict = new Dictionary<string, QmlObject>();
 
-            int pathPartsCount = path.Split('.').Length;
+            int pathPartsCount = $"{PathPrefix}{path}".Split('.').Length;
 
             foreach (var item in Entries)
             {
-                if (!item.Key.StartsWith(path)) continue;
+                if (!item.Key.StartsWith($"{PathPrefix}{path}")) continue;
                 var parts = item.Key.Split('.');
 
                 if (parts.Length == pathPartsCount) continue;
@@ -127,7 +143,7 @@ namespace qASIC.Core.QML
                 if (!dict.ContainsKey(objPath))
                     dict.Add(objPath, new QmlObject(objPath));
 
-                dict[objPath].Elements.AddRange(item.Value);
+                dict[objPath].AddRange(item.Value);
             }
 
             return dict.Values.ToList();

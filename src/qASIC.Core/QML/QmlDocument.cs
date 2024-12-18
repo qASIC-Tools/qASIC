@@ -10,7 +10,7 @@ namespace qASIC.QML
         public QmlDocument() : base() { }
         public QmlDocument(IEnumerable<QmlElement> elements) : base(elements) { }
 
-        public string PathPrefix { get; private set; }
+        public string NewElementPrefix { get; private set; }
 
         #region Adding
         public QmlDocument AddElement(QmlElement element)
@@ -20,10 +20,10 @@ namespace qASIC.QML
         }
 
         public QmlDocument AddEntry(string path, object value) =>
-            AddElement(new QmlEntry($"{PathPrefix}{path}", path, value));
+            AddElement(new QmlEntry($"{NewElementPrefix}{path}", path, value));
 
         public QmlDocument StartArrayEntry(string path) =>
-            AddElement(new QmlEntry($"{PathPrefix}{path}", path, string.Empty)
+            AddElement(new QmlEntry($"{NewElementPrefix}{path}", path, string.Empty)
             {
                 IsArrayStart = true
             });
@@ -39,7 +39,7 @@ namespace qASIC.QML
 
         public QmlDocument StartGroup(string groupPath)
         {
-            PathPrefix = string.IsNullOrWhiteSpace(groupPath) ?
+            NewElementPrefix = string.IsNullOrWhiteSpace(groupPath) ?
                 string.Empty :
                 $"{groupPath}.";
 
