@@ -159,10 +159,12 @@ namespace qASIC.Console
                 return null;
 
             //Executing
-            ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(args));
+            var commandName = CurrentCommand.CommandName;
+
+            ReturnedValue = Execute(commandName, () => CurrentCommand.Run(args));
             if (ReturnedValue is Task task)
             {
-                Task.Run(() => ExecuteAsync(CurrentCommand.CommandName, task, args.Logs, false));
+                Task.Run(() => ExecuteAsync(commandName, task, args.Logs, false));
                 ReturnedValue = null;
             }
 
