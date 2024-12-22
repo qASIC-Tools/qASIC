@@ -9,6 +9,7 @@ using System.Linq;
 using qASIC.Core;
 using qASIC.CommandPrompts;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 namespace qASIC.Console
 {
@@ -80,29 +81,7 @@ namespace qASIC.Console
 
         public GameLogManager Logs { get; internal set; }
 
-        private ICommandList _commandList;
-        public ICommandList CommandList 
-        {
-            get => _commandList;
-            set
-            {
-                if (_commandList != null)
-                {
-                    _commandList.OnCommandsAdded -= CommandListOnAdd;
-                    _commandList.OnCommandsRemoved -= CommandListOnRemove;
-                    CommandListOnRemove(_commandList);
-                }
-
-                _commandList = value;
-
-                if (_commandList != null)
-                {
-                    _commandList.OnCommandsAdded += CommandListOnAdd;
-                    _commandList.OnCommandsRemoved += CommandListOnRemove;
-                    CommandListOnAdd(_commandList);
-                }
-            }
-        }
+        public ICommandList CommandList { get; set; }
 
         public ArgumentsParser CommandParser { get; set; }
 
@@ -158,6 +137,9 @@ namespace qASIC.Console
             if (!PrepareForExecute(args))
                 return null;
 
+            if (args.LogOutput)
+                Logs.RegisterManager(args.Logs);
+
             //Executing
             var commandName = CurrentCommand.CommandName;
 
@@ -172,6 +154,9 @@ namespace qASIC.Console
             if (!(ReturnedValue is CommandPrompt))
                 CurrentCommand = null;
 
+            if (args.LogOutput)
+                Logs.UnregisterManager(args.Logs);
+
             return ReturnedValue;
         }
 
@@ -179,15 +164,24 @@ namespace qASIC.Console
         /// <param name="args">Command arguments.</param>
         public async Task<object> ExecuteAsync(GameCommandArgs args)
         {
+            //Before
             if (!PrepareForExecute(args))
                 return null;
 
-            ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(args));
+            if (args.LogOutput)
+                Logs.RegisterManager(args.Logs);
+
+            //Executing
+            ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(args), args.Logs);
             if (ReturnedValue is Task task) 
                 ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task);
 
+            //After
             if (!(ReturnedValue is CommandPrompt))
                 CurrentCommand = null;
+
+            if (args.LogOutput)
+                Logs.UnregisterManager(args.Logs);
 
             return ReturnedValue;
         }
@@ -202,7 +196,7 @@ namespace qASIC.Console
             {
                 var output = command.Invoke();
                 if (logOutput && output != null && !(output is CommandPrompt) && !(output is Task))
-                    logs?.Log($"Command returned '{output}'");
+                    logs?.Log(output.ToString());
 
                 return output;
             }
@@ -240,7 +234,7 @@ namespace qASIC.Console
                 var output = await objTask;
 
                 if (logOutput && output != null && !(output is CommandPrompt))
-                    logs?.Log($"Command returned '{output}'");
+                    logs?.Log(output.ToString());
 
                 return output;
             }
@@ -260,6 +254,9 @@ namespace qASIC.Console
 
         private bool PrepareForExecute(GameCommandArgs args)
         {
+            if (args.Logs == null)
+                args.Logs = new GameLogManager();
+
             //Prompt
             if (CurrentCommand != null)
             {
@@ -271,7 +268,6 @@ namespace qASIC.Console
                 if (!prompt.CanExecute(args))
                     return false;
 
-                AddLogManagerToArgs(args);
                 args.args = prompt.Prepare(args);
                 return true;
             }
@@ -282,21 +278,13 @@ namespace qASIC.Console
 
             if (!CommandList.TryGetCommand(args.commandName, out var command))
             {
-                args.Logs.LogError($"Command {args.commandName} doesn't exist");
+                Logs.LogError($"Command {args.commandName} doesn't exist");
                 return false;
             }
 
             CurrentCommand = command;
-            AddLogManagerToArgs(args);
 
             return true;
-        }
-
-        private void AddLogManagerToArgs(GameCommandArgs args)
-        {
-            args.Logs = Logs;
-            if (CurrentCommand is IHasLogs iHasLogs)
-                args.Logs = iHasLogs.Logs;
         }
 
         public virtual GameCommandArgs CreateCommandArgs(string cmd)
@@ -309,7 +297,6 @@ namespace qASIC.Console
                 commandName = CurrentCommand?.CommandName ?? (args.Length == 0 ? null : args[0].arg),
                 args = args,
                 console = this,
-                Logs = Logs,
             };
 
             return commandArgs;
@@ -332,20 +319,6 @@ namespace qASIC.Console
         #endregion
 
         #region Registering Loggables
-        void CommandListOnAdd(IEnumerable<ICommand> commands)
-        {
-            var targets = commands.Where(x => x is IHasLogs);
-            foreach (var item in targets)
-                Logs.RegisterLoggable(item as IHasLogs);
-        }
-
-        void CommandListOnRemove(IEnumerable<ICommand> commands)
-        {
-            var targets = commands.Where(x => x is IHasLogs);
-            foreach (var item in targets)
-                Logs.UnregisterLoggable(item as IHasLogs);
-        }
-
         private bool _getLogsFromInstance = true;
         /// <summary>Whenever to log messages from <see cref="Instance"/>.</summary>
         public bool GetLogsFromInstance

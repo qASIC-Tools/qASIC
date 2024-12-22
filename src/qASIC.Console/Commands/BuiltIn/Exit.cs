@@ -11,7 +11,7 @@ namespace qASIC.Console.Commands.BuiltIn
         public override object Run(GameCommandArgs args)
         {
             args.CheckArgumentCount(0);
-            Logs.Log("Goodbye");
+            args.Logs.Log("Goodbye");
             Environment.Exit(0);
             return null;
         }

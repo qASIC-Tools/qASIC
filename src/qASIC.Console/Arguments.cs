@@ -6,5 +6,7 @@
         public GameCommandArgs(CommandArgs args) : base(args) { }
 
         public GameConsole console;
+
+        public bool LogOutput { get; set; } = true;
     }
 }

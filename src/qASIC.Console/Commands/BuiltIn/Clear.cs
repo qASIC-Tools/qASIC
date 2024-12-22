@@ -9,7 +9,7 @@
         public override object Run(GameCommandArgs args)
         {
             args.CheckArgumentCount(0);
-            Logs.Log(qLog.CreateNow(string.Empty, LogType.Clear, qColor.Clear));
+            args.Logs.Log(qLog.CreateNow(string.Empty, LogType.Clear, qColor.Clear));
             return null;
         }
     }

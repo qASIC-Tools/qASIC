@@ -10,7 +10,7 @@
         public override object Run(GameCommandArgs args)
         {
             args.CheckArgumentCount(0);
-            Logs.Log("Hello world :)", qColor.Green);
+            args.Logs.Log("Hello world :)", qColor.Green);
             return null;
         }
     }

@@ -9,7 +9,7 @@ namespace qASIC
     public class CommandArgs : IEnumerable<CommandArgument>
     {
         public CommandArgs() { }
-        public CommandArgs(CommandArgs other)
+        public CommandArgs(CommandArgs other) : this()
         {
             inputString = other.inputString;
             commandName = other.commandName;

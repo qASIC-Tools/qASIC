@@ -47,7 +47,20 @@ namespace qASIC
         /// <returns>Returns itself.</returns>
         public LogManager RegisterLoggable(IHasLogs loggable)
         {
-            loggable.Logs.OnLog += Log;
+            if (loggable?.Logs != null && loggable.Logs != this)
+                loggable.Logs.OnLog += Log;
+
+            return this;
+        }
+
+        /// <summary>Subscribes to messages from a <see cref="LogManager"/>.</summary>
+        /// <param name="other">The other manager to register.</param>
+        /// <returns>Returns itself.</returns>
+        public LogManager RegisterManager(LogManager other)
+        {
+            if (other != null && other != this)
+                other.OnLog += Log;
+            
             return this;
         }
 
@@ -56,7 +69,20 @@ namespace qASIC
         /// <returns>Returns itself.</returns>
         public LogManager UnregisterLoggable(IHasLogs loggable)
         {
-            loggable.Logs.OnLog -= Log;
+            if (loggable?.Logs != null && loggable.Logs != this)
+                loggable.Logs.OnLog -= Log;
+
+            return this;
+        }
+
+        /// <summary>Unsubscribes from messages from a <see cref="LogManager"/>.</summary>
+        /// <param name="other">The other manager to deregister.</param>
+        /// <returns>Returns itself.</returns>
+        public LogManager UnregisterManager(LogManager other)
+        {
+            if (other != null && other != this)
+                other.OnLog -= Log;
+            
             return this;
         }
         #endregion

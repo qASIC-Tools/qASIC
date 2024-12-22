@@ -9,7 +9,7 @@
         public override object Run(GameCommandArgs args)
         {
             args.CheckArgumentCount(1);
-            Logs.Log(args[1].arg);
+            args.Logs.Log(args[1].arg);
             return null;
         }
     }
