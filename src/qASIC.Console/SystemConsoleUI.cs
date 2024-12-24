@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using SysConsole = System.Console;
 
@@ -30,8 +31,8 @@ namespace qASIC.Console
 
                 if (_console != null)
                 {
-                    _console.Logs.OnLog -= Console_OnLog;
-                    _console.Logs.OnUpdateLog -= Console_OnUpdateLog;
+                    _console.Logs.OnLog -= WriteLog;
+                    _console.Logs.OnUpdateLog -= UpdateLog;
                 }
 
                 VisibleLogs.Clear();
@@ -39,13 +40,48 @@ namespace qASIC.Console
 
                 if (_console != null)
                 {
-                    _console.Logs.OnLog += Console_OnLog;
-                    _console.Logs.OnUpdateLog += Console_OnUpdateLog;
+                    _console.Logs.OnLog += WriteLog;
+                    _console.Logs.OnUpdateLog += UpdateLog;
                 }
             }
         }
 
-        void Console_OnLog(qLog log)
+
+        private bool _rememberLogPosition = true;
+        public bool RememberLogPosition
+        {
+            get
+            {
+                return _rememberLogPosition && 
+                    !Environment.GetCommandLineArgs().Contains("--qsyscon-forget-log-pos");
+            }
+            set => _rememberLogPosition = value;
+        }
+
+        /// <summary>Format of a log, where:
+        /// <list type="bullet">
+        /// <item>{0} - <see cref="qLog.message"/></item>
+        /// <item>{1} - <see cref="qLog.time"/></item>
+        /// <item>{2} - <see cref="qLog.logType"/></item>
+        /// </list>
+        /// </summary>
+        public string LogFormat { get; set; } = "[{1}] [{2}] {0}";
+
+        /// <summary>String used for formatting <see cref="qLog.time"/>.</summary>
+        public string TimeFormat { get; set; } = "HH:mm:ss.fff";
+
+        /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
+        public bool CanRead { get; set; }
+
+        private Dictionary<qLog, LogData> VisibleLogs { get; set; } = new Dictionary<qLog, LogData>();
+
+        /// <summary>Gets invoked before executing a command. If false, command will not be executed.</summary>
+        public event Func<string, bool> CanExecute;
+
+        /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
+        public event Func<string, string> ProcessCommandString;
+
+        private void WriteLog(qLog log)
         {
             if (log.logType == LogType.Clear)
             {
@@ -57,14 +93,14 @@ namespace qASIC.Console
             var txt = CreateLogText(log);
             VisibleLogs.Add(log, new LogData()
             {
-                consoleTop = SysConsole.CursorTop,
+                consoleTop = RememberLogPosition ? SysConsole.CursorTop : 0,
                 emptyString = CreateEmptyStringForLog(log),
             });
 
             SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
         }
 
-        void Console_OnUpdateLog(qLog log)
+        private void UpdateLog(qLog log)
         {
             //Ignore if clear
             if (log.logType == LogType.Clear)
@@ -75,6 +111,12 @@ namespace qASIC.Console
                 return;
 
             var txt = CreateLogText(log);
+
+            if (!RememberLogPosition)
+            {
+                SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
+                return;
+            }
 
             var top = SysConsole.CursorTop;
             var left = SysConsole.CursorLeft;
@@ -106,29 +148,6 @@ namespace qASIC.Console
             SysConsole.CursorTop = top;
             SysConsole.CursorLeft = left;
         }
-
-        /// <summary>Format of a log, where:
-        /// <list type="bullet">
-        /// <item>{0} - <see cref="qLog.message"/></item>
-        /// <item>{1} - <see cref="qLog.time"/></item>
-        /// <item>{2} - <see cref="qLog.logType"/></item>
-        /// </list>
-        /// </summary>
-        public string LogFormat { get; set; } = "[{1}] [{2}] {0}";
-
-        /// <summary>String used for formatting <see cref="qLog.time"/>.</summary>
-        public string TimeFormat { get; set; } = "HH:mm:ss.fff";
-
-        /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
-        public bool CanRead { get; set; }
-
-        private Dictionary<qLog, LogData> VisibleLogs { get; set; } = new Dictionary<qLog, LogData>();
-
-        /// <summary>Gets invoked before executing a command. If false, command will not be executed.</summary>
-        public event Func<string, bool> CanExecute;
-
-        /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
-        public event Func<string, string> ProcessCommandString;
 
         /// <summary>Starts reading user input from the console window.</summary>
         /// <param name="readOnce">If true, reading will not be repeated.</param>
