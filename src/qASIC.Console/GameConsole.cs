@@ -143,7 +143,7 @@ namespace qASIC.Console
             //Executing
             var commandName = CurrentCommand.CommandName;
 
-            ReturnedValue = Execute(commandName, () => CurrentCommand.Run(args));
+            ReturnedValue = Execute(commandName, () => CurrentCommand.Run(args), args.Logs);
             if (ReturnedValue is Task task)
             {
                 Task.Run(() => ExecuteAsync(commandName, task, args.Logs, false));
@@ -174,7 +174,7 @@ namespace qASIC.Console
             //Executing
             ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(args), args.Logs);
             if (ReturnedValue is Task task) 
-                ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task);
+                ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task, args.Logs);
 
             //After
             if (!(ReturnedValue is CommandPrompt))
@@ -278,7 +278,7 @@ namespace qASIC.Console
 
             if (!CommandList.TryGetCommand(args.commandName, out var command))
             {
-                Logs.LogError($"Command {args.commandName} doesn't exist");
+                args.Logs.LogError($"Command {args.commandName} doesn't exist");
                 return false;
             }
 
