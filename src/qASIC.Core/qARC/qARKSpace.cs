@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlSpace : QmlElement
+    public class qARKSpace : qARKElement
     {
-        public QmlSpace(int count = 1) : base() 
+        public qARKSpace(int count = 1) : base() 
         {
             Count = count;
         }
@@ -19,10 +19,10 @@ namespace qASIC.QML
         public override string CreateContent() =>
             new string('\n', Count);
 
-        public override bool ShouldParse(QmlProcessedDocument processed, QmlDocument doc) =>
+        public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc) =>
             string.IsNullOrWhiteSpace(processed.PeekLine());
 
-        public override void Parse(QmlProcessedDocument processed, QmlDocument doc)
+        public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
         {
             int i = 0;
             while (!processed.FinishedReading && string.IsNullOrWhiteSpace(processed.PeekLine()))
@@ -31,7 +31,7 @@ namespace qASIC.QML
                 processed.GetLine();
             }
 
-            doc.AddElement(new QmlSpace(i));
+            doc.AddElement(new qARKSpace(i));
         }
 
         public override string ToString() =>

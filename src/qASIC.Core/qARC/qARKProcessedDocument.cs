@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlProcessedDocument : IEnumerable<string>
+    public class qARKProcessedDocument : IEnumerable<string>
     {
-        public QmlProcessedDocument(string txt) : this(QmlUtility.FormatString(txt).Split("\n")) { }
-        public QmlProcessedDocument(string[] lines)
+        public qARKProcessedDocument(string txt) : this(qARKUtility.FormatString(txt).Split("\n")) { }
+        public qARKProcessedDocument(string[] lines)
         {
             Lines = lines;
         }
@@ -16,7 +16,7 @@ namespace qASIC.QML
         public int Position { get; set; }
         public string Prefix { get; set;}
 
-        public QmlEntry PreviousEntry { get; set; } = null;
+        public qARKEntry PreviousEntry { get; set; } = null;
 
         public Dictionary<string, int> InsertPaths { get; set; } = new Dictionary<string, int>();
 

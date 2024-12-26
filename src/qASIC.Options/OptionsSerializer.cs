@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-using qASIC.QML;
+using qASIC.qARK;
 
 namespace qASIC.Options
 {
@@ -16,8 +16,8 @@ namespace qASIC.Options
 
             OnSave = list =>
             {
-                var serializer = new QmlSerializer();
-                var doc = new QmlDocument();
+                var serializer = new qARKSerializer();
+                var doc = new qARKDocument();
 
                 foreach (var item in list)
                     doc.AddEntry(item.Key, item.Value?.ToString());
@@ -27,14 +27,14 @@ namespace qASIC.Options
 
             OnLoad = (txt, list) =>
             {
-                var serializer = new QmlSerializer();
+                var serializer = new qARKSerializer();
                 var doc = serializer.Deserialize(txt);
 
                 var dict = new Dictionary<string, object>();
 
                 var items = doc
-                    .Where(x => x is QmlEntry)
-                    .Select(x => x as QmlEntry)
+                    .Where(x => x is qARKEntry)
+                    .Select(x => x as qARKEntry)
                     .GroupBy(x => x.Path)
                     .Where(x => list.ContainsKey(x.Key));
 

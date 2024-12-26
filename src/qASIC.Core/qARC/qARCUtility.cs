@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public static class QmlUtility
+    public static class qARKUtility
     {
         public static string FormatString(string s) =>
             (s ?? string.Empty)

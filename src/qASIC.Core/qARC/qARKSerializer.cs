@@ -1,18 +1,18 @@
 ﻿using System.Text;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlSerializer
+    public class qARKSerializer
     {
-        public QmlElement[] DeserializeElements { get; set; } = new QmlElement[]
+        public qARKElement[] DeserializeElements { get; set; } = new qARKElement[]
         {
-            new QmlSpace(),
-            new QmlComment(),
-            new QmlGroupBorder(),
-            new QmlEntry(),
+            new qARKSpace(),
+            new qARKComment(),
+            new qARKGroupBorder(),
+            new qARKEntry(),
         };
 
-        public string Serialize(QmlDocument document)
+        public string Serialize(qARKDocument document)
         {
             var txt = new StringBuilder();
 
@@ -27,10 +27,10 @@ namespace qASIC.QML
             return finalTxt;
         }
 
-        public QmlDocument Deserialize(string txt)
+        public qARKDocument Deserialize(string txt)
         {
-            var processed = new QmlProcessedDocument(txt);
-            var doc = new QmlDocument();
+            var processed = new qARKProcessedDocument(txt);
+            var doc = new qARKDocument();
 
             while (!processed.FinishedReading)
             {

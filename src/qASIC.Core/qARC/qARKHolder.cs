@@ -1,40 +1,40 @@
-﻿using qASIC.QML;
+﻿using qASIC.qARK;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.Core.QML
+namespace qASIC.Core.qARK
 {
-    public abstract class QmlHolder : IEnumerable<QmlElement>
+    public abstract class qARKHolder : IEnumerable<qARKElement>
     {
-        public QmlHolder() { }
-        public QmlHolder(IEnumerable<QmlElement> elements)
+        public qARKHolder() { }
+        public qARKHolder(IEnumerable<qARKElement> elements)
         {
             Elements = elements.ToList();
             Entries = elements
-                .Where(x => x is QmlEntry)
-                .Select(x => x as QmlEntry)
+                .Where(x => x is qARKEntry)
+                .Select(x => x as qARKEntry)
                 .GroupBy(x => x.Path)
                 .ToDictionary(x => x.Key, x => x.ToList());
         }
 
         protected virtual string PathPrefix => string.Empty;
-        protected List<QmlElement> Elements { get; set; } = new List<QmlElement>();
-        protected Dictionary<string, List<QmlEntry>> Entries { get; set; } = new Dictionary<string, List<QmlEntry>>();
+        protected List<qARKElement> Elements { get; set; } = new List<qARKElement>();
+        protected Dictionary<string, List<qARKEntry>> Entries { get; set; } = new Dictionary<string, List<qARKEntry>>();
 
         #region Entries
-        public QmlEntry GetEntry(string path) =>
+        public qARKEntry GetEntry(string path) =>
             Entries.TryGetValue($"{PathPrefix}{path}", out var val) ?
             val.Where(x => !x.IsArrayStart).FirstOrDefault() :
             null;
 
-        public QmlEntry[] GetEntries(string path) =>
+        public qARKEntry[] GetEntries(string path) =>
             Entries.TryGetValue($"{PathPrefix}{path}", out var val) ?
             val.Where(x => !x.IsArrayStart).ToArray() :
-            new QmlEntry[0];
+            new qARKEntry[0];
 
-        public T GetLastElementOfType<T>() where T : QmlElement
+        public T GetLastElementOfType<T>() where T : qARKElement
         {
             for (int i = Elements.Count - 1; i >= 0; i--)
             {
@@ -45,28 +45,28 @@ namespace qASIC.Core.QML
             return null;
         }
 
-        public void Add(QmlElement element)
+        public void Add(qARKElement element)
         {
             Elements.Add(element);
-            if (element is QmlEntry entry)
+            if (element is qARKEntry entry)
             {
                 if (!Entries.ContainsKey(entry.Path))
-                    Entries.Add(entry.Path, new List<QmlEntry>());
+                    Entries.Add(entry.Path, new List<qARKEntry>());
 
                 Entries[entry.Path].Add(entry);
             }
         }
 
-        public void AddRange(IEnumerable<QmlElement> elements)
+        public void AddRange(IEnumerable<qARKElement> elements)
         {
             Elements.AddRange(elements);
-            var entries = elements.Where(x => x is QmlEntry)
-                .Select(x => x as QmlEntry);
+            var entries = elements.Where(x => x is qARKEntry)
+                .Select(x => x as qARKEntry);
 
             foreach (var entry in entries)
             {
                 if (!Entries.ContainsKey(entry.Path))
-                    Entries.Add(entry.Path, new List<QmlEntry>());
+                    Entries.Add(entry.Path, new List<qARKEntry>());
 
                 Entries[entry.Path].Add(entry);
             }
@@ -75,26 +75,26 @@ namespace qASIC.Core.QML
 
         #region Values
         public T GetValue<T>(string path, T defaultValue = default) =>
-            QmlUtility.ParseValue<T>(GetEntry(path)?.Value, defaultValue);
+            qARKUtility.ParseValue<T>(GetEntry(path)?.Value, defaultValue);
 
         public object GetValue(string path, Type type, object defaultValue = null) =>
-            QmlUtility.ParseValue(type, GetEntry(path)?.Value, defaultValue);
+            qARKUtility.ParseValue(type, GetEntry(path)?.Value, defaultValue);
 
         public bool TryGetValue<T>(string path, out T result) =>
             TryGetValue(path, default, out result);
 
         public bool TryGetValue<T>(string path, T defaultValue, out T result) =>
-            QmlUtility.TryParseValue(GetEntry(path)?.Value, defaultValue, out result);
+            qARKUtility.TryParseValue(GetEntry(path)?.Value, defaultValue, out result);
 
         public bool TryGetValue(string path, Type type, out object result) =>
             TryGetValue(path, type, default, out result);
 
         public bool TryGetValue(string path, Type type, object defaultValue, out object result) =>
-            QmlUtility.TryParseValue(type, GetEntry(path)?.Value, defaultValue, out result);
+            qARKUtility.TryParseValue(type, GetEntry(path)?.Value, defaultValue, out result);
 
-        public QmlObject GetObject(string path)
+        public qARKObject GetObject(string path)
         {
-            var obj = new QmlObject($"{PathPrefix}{path}");
+            var obj = new qARKObject($"{PathPrefix}{path}");
 
             foreach (var item in Entries)
                 if (item.Key.StartsWith($"{PathPrefix}{path}"))
@@ -123,9 +123,9 @@ namespace qASIC.Core.QML
             return list;
         }
 
-        public List<QmlObject> GetObjectArray(string path)
+        public List<qARKObject> GetObjectArray(string path)
         {
-            var dict = new Dictionary<string, QmlObject>();
+            var dict = new Dictionary<string, qARKObject>();
 
             int pathPartsCount = $"{PathPrefix}{path}".Split('.').Length;
 
@@ -141,7 +141,7 @@ namespace qASIC.Core.QML
                 var objPath = string.Join('.', objParts);
 
                 if (!dict.ContainsKey(objPath))
-                    dict.Add(objPath, new QmlObject(objPath));
+                    dict.Add(objPath, new qARKObject(objPath));
 
                 dict[objPath].AddRange(item.Value);
             }
@@ -156,7 +156,7 @@ namespace qASIC.Core.QML
             Entries.Clear();
         }
 
-        public IEnumerator<QmlElement> GetEnumerator() =>
+        public IEnumerator<qARKElement> GetEnumerator() =>
             Elements.GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() =>

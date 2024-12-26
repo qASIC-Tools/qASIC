@@ -1,63 +1,65 @@
-﻿using qASIC.Core.QML;
+﻿using qASIC.Core.qARK;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlDocument : QmlHolder
+    public class qARKDocument : qARKHolder
     {
-        public QmlDocument() : base() { }
-        public QmlDocument(IEnumerable<QmlElement> elements) : base(elements) { }
+        public const string FILE_EXTENSION = "qark";
+
+        public qARKDocument() : base() { }
+        public qARKDocument(IEnumerable<qARKElement> elements) : base(elements) { }
 
         public string NewElementPrefix { get; private set; }
 
         #region Adding
-        public QmlDocument AddElement(QmlElement element)
+        public qARKDocument AddElement(qARKElement element)
         {
             Add(element);
             return this;
         }
 
-        public QmlDocument AddEntry(string path, object value) =>
-            AddElement(new QmlEntry($"{NewElementPrefix}{path}", path, value));
+        public qARKDocument AddEntry(string path, object value) =>
+            AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, value));
 
-        public QmlDocument StartArrayEntry(string path) =>
-            AddElement(new QmlEntry($"{NewElementPrefix}{path}", path, string.Empty)
+        public qARKDocument StartArrayEntry(string path) =>
+            AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, string.Empty)
             {
                 IsArrayStart = true
             });
 
-        public QmlDocument AddArrayItem(object value)
+        public qARKDocument AddArrayItem(object value)
         {
-            var prevEntry = GetLastElementOfType<QmlEntry>();
-            return AddElement(new QmlEntry(prevEntry?.Path ?? string.Empty, prevEntry?.RelativePath ?? string.Empty, value)
+            var prevEntry = GetLastElementOfType<qARKEntry>();
+            return AddElement(new qARKEntry(prevEntry?.Path ?? string.Empty, prevEntry?.RelativePath ?? string.Empty, value)
             {
                 IsArrayItem = true,
             });
         }
 
-        public QmlDocument StartGroup(string groupPath)
+        public qARKDocument StartGroup(string groupPath)
         {
             NewElementPrefix = string.IsNullOrWhiteSpace(groupPath) ?
                 string.Empty :
                 $"{groupPath}.";
 
-            return AddElement(new QmlGroupBorder(groupPath));
+            return AddElement(new qARKGroupBorder(groupPath));
         }
 
-        public QmlDocument FinishGroup() =>
+        public qARKDocument FinishGroup() =>
             StartGroup(string.Empty);
 
-        public QmlDocument AddComment(string comment) =>
-            AddElement(new QmlComment(comment));
+        public qARKDocument AddComment(string comment) =>
+            AddElement(new qARKComment(comment));
 
-        public QmlDocument AddSpace() =>
-            AddElement(new QmlSpace());
+        public qARKDocument AddSpace() =>
+            AddElement(new qARKSpace());
         #endregion
 
         #region Setting Single Value
-        public QmlDocument SetValue(string path, object value)
+        public qARKDocument SetValue(string path, object value)
         {
             var entry = GetEntry(path);
             if (entry == null)
@@ -70,7 +72,7 @@ namespace qASIC.QML
             return this;
         }
 
-        public QmlDocument SetValues(string path, object[] values)
+        public qARKDocument SetValues(string path, object[] values)
         {
             var entries = GetEntries(path);
             var valueCount = values.Count();
@@ -94,7 +96,7 @@ namespace qASIC.QML
                 if (insertAtIndex == -1)
                 {
                     //Finish if in group
-                    if (GetLastElementOfType<QmlGroupBorder>()?.IsEnding == false)
+                    if (GetLastElementOfType<qARKGroupBorder>()?.IsEnding == false)
                     {
                         FinishGroup();
                         AddSpace();
@@ -106,7 +108,7 @@ namespace qASIC.QML
 
                 for (int i = min; i < max; i++)
                 {
-                    Elements.Insert(insertAtIndex, new QmlEntry(path, relativePath, values[i])
+                    Elements.Insert(insertAtIndex, new qARKEntry(path, relativePath, values[i])
                     {
                         IsArrayItem = true,
                     });

@@ -2,14 +2,14 @@
 using System.Linq;
 using System.Text;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlEntry : QmlElement
+    public class qARKEntry : qARKElement
     {
-        public QmlEntry() : base() { }
-        public QmlEntry(string relativePath, object value) : this(relativePath, relativePath, value) { }
+        public qARKEntry() : base() { }
+        public qARKEntry(string relativePath, object value) : this(relativePath, relativePath, value) { }
 
-        public QmlEntry(string path, string relativePath, object value)
+        public qARKEntry(string path, string relativePath, object value)
         {
             Path = path;
             RelativePath = relativePath;
@@ -23,7 +23,7 @@ namespace qASIC.QML
         public string Value
         {
             get => value;
-            set => this.value = QmlUtility.FormatString(value);
+            set => this.value = qARKUtility.FormatString(value);
         }
 
         public bool IsArrayItem { get; set; }
@@ -31,22 +31,22 @@ namespace qASIC.QML
 
         #region Getting Value
         public T GetValue<T>(T defaultValue = default) =>
-            QmlUtility.ParseValue<T>(Value, defaultValue);
+            qARKUtility.ParseValue<T>(Value, defaultValue);
 
         public object GetValue(Type type, object defaultValue = null) =>
-            QmlUtility.ParseValue(type, Value, defaultValue);
+            qARKUtility.ParseValue(type, Value, defaultValue);
 
         public bool TryGetValue<T>(out T result) =>
             TryGetValue(default, out result);
 
         public bool TryGetValue<T>(T defaultValue, out T result) =>
-            QmlUtility.TryParseValue(Value, defaultValue, out result);
+            qARKUtility.TryParseValue(Value, defaultValue, out result);
 
         public bool TryGetValue(Type type, out object result) =>
             TryGetValue(type, default, out result);
 
         public bool TryGetValue(Type type, object defaultValue, out object result) =>
-            QmlUtility.TryParseValue(type, Value, defaultValue, out result);
+            qARKUtility.TryParseValue(type, Value, defaultValue, out result);
         #endregion
 
         public override string CreateContent()
@@ -55,18 +55,18 @@ namespace qASIC.QML
                 return $"{RelativePath}|\n";
 
             if (IsArrayItem)
-                return $"* {QmlUtility.PrepareValueStringForExport(Value)}\n";
+                return $"* {qARKUtility.PrepareValueStringForExport(Value)}\n";
 
-            return $"{RelativePath} = {QmlUtility.PrepareValueStringForExport(Value)}\n";
+            return $"{RelativePath} = {qARKUtility.PrepareValueStringForExport(Value)}\n";
         }
 
-        public override bool ShouldParse(QmlProcessedDocument processed, QmlDocument doc)
+        public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc)
         {
             var line = processed.PeekLine();
             return line.Contains('=') || line.TrimEnd().EndsWith('|') || line.TrimStart().StartsWith('*');
         }
 
-        public override void Parse(QmlProcessedDocument processed, QmlDocument doc)
+        public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
         {
             var line = processed.GetLine();
 
@@ -104,7 +104,7 @@ namespace qASIC.QML
 
             var path = processed.FormatPath(relativePath);
 
-            var el = new QmlEntry(path, relativePath, isArrayStart ? string.Empty : processed.GetValue(txt))
+            var el = new qARKEntry(path, relativePath, isArrayStart ? string.Empty : processed.GetValue(txt))
             {
                 IsArrayStart = isArrayStart,
                 IsArrayItem = isArrayItem,

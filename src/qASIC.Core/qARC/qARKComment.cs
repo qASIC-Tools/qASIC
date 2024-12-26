@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Text;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlComment : QmlElement
+    public class qARKComment : qARKElement
     {
-        public QmlComment() : base() { }
-        public QmlComment(string comment)
+        public qARKComment() : base() { }
+        public qARKComment(string comment)
         {
             Comment = comment;
         }
@@ -15,16 +15,16 @@ namespace qASIC.QML
         public string Comment
         {
             get => comment;
-            set => comment = QmlUtility.FormatString(value);
+            set => comment = qARKUtility.FormatString(value);
         }
 
         public override string CreateContent() =>
             $"# {Comment.Replace("\n", "\n# ")}\n";
 
-        public override bool ShouldParse(QmlProcessedDocument processed, QmlDocument doc) =>
+        public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc) =>
             processed.PeekLine().Trim().StartsWith("#");
 
-        public override void Parse(QmlProcessedDocument processed, QmlDocument doc)
+        public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
         {
             var comment = new StringBuilder();
             while (!processed.FinishedReading && processed.PeekLine().TrimStart().StartsWith("#"))
@@ -36,7 +36,7 @@ namespace qASIC.QML
             }
 
             var txt = comment.ToString();
-            doc.AddElement(new QmlComment(txt.Substring(1, txt.Length - 1)));
+            doc.AddElement(new qARKComment(txt.Substring(1, txt.Length - 1)));
         }
 
         public override string ToString() =>

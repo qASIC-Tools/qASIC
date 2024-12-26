@@ -1,13 +1,13 @@
 ﻿using System.Text;
 
-namespace qASIC.QML
+namespace qASIC.qARK
 {
-    public class QmlGroupBorder : QmlElement
+    public class qARKGroupBorder : qARKElement
     {
-        public QmlGroupBorder() : base() { }
-        public QmlGroupBorder(string relativePath) : this(relativePath, relativePath) { }
+        public qARKGroupBorder() : base() { }
+        public qARKGroupBorder(string relativePath) : this(relativePath, relativePath) { }
 
-        public QmlGroupBorder(string path, string relativePath)
+        public qARKGroupBorder(string path, string relativePath)
         {
             Path = path;
             RelativePath = relativePath;
@@ -24,10 +24,10 @@ namespace qASIC.QML
             "---\n" :
             $"--- {RelativePath} ---\n";
 
-        public override bool ShouldParse(QmlProcessedDocument processed, QmlDocument doc) =>
+        public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc) =>
             processed.PeekLine().TrimStart().StartsWith('-');
 
-        public override void Parse(QmlProcessedDocument processed, QmlDocument doc)
+        public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
         {
             var relativePath = processed.GetLine()
                 .Trim()
@@ -40,13 +40,13 @@ namespace qASIC.QML
 
             if (string.IsNullOrEmpty(relativePath))
             {
-                doc.AddElement(new QmlGroupBorder());
+                doc.AddElement(new qARKGroupBorder());
                 return;
             }
 
             processed.Prefix = $"{path}.";
 
-            doc.AddElement(new QmlGroupBorder(path, relativePath));
+            doc.AddElement(new qARKGroupBorder(path, relativePath));
         }
 
         public override string ToString() =>
