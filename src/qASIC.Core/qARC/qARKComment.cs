@@ -40,6 +40,6 @@ namespace qASIC.qARK
         }
 
         public override string ToString() =>
-            $"QML Entry '{CreateContent().Trim()}'";
+            $"qARK Comment '{CreateContent().Trim()}'";
     }
 }

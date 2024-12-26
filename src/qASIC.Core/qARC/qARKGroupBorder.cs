@@ -50,6 +50,6 @@ namespace qASIC.qARK
         }
 
         public override string ToString() =>
-            $"QML Group Border '{CreateContent().Trim()}' (fullPath: {Path})";
+            $"qARK Group Border '{CreateContent().Trim()}' (fullPath: {Path})";
     }
 }

@@ -115,6 +115,6 @@ namespace qASIC.qARK
         }
 
         public override string ToString() =>
-            $"QML Entry '{CreateContent().Trim()}' (fullPath: {Path})";
+            $"qARK Entry '{CreateContent().Trim()}' (fullPath: {Path})";
     }
 }

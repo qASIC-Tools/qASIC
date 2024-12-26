@@ -35,6 +35,6 @@ namespace qASIC.qARK
         }
 
         public override string ToString() =>
-            $"QML Entry (spaceCount: {count})";
+            $"qARK Space (spaceCount: {count})";
     }
 }
