@@ -9,16 +9,24 @@ namespace qASIC.Console.Parsing.Arguments
 
         public List<ValueParser> ValueParsers { get; set; } = new List<ValueParser>(ValueParser.CreateStandardParserArray());
 
-        public abstract CommandArgument[] ParseString(string cmd);
+        /// <summary>Gets the command name from a console input string.</summary>
+        /// <param name="cmd">The console input string.</param>
+        /// <returns>Returns the parsed command name.</returns>
+        public abstract string ParseCommandName(string cmd);
+        
+        /// <summary>Gets command arguments from a console input string.</summary>
+        /// <param name="cmd">The console input string.</param>
+        /// <returns>Returns a list of command arguments.</returns>
+        public abstract CommandArgument[] ParseArguments(string cmd);
 
-        protected object[] ParseArgument(string arg)
+        protected CommandArgument CreateCommandArgument(string arg)
         {
-            List<object> parsedArgs = new List<object>();
+            var parsedArgs = new List<object>();
             foreach (var parser in ValueParsers)
                 if (parser.TryParse(arg, out object result) && result != null)
                     parsedArgs.Add(result);
 
-            return parsedArgs.ToArray();
+            return new CommandArgument(arg, parsedArgs.ToArray());
         }
     }
 }

@@ -51,7 +51,6 @@ namespace qASIC.Console.Commands
             gameArgs.CheckArgumentCount(minArgLimit, maxArgLimit);
 
             CommandArgument[] cmdArgs = gameArgs.args
-                .Skip(1)
                 .ToArray();
 
             var targets = Targets
@@ -269,7 +268,6 @@ namespace qASIC.Console.Commands
 
                 if (commandArgsType != null)
                     parameters = parameters
-                        .Skip(1)
                         .ToArray();
 
                 minArgsCount = parameters

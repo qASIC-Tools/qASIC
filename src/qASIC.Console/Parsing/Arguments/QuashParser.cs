@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace qASIC.Console.Parsing.Arguments
 {
@@ -8,47 +9,84 @@ namespace qASIC.Console.Parsing.Arguments
         public string[] textForTrue = new string[] { "true", "on", "yes" };
         public string[] textForFalse = new string[] { "false", "off", "no" };
 
-        public override CommandArgument[] ParseString(string cmd)
+        public override string ParseCommandName(string cmd)
         {
-            List<string> args = new List<string>();
+            cmd = cmd.Trim();
 
-            bool isAdvanced = false;
-            string currentString = "";
+            var commandName = new StringBuilder();
+            foreach (var c in cmd)
+            {
+                if (char.IsWhiteSpace(c)) break;
+                commandName.Append(c);
+            }
+
+            return commandName.ToString();
+        }
+
+        public override CommandArgument[] ParseArguments(string cmd)
+        {
+            var args = new List<CommandArgument>();
+
+            var readCommand = false;
+            var complex = false;
+            var currentString = new StringBuilder();
 
             cmd = cmd.Trim();
 
             for (int i = 0; i < cmd.Length; i++)
             {
-                if (isAdvanced)
+                //CASE: reading command name
+                //Ignore rest until done
+                if (!readCommand)
                 {
-                    if (cmd[i] == '"' && (cmd.Length <= i + 1 || cmd[i + 1] == ' '))
+                    if (char.IsWhiteSpace(cmd[i]))
+                        readCommand = true;
+                    
+                    continue;
+                }
+
+                //CASE: surrounded by quotation marks
+                if (complex)
+                {
+                    if (cmd[i] == '"' && 
+                        (cmd.Length <= i + 1 ||char.IsWhiteSpace(cmd[i + 1])))
                     {
-                        isAdvanced = false;
+                        complex = false;
                         continue;
                     }
 
-                    currentString += cmd[i];
+                    currentString.Append(cmd[i]);
                     continue;
                 }
 
-                if (cmd[i] == ' ')
+                //CASE: not that
+
+
+                //CASE: whitespace
+                //finish creating argument
+                if (char.IsWhiteSpace(cmd[i]))
                 {
-                    args.Add(currentString);
-                    currentString = "";
+                    args.Add(CreateCommandArgument(currentString.ToString()));
+                    currentString.Clear();
                     continue;
                 }
 
-                if (cmd[i] == '"' && (i != 0 && cmd[i - 1] == ' ' || i == 0) && currentString == "")
+                //CASE: quotation mark after white space
+                if (cmd[i] == '"' && 
+                    (i != 0 && char.IsWhiteSpace(cmd[i - 1]) || i == 0) && 
+                    currentString.Length == 0)
                 {
-                    isAdvanced = true;
+                    complex = true;
                     continue;
                 }
 
-                currentString += cmd[i];
+                currentString.Append(cmd[i]);
             }
 
-            args.Add(currentString);
-            return args.Select(x => new CommandArgument(x, ParseArgument(x))).ToArray();
+            if (currentString.Length > 0)
+                args.Add(CreateCommandArgument(currentString.ToString()));
+            
+            return args.ToArray();
         }
     }
 }

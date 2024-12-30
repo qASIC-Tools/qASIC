@@ -289,13 +289,11 @@ namespace qASIC.Console
 
         public virtual GameCommandArgs CreateCommandArgs(string cmd)
         {
-            var args = CreateConsoleArguments(cmd);
-
             var commandArgs = new GameCommandArgs()
             {
                 inputString = cmd,
-                commandName = CurrentCommand?.CommandName ?? (args.Length == 0 ? null : args[0].arg),
-                args = args,
+                commandName = GetCommandName(cmd),
+                args = CreateConsoleArguments(cmd),
                 console = this,
             };
 
@@ -311,10 +309,21 @@ namespace qASIC.Console
                 if (CommandParser == null)
                     throw new Exception("Cannot parse commands with no parser!");
 
-                args = CommandParser.ParseString(cmd);
+                args = CommandParser.ParseArguments(cmd);
             }
 
             return args;
+        }
+
+        protected string GetCommandName(string cmd)
+        {
+            if (CurrentCommand?.CommandName != null)
+                return CurrentCommand.CommandName;
+            
+            if (CommandParser == null)
+                throw new Exception("Cannot parse commands with no parser!");
+            
+            return CommandParser.ParseCommandName(cmd);
         }
         #endregion
 

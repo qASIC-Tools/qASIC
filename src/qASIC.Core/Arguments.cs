@@ -53,11 +53,10 @@ namespace qASIC
 
         public void CheckArgumentCount(int min, int max)
         {
-            var argsCount = Length - 1;
-            bool valid = min <= argsCount && argsCount <= max;
+            bool valid = min <= args.Length && args.Length <= max;
 
             if (!valid)
-                throw new CommandArgsCountException(argsCount, min, max);
+                throw new CommandArgsCountException(args.Length, min, max);
         }
 
         public IEnumerator<CommandArgument> GetEnumerator() =>

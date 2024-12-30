@@ -27,13 +27,13 @@ namespace qASIC.Console.Commands.BuiltIn
             //help <index>
             if (args.Length == 2)
             {
-                switch (args[1].CanGetValue<int>())
+                switch (args[0].CanGetValue<int>())
                 {
                     case true:
-                        index = args[1].GetValue<int>();
+                        index = args[0].GetValue<int>();
                         break;
                     case false:
-                        targetCommand = args[1].arg;
+                        targetCommand = args[0].arg;
                         break;
                 }
             }
