@@ -50,6 +50,7 @@ namespace qASICRemote
             GConsole.Targets.Register(this);
 
             Interface = new SystemConsoleUI(GConsole);
+
             Interface.CanExecute += Interface_CanExecute;
             Interface.ProcessCommandString += Interface_ProcessCommandString;
 

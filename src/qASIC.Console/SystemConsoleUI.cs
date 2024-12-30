@@ -46,18 +46,6 @@ namespace qASIC.Console
             }
         }
 
-
-        private bool _rememberLogPosition = true;
-        public bool RememberLogPosition
-        {
-            get
-            {
-                return _rememberLogPosition && 
-                    !Environment.GetCommandLineArgs().Contains("--qsyscon-forget-log-pos");
-            }
-            set => _rememberLogPosition = value;
-        }
-
         /// <summary>Format of a log, where:
         /// <list type="bullet">
         /// <item>{0} - <see cref="qLog.message"/></item>
@@ -72,6 +60,9 @@ namespace qASIC.Console
 
         /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
         public bool CanRead { get; set; }
+
+        /// <summary>Is the console currently reading input from the command line.</summary>
+        public bool IsReading { get; set; }
 
         private Dictionary<qLog, LogData> VisibleLogs { get; set; } = new Dictionary<qLog, LogData>();
 
@@ -91,11 +82,18 @@ namespace qASIC.Console
             }
 
             var txt = CreateLogText(log);
-            VisibleLogs.Add(log, new LogData()
+
+            //Do not add log to visible logs if reading
+            //if we don't do this, we might freeze until
+            //reading is done
+            if (!IsReading)
             {
-                consoleTop = RememberLogPosition ? SysConsole.CursorTop : 0,
-                emptyString = CreateEmptyStringForLog(log),
-            });
+                VisibleLogs.Add(log, new LogData()
+                {
+                    consoleTop = SysConsole.CursorTop,
+                    emptyString = CreateEmptyStringForLog(log),
+                });
+            }
 
             SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
         }
@@ -106,17 +104,16 @@ namespace qASIC.Console
             if (log.logType == LogType.Clear)
                 return;
 
-            //Ignore if it's not displayed
-            if (!VisibleLogs.ContainsKey(log))
-                return;
-
-            var txt = CreateLogText(log);
-
-            if (!RememberLogPosition)
+            //Print if console is reading (prevent
+            //from freezing until done) or if log
+            //isn't remembered
+            if (IsReading || !VisibleLogs.ContainsKey(log))
             {
-                SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
+                WriteLog(log);
                 return;
             }
+
+            var txt = CreateLogText(log);
 
             var top = SysConsole.CursorTop;
             var left = SysConsole.CursorLeft;
@@ -188,6 +185,7 @@ namespace qASIC.Console
         string ConstructCmdString()
         {
             string cmd = string.Empty;
+            IsReading = true;
             switch (Console.ReturnedValue)
             {
                 case KeyPrompt keyPrompt:
@@ -222,6 +220,8 @@ namespace qASIC.Console
                     cmd = SysConsole.ReadLine();
                     break;
             }
+
+            IsReading = false;
 
             return cmd;
         }
