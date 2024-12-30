@@ -188,7 +188,7 @@ namespace qASIC.Console
             IsReading = true;
             switch (Console.ReturnedValue)
             {
-                case KeyPrompt keyPrompt:
+                case KeyPrompt:
                     var key = SysConsole.ReadKey();
 
                     var promptKey = key.Key switch

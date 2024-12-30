@@ -4,7 +4,6 @@ using qASIC.Console;
 using qASIC.Communication.Discovery;
 using System.Text;
 using System.Net;
-using qASIC.Console.Commands.Attributes;
 using qASIC.Console.Commands;
 using qASIC.CommandPrompts;
 
@@ -44,15 +43,13 @@ namespace qASICRemote
             var commands = new GameCommandList()
                 .AddBuiltInCommands()
                 .AddCommand(new ConnectionsListCommand(this))
+                .AddCommand(new SendCmdCommand(this))
                 .FindAttributeCommands<InspectorCommand>();
 
             GConsole = new GameConsole(QasicInstance, "MAIN", commands);
             GConsole.Targets.Register(this);
 
             Interface = new SystemConsoleUI(GConsole);
-
-            Interface.CanExecute += Interface_CanExecute;
-            Interface.ProcessCommandString += Interface_ProcessCommandString;
 
             AppDomain.CurrentDomain.ProcessExit += OnApplicationClose;
 
@@ -115,46 +112,9 @@ namespace qASICRemote
             GConsole.Log($"Created update loop, update frequency: {UPDATE_FREQUENCY}ms");
 
             GConsole.Log("-----------------------------------------------------");
-            GConsole.Log("Type '.help' to list all commands");
+            GConsole.Log("Type 'help' to list all commands");
 
             Interface.StartReading();
-        }
-
-        private bool Interface_CanExecute(string cmd)
-        {
-            var forceUseGConsole = GConsole.ReturnedValue is CommandPrompt;
-
-            if (forceUseGConsole)
-                return true;
-
-            if (cmd.StartsWith(".") && !cmd.StartsWith(".."))
-            {
-                GConsole.Execute(cmd.Substring(1, cmd.Length - 1));
-                return false;
-            }
-
-            if (client.CurrentState != qClient.State.Connected)
-            {
-                GConsole.LogError("Currently not connected to any application. Use '.' prefix to run commands for this application!");
-                return false;
-            }
-
-            if (SelectedConsole == null)
-            {
-                GConsole.LogError("No console selected!");
-                return false;
-            }
-
-            consoleManager.Get(SelectedConsole.Name).SendCommand(cmd);
-            return false;
-        }
-
-        private string Interface_ProcessCommandString(string arg)
-        {
-            if (arg.StartsWith(".."))
-                return arg.Substring(1, arg.Length - 1);
-
-            return arg;
         }
 
         private void ConsoleManager_OnConsoleRegister(GameConsole console)
@@ -310,7 +270,7 @@ namespace qASICRemote
         {
             public ConnectionsListCommand(Inspector inspector)
             {
-                Inspector = inspector;
+                this.inspector = inspector;
             }
 
             public override string CommandName => "connectionslist";
@@ -318,7 +278,7 @@ namespace qASICRemote
 
             public override string Description => "Shows a list of discovered connections and allows to connect to them.";
 
-            Inspector Inspector { get; set; }
+            Inspector inspector;
 
             qLog log;
             int index;
@@ -345,26 +305,26 @@ namespace qASICRemote
                             final = true;
                             break;
                         case KeyPrompt.NavigationKey.Up:
-                            index = Math.Clamp(index - 1, 0, Inspector.DiscoveryClient.Discovered.Count - 1);
+                            index = Math.Clamp(index - 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
                             break;
                         case KeyPrompt.NavigationKey.Down:
-                            index = Math.Clamp(index + 1, 0, Inspector.DiscoveryClient.Discovered.Count - 1);
+                            index = Math.Clamp(index + 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
                             break;
                         case KeyPrompt.NavigationKey.Right:
                         case KeyPrompt.NavigationKey.Confirm:
-                            var targetConn = Inspector.DiscoveryClient.Discovered[index];
-                            Inspector.client.Connect(targetConn.Address, targetConn.Port);
+                            var targetConn = inspector.DiscoveryClient.Discovered[index];
+                            inspector.client.Connect(targetConn.Address, targetConn.Port);
                             final = true;
                             break;
                     }
                 }
 
-                for (int i = 0; i < Inspector.DiscoveryClient.Discovered.Count; i++)
+                for (int i = 0; i < inspector.DiscoveryClient.Discovered.Count; i++)
                 {
                     logTxt.Append("\n");
                     logTxt.Append(index == i ? (final ? "]" : ">") : " ");
                     logTxt.Append(" ");
-                    var conn = Inspector.DiscoveryClient.Discovered[i];
+                    var conn = inspector.DiscoveryClient.Discovered[i];
                     var info = conn.Identity.ReadNetworkSerializable<RemoteAppInfo>();
                     conn.Identity.ResetPosition();
 
@@ -380,6 +340,56 @@ namespace qASICRemote
                 return final ? 
                     null : 
                     navigationPrompt;
+            }
+        }
+
+        class SendCmdCommand : GameCommand
+        {
+            public SendCmdCommand(Inspector inspector)
+            {
+                this.inspector = inspector;
+            }
+
+            Inspector inspector;
+
+            public override string CommandName => "sendcmd";
+            public override string[] Aliases => new string[]
+            {
+                "snc",
+                "sudo",
+            };
+
+            public override string Description => "Sends a command to the selected console";
+
+            public override object Run(GameCommandArgs args)
+            {
+                if (inspector.client.CurrentState != qClient.State.Connected)
+                {
+                    args.Logs.LogError("Cannot send cmd, client not connected. Make sure to connect to an application first before running this command.");
+                    return null;
+                }
+
+                if (inspector.consoleManager.Count() == 0)
+                {
+                    args.Logs.LogError("Cannot send cmd, no consoles registered. It seems like the connected application has no active consoles or it hasn't registered them to be used remotely.");
+                    return null;
+                }
+
+                if (inspector.SelectedConsole == null)
+                {
+                    args.Logs.LogError("Cannot send cmd, no console selected. Make sure to run selectedconsole to select a console");
+                    return null;
+                }
+
+                var cmd = args.inputString.TrimStart();
+                cmd = cmd.Substring(args.commandName.Length, cmd.Length - args.commandName.Length)
+                    .TrimStart();
+                
+                inspector.consoleManager
+                    .Get(inspector.SelectedConsole.Name)
+                    .SendCommand(cmd);
+
+                return null;
             }
         }
     }

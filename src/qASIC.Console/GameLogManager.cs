@@ -9,7 +9,7 @@ namespace qASIC.Console
     public class GameLogManager : LogManager, IEnumerable<qLog>
     {
         public GameLogManager() : this(new List<qLog>()) { }
-        public GameLogManager(IEnumerable<qLog> logs)
+        public GameLogManager(IEnumerable<qLog> logs) : base()
         {
             Logs = new List<qLog>(logs);
         }

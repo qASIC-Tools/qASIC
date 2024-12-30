@@ -10,6 +10,8 @@ namespace qASIC
         public LogManager(string defaultColorTag, string warningColor, string errorColor)
         {
             DefaultColorTag = defaultColorTag;
+            WarningColorTag = warningColor;
+            ErrorColorTag = errorColor;
         }
 
         public string DefaultColorTag { get; set; }
