@@ -1,4 +1,5 @@
-﻿using qASIC.qARK;
+﻿using qASIC.Parsing;
+using qASIC.qARK;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,9 +9,19 @@ namespace qASIC.Core.qARK
 {
     public abstract class qARKHolder : IEnumerable<qARKElement>
     {
-        public qARKHolder() { }
-        public qARKHolder(IEnumerable<qARKElement> elements)
+        public qARKHolder() : this (new ModularParser()) { }
+        public qARKHolder(IEnumerable<qARKElement> elements) : this(new ModularParser(), elements) { }
+
+        public qARKHolder(ModularParser parser)
         {
+            Parser = parser;
+            Elements = new List<qARKElement>();
+            Entries = new Dictionary<string, List<qARKEntry>>();
+        }
+
+        public qARKHolder(ModularParser parser, IEnumerable<qARKElement> elements)
+        {
+            Parser = parser;
             Elements = elements.ToList();
             Entries = elements
                 .Where(x => x is qARKEntry)
@@ -20,8 +31,10 @@ namespace qASIC.Core.qARK
         }
 
         protected virtual string PathPrefix => string.Empty;
-        protected List<qARKElement> Elements { get; set; } = new List<qARKElement>();
-        protected Dictionary<string, List<qARKEntry>> Entries { get; set; } = new Dictionary<string, List<qARKEntry>>();
+        protected List<qARKElement> Elements { get; set; }
+        protected Dictionary<string, List<qARKEntry>> Entries { get; set; }
+
+        public ModularParser Parser { get; private set; }
 
         #region Entries
         public qARKEntry GetEntry(string path) =>
@@ -75,22 +88,54 @@ namespace qASIC.Core.qARK
 
         #region Values
         public T GetValue<T>(string path, T defaultValue = default) =>
-            qARKUtility.ParseValue<T>(GetEntry(path)?.Value, defaultValue);
+            Parser?.TryParse(GetEntry(path)?.Value, out T result) == true ?
+                result :
+                defaultValue;
 
         public object GetValue(string path, Type type, object defaultValue = null) =>
-            qARKUtility.ParseValue(type, GetEntry(path)?.Value, defaultValue);
+            Parser?.TryParse(type, GetEntry(path)?.Value, out object result) == true ?
+                result :
+                defaultValue;
 
         public bool TryGetValue<T>(string path, out T result) =>
             TryGetValue(path, default, out result);
 
-        public bool TryGetValue<T>(string path, T defaultValue, out T result) =>
-            qARKUtility.TryParseValue(GetEntry(path)?.Value, defaultValue, out result);
+        public bool TryGetValue<T>(string path, T defaultValue, out T result)
+        {
+            if (Parser == null)
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            var val = GetEntry(path)?.Value;
+
+            if (Parser.TryParse(val, out result))
+                return true;
+
+            result = defaultValue;
+            return false;
+        }
 
         public bool TryGetValue(string path, Type type, out object result) =>
             TryGetValue(path, type, default, out result);
 
-        public bool TryGetValue(string path, Type type, object defaultValue, out object result) =>
-            qARKUtility.TryParseValue(type, GetEntry(path)?.Value, defaultValue, out result);
+        public bool TryGetValue(string path, Type type, object defaultValue, out object result)
+        {
+            if (Parser == null)
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            var val = GetEntry(path)?.Value;
+
+            if (Parser.TryParse(val, out result))
+                return true;
+
+            result = defaultValue;
+            return false;
+        }
 
         public qARKObject GetObject(string path)
         {

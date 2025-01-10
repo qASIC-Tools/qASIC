@@ -1,19 +1,19 @@
-﻿using System;
+﻿using qASIC.Parsing;
+using System;
 using System.Linq;
-using System.Text;
 
 namespace qASIC.qARK
 {
     public class qARKEntry : qARKElement
     {
         public qARKEntry() : base() { }
-        public qARKEntry(string relativePath, object value) : this(relativePath, relativePath, value) { }
+        public qARKEntry(string relativePath, string value) : this(relativePath, relativePath, value) { }
 
-        public qARKEntry(string path, string relativePath, object value)
+        public qARKEntry(string path, string relativePath, string value)
         {
             Path = path;
             RelativePath = relativePath;
-            Value = value?.ToString() ?? string.Empty;
+            Value = value;
         }
 
         public string Path { get; set; }
@@ -29,24 +29,54 @@ namespace qASIC.qARK
         public bool IsArrayItem { get; set; }
         public bool IsArrayStart { get; set; }
 
+        public ModularParser Parser { get; set; }
+
         #region Getting Value
         public T GetValue<T>(T defaultValue = default) =>
-            qARKUtility.ParseValue<T>(Value, defaultValue);
+            Parser?.TryParse<T>(Value, out var result) == true ?
+                result :
+                defaultValue;
 
         public object GetValue(Type type, object defaultValue = null) =>
-            qARKUtility.ParseValue(type, Value, defaultValue);
+            Parser?.TryParse(type, Value, out var result) == true ?
+                result :
+                defaultValue;
 
         public bool TryGetValue<T>(out T result) =>
             TryGetValue(default, out result);
 
-        public bool TryGetValue<T>(T defaultValue, out T result) =>
-            qARKUtility.TryParseValue(Value, defaultValue, out result);
+        public bool TryGetValue<T>(T defaultValue, out T result)
+        {
+            if (Parser == null)
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            if (Parser.TryParse(Value, out result))
+                return true;
+
+            result = defaultValue;
+            return false;
+        }
 
         public bool TryGetValue(Type type, out object result) =>
             TryGetValue(type, default, out result);
 
-        public bool TryGetValue(Type type, object defaultValue, out object result) =>
-            qARKUtility.TryParseValue(type, Value, defaultValue, out result);
+        public bool TryGetValue(Type type, object defaultValue, out object result)
+        {
+            if (Parser == null)
+            {
+                result = defaultValue;
+                return false;
+            }
+
+            if (Parser.TryParse(Value, out result))
+                return true;
+
+            result = defaultValue;
+            return false;
+        }
         #endregion
 
         public override string CreateContent()

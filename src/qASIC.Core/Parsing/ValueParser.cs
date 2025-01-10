@@ -9,6 +9,9 @@ namespace qASIC.Parsing
         public static ValueParser[] CreateStandardParserArray() =>
             new ValueParser[]
             {
+                new qColorParser(),
+                new DateTimeParser(),
+                new TimeSpanParser(),
                 new IntParser(),
                 new UIntParser(),
                 new FloatParser(),
@@ -21,12 +24,15 @@ namespace qASIC.Parsing
                 new ShortParser(),
                 new UShortParser(),
                 new BoolParser(),
+                new CharParser(),
                 new StringParser(),
             };
 
         public abstract Type ValueType { get; }
 
         public abstract bool TryParse(string s, out object result);
+        public virtual string ConvertToString(object obj) =>
+            obj?.ToString() ?? string.Empty;
     }
 
     public abstract class ValueParser<T> : ValueParser
@@ -41,5 +47,11 @@ namespace qASIC.Parsing
         }
 
         public abstract bool TryParse(string s, out T result);
+
+        public override string ConvertToString(object obj) =>
+            ConvertToString((T)obj);
+
+        public virtual string ConvertToString(T obj) =>
+            obj?.ToString() ?? string.Empty;
     }
 }

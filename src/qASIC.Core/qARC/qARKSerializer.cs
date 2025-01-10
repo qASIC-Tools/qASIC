@@ -1,9 +1,16 @@
-﻿using System.Text;
+﻿using qASIC.Parsing;
+using System.Text;
 
 namespace qASIC.qARK
 {
     public class qARKSerializer
     {
+        public qARKSerializer() : this(new ModularParser()) { }
+        public qARKSerializer(ModularParser parser)
+        {
+            Parser = parser;
+        }
+
         public qARKElement[] DeserializeElements { get; set; } = new qARKElement[]
         {
             new qARKSpace(),
@@ -11,6 +18,8 @@ namespace qASIC.qARK
             new qARKGroupBorder(),
             new qARKEntry(),
         };
+
+        public ModularParser Parser { get; set; }
 
         public string Serialize(qARKDocument document)
         {
@@ -30,7 +39,7 @@ namespace qASIC.qARK
         public qARKDocument Deserialize(string txt)
         {
             var processed = new qARKProcessedDocument(txt);
-            var doc = new qARKDocument();
+            var doc = new qARKDocument(Parser);
 
             while (!processed.FinishedReading)
             {

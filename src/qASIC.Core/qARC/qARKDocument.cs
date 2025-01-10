@@ -1,4 +1,5 @@
 ﻿using qASIC.Core.qARK;
+using qASIC.Parsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,9 @@ namespace qASIC.qARK
         public const string FILE_EXTENSION = "qark";
 
         public qARKDocument() : base() { }
+        public qARKDocument(ModularParser parser) : base(parser) { }
         public qARKDocument(IEnumerable<qARKElement> elements) : base(elements) { }
+        public qARKDocument(ModularParser parser, IEnumerable<qARKElement> elements) : base(parser, elements) { }
 
         public string NewElementPrefix { get; private set; }
 
@@ -22,19 +25,24 @@ namespace qASIC.qARK
         }
 
         public qARKDocument AddEntry(string path, object value) =>
-            AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, value));
+            AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, Parser?.ConvertToString(value) ?? string.Empty)
+            {
+                Parser = Parser,
+            });
 
         public qARKDocument StartArrayEntry(string path) =>
             AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, string.Empty)
             {
+                Parser = Parser,
                 IsArrayStart = true
             });
 
         public qARKDocument AddArrayItem(object value)
         {
             var prevEntry = GetLastElementOfType<qARKEntry>();
-            return AddElement(new qARKEntry(prevEntry?.Path ?? string.Empty, prevEntry?.RelativePath ?? string.Empty, value)
+            return AddElement(new qARKEntry(prevEntry?.Path ?? string.Empty, prevEntry?.RelativePath ?? string.Empty, Parser?.ConvertToString(value) ?? string.Empty)
             {
+                Parser = Parser,
                 IsArrayItem = true,
             });
         }
@@ -108,8 +116,9 @@ namespace qASIC.qARK
 
                 for (int i = min; i < max; i++)
                 {
-                    Elements.Insert(insertAtIndex, new qARKEntry(path, relativePath, values[i])
+                    Elements.Insert(insertAtIndex, new qARKEntry(path, relativePath, Parser.ConvertToString(values[i]) ?? string.Empty)
                     {
+                        Parser = Parser,
                         IsArrayItem = true,
                     });
                     insertAtIndex++;

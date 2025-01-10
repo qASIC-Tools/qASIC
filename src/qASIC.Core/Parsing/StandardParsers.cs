@@ -4,7 +4,7 @@
     {
         public override bool TryParse(string s, out bool result)
         {
-            switch (s)
+            switch (s?.ToLower() ?? string.Empty)
             {
                 case "true":
                 case "1":
@@ -65,7 +65,7 @@
     {
         public override bool TryParse(string s, out float result)
         {
-            s = s.ToLower();
+            s = s?.ToLower() ?? string.Empty;
 
             if (s.EndsWith("f"))
                 s = s.Substring(0, s.Length - 1);
@@ -96,6 +96,12 @@
     {
         public override bool TryParse(string s, out ulong result) =>
             ulong.TryParse(s, out result);
+    }
+
+    public class CharParser : ValueParser<char>
+    {
+        public override bool TryParse(string s, out char result) =>
+            char.TryParse(s, out result);
     }
 
     public class StringParser : ValueParser<string>
