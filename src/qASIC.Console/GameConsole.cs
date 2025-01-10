@@ -4,12 +4,8 @@ using qASIC.Console.Commands;
 using System.Reflection;
 using qASIC.Console.Parsing.Arguments;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using qASIC.Core;
 using qASIC.CommandPrompts;
 using System.Threading.Tasks;
-using System.Security.Cryptography;
 
 namespace qASIC.Console
 {

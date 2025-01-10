@@ -1,6 +1,4 @@
-﻿using qASIC.Core;
-
-namespace qASIC.Console.Commands
+﻿namespace qASIC.Console.Commands
 {
     public abstract class GameCommand : ICommand
     {

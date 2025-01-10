@@ -102,6 +102,12 @@ namespace qASIC.Console
 
         private async Task FileWriteTask()
         {
+            if (FilePath == null)
+            {
+                _fileWriteQueue.Clear();
+                return;
+            }    
+
             using (var writer = new StreamWriter(FilePath, true))
             {
                 while (_fileWriteQueue.Count > 0)
