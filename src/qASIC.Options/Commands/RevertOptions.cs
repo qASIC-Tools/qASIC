@@ -8,9 +8,9 @@
         public override string[] Aliases => new string[] { "revertsettings", "optionsrevert", "settingsrevert" };
         public override string Description => "Loads options from disk while discarding any unsaved changes.";
 
-        public override object Run(CommandArgs args)
+        public override object Run(CommandContext context)
         {
-            args.CheckArgumentCount(0);
+            context.CheckArgumentCount(0);
             Manager.Revert();
             return null;
         }

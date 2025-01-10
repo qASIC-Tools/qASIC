@@ -8,9 +8,9 @@
         public override string[] Aliases => new string[] { "applysettings", "optionsapply", "settingsapply" };
         public override string Description => "Saves options to disk.";
 
-        public override object Run(CommandArgs args)
+        public override object Run(CommandContext context)
         {
-            args.CheckArgumentCount(0);
+            context.CheckArgumentCount(0);
             Manager.Apply();
             return null;
         }

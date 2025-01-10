@@ -198,7 +198,7 @@ namespace qASICRemote
         }
 
         [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(GameCommandArgs args, string val)
+        private void Cmd_SelectedConsoleIndex(GameCommandContext context, string val)
         {
             var console = consoleManager.Where(x => x.Console.Name == val)
                 .FirstOrDefault()?.Console;
@@ -207,18 +207,18 @@ namespace qASICRemote
                 throw new CommandException("Console does not exist!");
 
             SelectedConsole = console;
-            args.console.Log($"Selected console '{SelectedConsole.Name}'.");
+            context.console.Log($"Selected console '{SelectedConsole.Name}'.");
         }
 
         [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(GameCommandArgs args, int index)
+        private void Cmd_SelectedConsoleIndex(GameCommandContext context, int index)
         {
             var consoles = consoleManager.ToArray();
 
             if (!consoles.IndexInRange(index))
                 throw new CommandException("Console index is out of range!");
 
-            Cmd_SelectedConsoleIndex(args, consoles[index].Console.Name);
+            Cmd_SelectedConsoleIndex(context, consoles[index].Console.Name);
         }
 
         private void Cc_log_OnReceiveLog(qLog log, PacketType packetType)
@@ -285,9 +285,9 @@ namespace qASICRemote
 
             KeyPrompt navigationPrompt = new KeyPrompt();
 
-            public override object Run(GameCommandArgs args)
+            public override object Run(GameCommandContext context)
             {
-                if (log == null || args.console.ReturnedValue == null)
+                if (log == null || context.console.ReturnedValue == null)
                 {
                     log = qLog.CreateNow("");
                     index = 0;
@@ -296,7 +296,7 @@ namespace qASICRemote
                 StringBuilder logTxt = new StringBuilder("Navigate with arrows, left arrow to exit");
                 bool final = false;
 
-                if (args.console.ReturnedValue == navigationPrompt)
+                if (context.console.ReturnedValue == navigationPrompt)
                 {
                     switch (navigationPrompt.Key)
                     {
@@ -336,7 +336,7 @@ namespace qASICRemote
 
                 log.message = logTxt.ToString();
 
-                args.console.Log(log);
+                context.console.Log(log);
                 return final ? 
                     null : 
                     navigationPrompt;
@@ -361,28 +361,28 @@ namespace qASICRemote
 
             public override string Description => "Sends a command to the selected console";
 
-            public override object Run(GameCommandArgs args)
+            public override object Run(GameCommandContext context)
             {
                 if (inspector.client.CurrentState != qClient.State.Connected)
                 {
-                    args.Logs.LogError("Cannot send cmd, client not connected. Make sure to connect to an application first before running this command.");
+                    context.Logs.LogError("Cannot send cmd, client not connected. Make sure to connect to an application first before running this command.");
                     return null;
                 }
 
                 if (inspector.consoleManager.Count() == 0)
                 {
-                    args.Logs.LogError("Cannot send cmd, no consoles registered. It seems like the connected application has no active consoles or it hasn't registered them to be used remotely.");
+                    context.Logs.LogError("Cannot send cmd, no consoles registered. It seems like the connected application has no active consoles or it hasn't registered them to be used remotely.");
                     return null;
                 }
 
                 if (inspector.SelectedConsole == null)
                 {
-                    args.Logs.LogError("Cannot send cmd, no console selected. Make sure to run selectedconsole to select a console");
+                    context.Logs.LogError("Cannot send cmd, no console selected. Make sure to run selectedconsole to select a console");
                     return null;
                 }
 
-                var cmd = args.inputString.TrimStart();
-                cmd = cmd.Substring(args.commandName.Length, cmd.Length - args.commandName.Length)
+                var cmd = context.inputString.TrimStart();
+                cmd = cmd.Substring(context.commandName.Length, cmd.Length - context.commandName.Length)
                     .TrimStart();
                 
                 inspector.consoleManager

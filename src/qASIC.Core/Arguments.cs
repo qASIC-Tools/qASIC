@@ -6,10 +6,10 @@ using qASIC.CommandPrompts;
 
 namespace qASIC
 {
-    public class CommandArgs : IEnumerable<CommandArgument>
+    public class CommandContext : IEnumerable<CommandArgument>
     {
-        public CommandArgs() { }
-        public CommandArgs(CommandArgs other) : this()
+        public CommandContext() { }
+        public CommandContext(CommandContext other) : this()
         {
             inputString = other.inputString;
             commandName = other.commandName;
@@ -57,6 +57,18 @@ namespace qASIC
 
             if (!valid)
                 throw new CommandArgsCountException(args.Length, min, max);
+        }
+
+        public void CheckArgumentCountMin(int min)
+        {
+            if (args.Length < min)
+                throw new CommandArgsCountException(args.Length, min, int.MaxValue);
+        }
+
+        public void CheckArgumentCountMax(int max)
+        {
+            if (args.Length > max)
+                throw new CommandArgsCountException(args.Length, 0, max);
         }
 
         public IEnumerator<CommandArgument> GetEnumerator() =>

@@ -23,14 +23,14 @@ namespace qASIC.Options.Commands
 
         List<Options.OptionsList.ListItem> items;
 
-        public override object Run(CommandArgs args)
+        public override object Run(CommandContext context)
         {
-            if (args.prompt == navigationPrompt)
+            if (context.prompt == navigationPrompt)
             {
                 switch (navigationPrompt.Key)
                 {
                     case KeyPrompt.NavigationKey.Cancel:
-                        UpdateLog(args, true, true);
+                        UpdateLog(context, true, true);
                         return null;
                     case KeyPrompt.NavigationKey.Up:
                         index = Math.Max(index - 1, 0);
@@ -39,16 +39,16 @@ namespace qASIC.Options.Commands
                         index = Math.Min(index + 1, items.Count - 1);
                         break;
                     case KeyPrompt.NavigationKey.Confirm:
-                        UpdateLog(args, true);
+                        UpdateLog(context, true);
                         targetOption = items[index];
-                        return AskForValue(args);
+                        return AskForValue(context);
                 }
 
-                UpdateLog(args);
+                UpdateLog(context);
                 return navigationPrompt;
             }
 
-            if (args.prompt == valuePrompt)
+            if (context.prompt == valuePrompt)
             {
                 //Set
 
@@ -70,43 +70,43 @@ namespace qASIC.Options.Commands
                 return null;
             }
 
-            args.CheckArgumentCount(0, 2);
+            context.CheckArgumentCount(0, 2);
 
             //No args
-            if (args.Length == 1)
+            if (context.Length == 1)
             {
                 listLog = null;
                 items = Manager.OptionsList.Select(x => x.Value)
                     .ToList();
-                UpdateLog(args);
+                UpdateLog(context);
                 return navigationPrompt;
             }
 
             //Option name
-            if (args.Length == 2)
+            if (context.Length == 2)
             {
-                targetOption = GetOption(args[1].arg);
-                return AskForValue(args);
+                targetOption = GetOption(context[1].arg);
+                return AskForValue(context);
             }
 
             //All args
-            targetOption = GetOption(args[1].arg);
+            targetOption = GetOption(context[1].arg);
             var settType = targetOption.Value?.GetType();
             var val = settType == null ?
-                args[2].parsedValues.First() :
-                args[2].GetValue(settType);
+                context[2].parsedValues.First() :
+                context[2].GetValue(settType);
 
             Manager.SetOption(targetOption.Name, val);
             return null;
         }
 
-        object AskForValue(CommandArgs args)
+        object AskForValue(CommandContext context)
         {
-            args.Logs.Log("Enter value...");
+            context.Logs.Log("Enter value...");
             return valuePrompt;
         }
 
-        void UpdateLog(CommandArgs args, bool final = false, bool cancelled = false)
+        void UpdateLog(CommandContext context, bool final = false, bool cancelled = false)
         {
             if (listLog == null)
                 listLog = qLog.CreateNow("");
@@ -120,7 +120,7 @@ namespace qASIC.Options.Commands
             }
 
             listLog.message = txt.ToString();
-            args.Logs.Log(listLog);
+            context.Logs.Log(listLog);
         }
 
         Options.OptionsList.ListItem GetOption(string settingName)

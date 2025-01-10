@@ -4,12 +4,12 @@
     {
         public string Text { get; private set; }
 
-        public override CommandArgument[] Prepare(CommandArgs args)
+        public override CommandArgument[] Prepare(CommandContext context)
         {
-            Text = args.inputString;
+            Text = context.inputString;
             return new CommandArgument[]
             {
-                new CommandArgument(args.inputString, new object[] { args.inputString }),
+                new CommandArgument(context.inputString, new object[] { context.inputString }),
             };
         }
     }

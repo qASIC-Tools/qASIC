@@ -13,32 +13,32 @@ namespace qASIC.Console.Commands.BuiltIn
         public bool AllowDetailedDescription { get; set; } = true;
         public int PageCommandLimit { get; set; } = 16;
 
-        public override object Run(GameCommandArgs args)
+        public override object Run(GameCommandContext context)
         {
             //Ignore page argument if multipage and detailed description is off
             if (!MultiplePages)
-                args.CheckArgumentCount(0);
+                context.CheckArgumentCount(0);
 
-            args.CheckArgumentCount(0, 1);
+            context.CheckArgumentCount(0, 1);
 
             string targetCommand = null;
             int index = 0;
 
             //help <index>
-            if (args.Length == 2)
+            if (context.Length == 2)
             {
-                switch (args[0].CanGetValue<int>())
+                switch (context[0].CanGetValue<int>())
                 {
                     case true:
-                        index = args[0].GetValue<int>();
+                        index = context[0].GetValue<int>();
                         break;
                     case false:
-                        targetCommand = args[0].arg;
+                        targetCommand = context[0].arg;
                         break;
                 }
             }
 
-            var commandList = args.console.CommandList;
+            var commandList = context.console.CommandList;
             var commands = commandList.ToList();
             if (targetCommand != null)
             {
@@ -47,11 +47,11 @@ namespace qASIC.Console.Commands.BuiltIn
 
                 if (command.DetailedDescription == null && command.Description == null)
                 {
-                    args.Logs.Log($"No detailed help avaliable for command '{targetCommand}'");
+                    context.Logs.Log($"No detailed help avaliable for command '{targetCommand}'");
                     return null;
                 }
 
-                args.Logs.Log($"Help for command '{command.CommandName}': {command.DetailedDescription ?? command.Description}", "info");
+                context.Logs.Log($"Help for command '{command.CommandName}': {command.DetailedDescription ?? command.Description}", "info");
                 return null;
             }
 
@@ -67,7 +67,7 @@ namespace qASIC.Console.Commands.BuiltIn
             for (int i = index * PageCommandLimit; i < Math.Max(index * (PageCommandLimit + 1), commands.Count); i++)
                 stringBuilder.AppendLine($"{commands[i].CommandName} - {commands[i].Description ?? "No description"}");
 
-            args.Logs.Log(stringBuilder.ToString(), "info");
+            context.Logs.Log(stringBuilder.ToString(), "info");
 
             return null;
         }

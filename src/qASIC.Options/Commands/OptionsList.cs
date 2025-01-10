@@ -10,16 +10,16 @@ namespace qASIC.Options.Commands
         public override string[] Aliases => new string[] { "settingslist", "listoptions", "listsettings" };
         public override string Description => "Shows a list of options.";
 
-        public override object Run(CommandArgs args)
+        public override object Run(CommandContext context)
         {
-            args.CheckArgumentCount(0);
+            context.CheckArgumentCount(0);
 
             StringBuilder txt = new StringBuilder("List of options:");
 
             foreach (var item in Manager.OptionsList)
                 txt.Append($"\n- {item.Key}:{item.Value.Value} (default: {item.Value.DefaultValue})");
 
-            args.Logs.Log(txt.ToString());
+            context.Logs.Log(txt.ToString());
             return null;
         }
     }

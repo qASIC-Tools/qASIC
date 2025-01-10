@@ -12,9 +12,9 @@ namespace qASIC.Console.Commands
 
         public virtual string DetailedDescription => null;
 
-        public object Run(CommandArgs args) =>
-            Run(args as GameCommandArgs);
+        public object Run(CommandContext context) =>
+            Run(context as GameCommandContext);
 
-        public abstract object Run(GameCommandArgs args);
+        public abstract object Run(GameCommandContext context);
     }
 }

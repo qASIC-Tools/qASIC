@@ -12,7 +12,7 @@
         string DetailedDescription { get; }
 
         /// <summary>Method for executing command logic.</summary>
-        /// <param name="args">Arguments for the command.</param>
-        object Run(CommandArgs args);
+        /// <param name="context">Arguments for the command.</param>
+        object Run(CommandContext context);
     }
 }

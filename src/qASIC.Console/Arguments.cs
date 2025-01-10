@@ -1,9 +1,16 @@
 ﻿namespace qASIC.Console
 {
-    public class GameCommandArgs : CommandArgs
+    public class GameCommandContext : CommandContext
     {
-        public GameCommandArgs() { }
-        public GameCommandArgs(CommandArgs args) : base(args) { }
+        public GameCommandContext() { }
+        public GameCommandContext(CommandContext other) : base(other)
+        { 
+            if (other is GameCommandContext gameContext)
+            {
+                console = gameContext.console;
+                LogOutput = gameContext.LogOutput;
+            }
+        }
 
         public GameConsole console;
 

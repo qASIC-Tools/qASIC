@@ -17,6 +17,6 @@
 
         public virtual string DetailedDescription { get; }
 
-        public abstract object Run(CommandArgs args);
+        public abstract object Run(CommandContext context);
     }
 }

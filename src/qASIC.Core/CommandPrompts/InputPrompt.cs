@@ -4,7 +4,7 @@
     {
         public override bool ParseArguments => true;
 
-        public override CommandArgument[] Prepare(CommandArgs args) =>
-            args.args;
+        public override CommandArgument[] Prepare(CommandContext context) =>
+            context.args;
     }
 }

@@ -29,17 +29,17 @@ namespace qASIC.CommandPrompts
 
         public NavigationKey Key { get; private set; } = NavigationKey.None;
 
-        public override bool CanExecute(CommandArgs args) =>
-            args.inputString.Length > 0;
+        public override bool CanExecute(CommandContext context) =>
+            context.inputString.Length > 0;
 
-        public override CommandArgument[] Prepare(CommandArgs args)
+        public override CommandArgument[] Prepare(CommandContext context)
         {
-            string s = args.inputString.First().ToString();
+            string s = context.inputString.First().ToString();
 
-            if (keyNames.Forward.TryGetValue(args.inputString.ToLower(), out var key))
+            if (keyNames.Forward.TryGetValue(context.inputString.ToLower(), out var key))
             {
                 Key = key;
-                s = args.inputString.ToLower();
+                s = context.inputString.ToLower();
             }
 
             var values = s.Length == 1 ?

@@ -6,10 +6,10 @@
         public override string Description => "Clears the console.";
         public override string[] Aliases => new string[] { "cls", "clr" };
 
-        public override object Run(GameCommandArgs args)
+        public override object Run(GameCommandContext context)
         {
-            args.CheckArgumentCount(0);
-            args.Logs.Log(qLog.CreateNow(string.Empty, LogType.Clear, qColor.Clear));
+            context.CheckArgumentCount(0);
+            context.Logs.Log(qLog.CreateNow(string.Empty, LogType.Clear, qColor.Clear));
             return null;
         }
     }

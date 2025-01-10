@@ -28,19 +28,19 @@ namespace qASIC.Console.Commands.BuiltIn
             return txt.ToString().TrimStart(',').Trim();
         };
 
-        public override object Run(GameCommandArgs args)
+        public override object Run(GameCommandContext context)
         {
-            args.CheckArgumentCount(0);
+            context.CheckArgumentCount(0);
 
-            var appInfo = args.console.Instance?.AppInfo;
+            var appInfo = context.console.Instance?.AppInfo;
 
             if (appInfo == null)
             {
-                args.console.LogError("No version information is supplied.");
+                context.console.LogError("No version information is supplied.");
                 return null;
             }
 
-            args.console.Log(GetInfoString(appInfo));
+            context.console.Log(GetInfoString(appInfo));
             return null;
         }
     }

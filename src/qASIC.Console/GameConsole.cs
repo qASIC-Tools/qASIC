@@ -122,31 +122,31 @@ namespace qASIC.Console
         /// <summary>Executes a command.</summary>
         /// <param name="cmd">Command text that will be parsed and executed.</param>
         public object Execute(string cmd) =>
-            Execute(CreateCommandArgs(cmd));
+            Execute(CreateContext(cmd));
 
         /// <summary>Executes a command asynchronously.</summary>
         /// <param name="cmd">Command text that will be parsed and executed.</param>
         public async Task<object> ExecuteAsync(string cmd) =>
-            await ExecuteAsync(CreateCommandArgs(cmd));
+            await ExecuteAsync(CreateContext(cmd));
 
         /// <summary>Executes a command.</summary>
-        /// <param name="args">Command arguments.</param>
-        public object Execute(GameCommandArgs args)
+        /// <param name="context">Command arguments.</param>
+        public object Execute(GameCommandContext context)
         {
             //Before
-            if (!PrepareForExecute(args))
+            if (!PrepareForExecute(context))
                 return null;
 
-            if (args.LogOutput)
-                Logs.RegisterManager(args.Logs);
+            if (context.LogOutput)
+                Logs.RegisterManager(context.Logs);
 
             //Executing
             var commandName = CurrentCommand.CommandName;
 
-            ReturnedValue = Execute(commandName, () => CurrentCommand.Run(args), args.Logs);
+            ReturnedValue = Execute(commandName, () => CurrentCommand.Run(context), context.Logs);
             if (ReturnedValue is Task task)
             {
-                Task.Run(() => ExecuteAsync(commandName, task, args.Logs, false));
+                Task.Run(() => ExecuteAsync(commandName, task, context.Logs, false));
                 ReturnedValue = null;
             }
 
@@ -154,34 +154,34 @@ namespace qASIC.Console
             if (!(ReturnedValue is CommandPrompt))
                 CurrentCommand = null;
 
-            if (args.LogOutput)
-                Logs.UnregisterManager(args.Logs);
+            if (context.LogOutput)
+                Logs.UnregisterManager(context.Logs);
 
             return ReturnedValue;
         }
 
         /// <summary>Executes a command asynchronously.</summary>
-        /// <param name="args">Command arguments.</param>
-        public async Task<object> ExecuteAsync(GameCommandArgs args)
+        /// <param name="context">Command arguments.</param>
+        public async Task<object> ExecuteAsync(GameCommandContext context)
         {
             //Before
-            if (!PrepareForExecute(args))
+            if (!PrepareForExecute(context))
                 return null;
 
-            if (args.LogOutput)
-                Logs.RegisterManager(args.Logs);
+            if (context.LogOutput)
+                Logs.RegisterManager(context.Logs);
 
             //Executing
-            ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(args), args.Logs);
+            ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(context), context.Logs);
             if (ReturnedValue is Task task) 
-                ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task, args.Logs);
+                ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs);
 
             //After
             if (!(ReturnedValue is CommandPrompt))
                 CurrentCommand = null;
 
-            if (args.LogOutput)
-                Logs.UnregisterManager(args.Logs);
+            if (context.LogOutput)
+                Logs.UnregisterManager(context.Logs);
 
             return ReturnedValue;
         }
@@ -252,10 +252,10 @@ namespace qASIC.Console
             return null;
         }
 
-        private bool PrepareForExecute(GameCommandArgs args)
+        private bool PrepareForExecute(GameCommandContext context)
         {
-            if (args.Logs == null)
-                args.Logs = new GameLogManager();
+            if (context.Logs == null)
+                context.Logs = new GameLogManager();
 
             //Prompt
             if (CurrentCommand != null)
@@ -263,12 +263,12 @@ namespace qASIC.Console
                 if (!(ReturnedValue is CommandPrompt prompt))
                     throw new Exception("A command is already being executed!");
 
-                args.prompt = prompt;
+                context.prompt = prompt;
 
-                if (!prompt.CanExecute(args))
+                if (!prompt.CanExecute(context))
                     return false;
 
-                args.args = prompt.Prepare(args);
+                context.args = prompt.Prepare(context);
                 return true;
             }
 
@@ -276,9 +276,9 @@ namespace qASIC.Console
             if (CommandList == null)
                 throw new Exception("Cannot execute commands with no command list!");
 
-            if (!CommandList.TryGetCommand(args.commandName, out var command))
+            if (!CommandList.TryGetCommand(context.commandName, out var command))
             {
-                args.Logs.LogError($"Command {args.commandName} doesn't exist");
+                context.Logs.LogError($"Command {context.commandName} doesn't exist");
                 return false;
             }
 
@@ -287,9 +287,9 @@ namespace qASIC.Console
             return true;
         }
 
-        public virtual GameCommandArgs CreateCommandArgs(string cmd)
+        public virtual GameCommandContext CreateContext(string cmd)
         {
-            var commandArgs = new GameCommandArgs()
+            var context = new GameCommandContext()
             {
                 inputString = cmd,
                 commandName = GetCommandName(cmd),
@@ -297,7 +297,7 @@ namespace qASIC.Console
                 console = this,
             };
 
-            return commandArgs;
+            return context;
         }
 
         protected CommandArgument[] CreateConsoleArguments(string cmd)
