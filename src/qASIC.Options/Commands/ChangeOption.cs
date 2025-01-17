@@ -93,7 +93,7 @@ namespace qASIC.Options.Commands
             targetOption = GetOption(context[1].arg);
             var settType = targetOption.Value?.GetType();
             var val = settType == null ?
-                context[2].parsedValues.First() :
+                context[2].values.First() :
                 context[2].GetValue(settType);
 
             Manager.SetOption(targetOption.Name, val);

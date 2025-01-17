@@ -66,7 +66,7 @@ namespace qASIC.Console.Commands
                     supportedArgTypes[i].Add(target.argTypes[i]);
 
             for (int i = 0; i < cmdArgs.Length; i++)
-                cmdArgs[i].parsedValues = cmdArgs[i].parsedValues
+                cmdArgs[i].values = cmdArgs[i].values
                     .Where(x => supportedArgTypes[i].Contains(x.GetType()) || x is string)
                     .ToArray();
 
@@ -86,7 +86,7 @@ namespace qASIC.Console.Commands
                 {
                     var index = values.Count;
                     values.Add(new object());
-                    foreach (var value in cmdArgs[index].parsedValues)
+                    foreach (var value in cmdArgs[index].values)
                     {
                         values[index] = value;
                         if (FindCommandAndTryRun(values, false))

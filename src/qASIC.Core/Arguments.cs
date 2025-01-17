@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using qASIC.CommandPrompts;
+using qASIC.Parsing;
 
 namespace qASIC
 {
@@ -82,16 +83,17 @@ namespace qASIC
 
     public class CommandArgument
     {
-        public CommandArgument(string arg) : this(arg, new object[0]) { }
-
-        public CommandArgument(string arg, object[] parsedValues)
+        public CommandArgument(string arg, params object[] values) : this(null, arg, values) { }
+        public CommandArgument(ModularParser parser, string arg, params object[] values)
         {
+            Parser = parser;
             this.arg = arg;
-            this.parsedValues = parsedValues;
+            this.values = values;
         }
 
         public string arg;
-        public object[] parsedValues;
+        public object[] values;
+        public ModularParser Parser { get; set; }
 
         public static explicit operator string(CommandArgument arg) =>
             arg.arg.ToString();
@@ -103,7 +105,7 @@ namespace qASIC
         {
             var result = TryGetValue(type, out var obj);
             if (!result) throw new CommandParseException(type, arg);
-            return obj!;
+            return obj;
         }
 
         public bool TryGetValue<T>(out T value)
@@ -115,7 +117,7 @@ namespace qASIC
 
         public bool TryGetValue(Type type, out object value)
         {
-            foreach (var item in parsedValues)
+            foreach (var item in values)
             {
                 var itemType = item.GetType();
                 if (!type.IsAssignableFrom(itemType)) continue;
@@ -123,8 +125,7 @@ namespace qASIC
                 return true;
             }
 
-            value = null;
-            return false;
+            return Parser.TryParse(type, arg, out value);
         }
 
         public bool CanGetValue<T>() =>
