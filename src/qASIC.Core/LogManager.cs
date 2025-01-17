@@ -18,14 +18,30 @@ namespace qASIC
         public string WarningColorTag { get; set; }
         public string ErrorColorTag { get; set; }
 
+        #region Closing
+        public bool Closed { get; private set; } = false;
+        public Action<LogManager> OnClose;
+        
+        public virtual void Close()
+        {
+            Closed = true;
+            OnClose?.Invoke(this);
+        }
+        #endregion
+
         #region Logging
         public event Action<qLog> OnLog;
 
         protected void InvokeOnLog(qLog log) =>
             OnLog?.Invoke(log);
 
-        public virtual void Log(qLog log) =>
+        public virtual void Log(qLog log)
+        {
+            if (Closed)
+                throw new Exception("Can't log, log manager closed!");
+
             InvokeOnLog(log);
+        }
 
         public void Log(string message, string colorTag) =>
             Log(qLog.CreateNow(message, colorTag));

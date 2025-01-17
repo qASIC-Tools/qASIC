@@ -24,6 +24,9 @@ namespace qASIC.Console
 
         public override void Log(qLog log)
         {
+            if (Closed)
+                throw new Exception("Can't log, log manager closed!");
+
             if (Logs.Contains(log))
             {
                 InvokeOnUpdateLog(log);

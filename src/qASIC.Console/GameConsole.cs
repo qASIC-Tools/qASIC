@@ -83,6 +83,7 @@ namespace qASIC.Console
 
         public ICommand CurrentCommand { get; private set; } = null;
         public object ReturnedValue { get; private set; } = null;
+        public LogManager CurrentCommandLogs { get; private set; } = null;
 
         public GameConsoleTheme Theme { get; set; } = GameConsoleTheme.Default;
 
@@ -125,35 +126,87 @@ namespace qASIC.Console
         public async Task<object> ExecuteAsync(string cmd) =>
             await ExecuteAsync(CreateContext(cmd));
 
+        private bool PreprocessContext(GameCommandContext context)
+        {
+            //Prompt
+            if (CurrentCommand != null)
+            {
+                if (!(ReturnedValue is CommandPrompt prompt))
+                    throw new Exception("A command is already being executed!");
+
+                context.prompt = prompt;
+                context.commandName = CurrentCommand.CommandName;
+                context.Logs = CurrentCommandLogs;
+
+                if (!prompt.CanExecute(context))
+                    return false;
+
+                context.args = prompt.Prepare(context);
+                return true;
+            }
+
+            //Normal
+            if (CommandList == null)
+                throw new Exception("Cannot execute commands with no command list!");
+            
+            if (context.Logs == null)
+                context.Logs = new GameLogManager();
+
+            bool registerLogs = context.LogOutput;
+            if (registerLogs)
+                Logs.RegisterManager(context.Logs);
+            
+            if (!CommandList.TryGetCommand(context.commandName, out var command))
+            {
+                context.Logs.LogError($"Command {context.commandName} doesn't exist");
+                Logs.UnregisterManager(context.Logs);
+                return false;
+            }
+
+            CurrentCommand = command;
+            CurrentCommandLogs = context.Logs;
+
+            return true;
+        }
+
+        private object PostprocessContext(GameCommandContext context)
+        {
+            var unregister = true;
+            if (context.RunTaskResult && ReturnedValue is Task task)
+            {
+                ReturnedValue = null;
+                unregister = false;
+                Task.Run(async () => 
+                {
+                    await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs, false);
+                    Logs.UnregisterManager(context.Logs);
+                });
+            }
+
+            if (ReturnedValue is CommandPrompt)
+                return ReturnedValue;
+
+            if (unregister)
+                Logs.UnregisterManager(CurrentCommandLogs);
+            
+            CurrentCommandLogs = null;
+            CurrentCommand = null;
+            return ReturnedValue;
+        }
+
         /// <summary>Executes a command.</summary>
         /// <param name="context">Command arguments.</param>
         public object Execute(GameCommandContext context)
         {
             //Before
-            if (!PrepareForExecute(context))
+            if (!PreprocessContext(context))
                 return null;
 
-            if (context.LogOutput)
-                Logs.RegisterManager(context.Logs);
-
             //Executing
-            var commandName = CurrentCommand.CommandName;
-
-            ReturnedValue = Execute(commandName, () => CurrentCommand.Run(context), context.Logs);
-            if (ReturnedValue is Task task)
-            {
-                Task.Run(() => ExecuteAsync(commandName, task, context.Logs, false));
-                ReturnedValue = null;
-            }
+            ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(context), context.Logs);
 
             //After
-            if (!(ReturnedValue is CommandPrompt))
-                CurrentCommand = null;
-
-            if (context.LogOutput)
-                Logs.UnregisterManager(context.Logs);
-
-            return ReturnedValue;
+            return PostprocessContext(context);
         }
 
         /// <summary>Executes a command asynchronously.</summary>
@@ -161,11 +214,8 @@ namespace qASIC.Console
         public async Task<object> ExecuteAsync(GameCommandContext context)
         {
             //Before
-            if (!PrepareForExecute(context))
+            if (!PreprocessContext(context))
                 return null;
-
-            if (context.LogOutput)
-                Logs.RegisterManager(context.Logs);
 
             //Executing
             ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(context), context.Logs);
@@ -173,13 +223,7 @@ namespace qASIC.Console
                 ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs);
 
             //After
-            if (!(ReturnedValue is CommandPrompt))
-                CurrentCommand = null;
-
-            if (context.LogOutput)
-                Logs.UnregisterManager(context.Logs);
-
-            return ReturnedValue;
+            return PostprocessContext(context);
         }
 
         /// <summary>Executes a command.</summary>
@@ -246,41 +290,6 @@ namespace qASIC.Console
             }
 
             return null;
-        }
-
-        private bool PrepareForExecute(GameCommandContext context)
-        {
-            if (context.Logs == null)
-                context.Logs = new GameLogManager();
-
-            //Prompt
-            if (CurrentCommand != null)
-            {
-                if (!(ReturnedValue is CommandPrompt prompt))
-                    throw new Exception("A command is already being executed!");
-
-                context.prompt = prompt;
-
-                if (!prompt.CanExecute(context))
-                    return false;
-
-                context.args = prompt.Prepare(context);
-                return true;
-            }
-
-            //Normal
-            if (CommandList == null)
-                throw new Exception("Cannot execute commands with no command list!");
-
-            if (!CommandList.TryGetCommand(context.commandName, out var command))
-            {
-                context.Logs.LogError($"Command {context.commandName} doesn't exist");
-                return false;
-            }
-
-            CurrentCommand = command;
-
-            return true;
         }
 
         public virtual GameCommandContext CreateContext(string cmd)
