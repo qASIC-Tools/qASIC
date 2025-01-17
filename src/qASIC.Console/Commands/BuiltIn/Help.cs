@@ -13,6 +13,8 @@ namespace qASIC.Console.Commands.BuiltIn
         public bool AllowDetailedDescription { get; set; } = true;
         public int PageCommandLimit { get; set; } = 16;
 
+        public Func<GameCommandContext, ICommand, bool> CanShowCommand;
+
         public override object Run(GameCommandContext context)
         {
             //Ignore page argument if multipage and detailed description is off
@@ -39,7 +41,10 @@ namespace qASIC.Console.Commands.BuiltIn
             }
 
             var commandList = context.console.CommandList;
-            var commands = commandList.ToList();
+            var commands = commandList
+                .Where(x => CanShowCommand?.Invoke(context, x) ?? true)
+                .ToList();
+
             if (targetCommand != null)
             {
                 if (!commandList.TryGetCommand(targetCommand, out ICommand command) || command == null)
