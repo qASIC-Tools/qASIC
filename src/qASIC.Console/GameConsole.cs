@@ -171,23 +171,27 @@ namespace qASIC.Console
 
         private object PostprocessContext(GameCommandContext context)
         {
-            var unregister = true;
+            var closeLogs = true;
             if (context.RunTaskResult && ReturnedValue is Task task)
             {
                 ReturnedValue = null;
-                unregister = false;
+                closeLogs = false;
                 Task.Run(async () => 
                 {
                     await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs, false);
                     Logs.UnregisterManager(context.Logs);
+                    context.Logs?.Close();
                 });
             }
 
             if (ReturnedValue is CommandPrompt)
                 return ReturnedValue;
 
-            if (unregister)
+            if (closeLogs)
+            {
                 Logs.UnregisterManager(CurrentCommandLogs);
+                CurrentCommandLogs.Close();   
+            }
             
             CurrentCommandLogs = null;
             CurrentCommand = null;
