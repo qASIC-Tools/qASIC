@@ -19,6 +19,14 @@ namespace qASIC.Console
 
         public event Action<qLog> OnUpdateLog;
 
+        public void Clear()
+        {
+            if (Closed)
+                throw new Exception("Can't clear logs, log manager closed!");
+            
+            Logs?.Clear();
+        }
+
         protected void InvokeOnUpdateLog(qLog log) =>
             OnUpdateLog?.Invoke(log);
 

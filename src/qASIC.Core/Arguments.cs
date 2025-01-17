@@ -128,7 +128,7 @@ namespace qASIC
             return Parser.TryParse(type, arg, out value);
         }
 
-        public bool TryGetValueOverride<T>(ref object value)
+        public bool TryGetValueOverride<T>(ref T value)
         {
             if (TryGetValue(out T val))
             {
