@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace qASIC
 {
@@ -60,5 +61,21 @@ namespace qASIC
                 return "Invalid argument count";
             }
         }
+    }
+
+    public class CommandOptionException : CommandException
+    {
+        public CommandOptionException() { }
+        public CommandOptionException(string arg, IEnumerable<string> options)
+        {
+            this.arg = arg;
+            this.options = options;
+        }
+
+        public IEnumerable<string> options;
+        public string arg;
+
+        public override string Message =>
+            $"Option '{arg}' does not exist! Avaliable options: {string.Join(", ", options)}";
     }
 }

@@ -134,6 +134,63 @@ namespace qASIC
         public bool CanGetValue(Type type) =>
             TryGetValue(type, out _);
 
+        public bool TryGetEnum<T>(out T result) where T : struct, Enum
+        {
+            var values = Enum.GetValues<T>();
+
+            foreach (var item in values)
+            {
+                if (item.ToString().ToLower() != arg.ToLower()) continue;
+                result = item;
+                return true;
+            }
+
+            result = default;
+            return false;
+        }
+
+        public bool TryGetOption<T>(IDictionary<string, T> dict, out T result)
+        {
+            return dict.TryGetValue(arg, out result);
+        }
+
+        public bool TryGetOptionIndex(string[] options, out int index)
+        {
+            for (int i = 0; i < options.Length; i++)
+            {
+                if (arg.ToLower() != options[i].ToLower()) continue;
+                index = i;
+                return true;
+            }
+
+            index = -1;
+            return false;
+        }
+
+        public T GetEnum<T>() where T : struct, Enum
+        {
+            if (TryGetEnum<T>(out T result))
+                return result;
+
+            throw new CommandOptionException(arg, Enum.GetValues<T>().Select(x => x.ToString()));
+        }
+
+        public T GetOption<T>(IDictionary<string, T> dict)
+        {
+            if (TryGetOption(dict, out T result))
+                return result;
+
+            throw new CommandOptionException(arg, dict.Select(x => x.Key));
+        }
+
+        public int GetOptionIndex(string[] options)
+        {
+            if (TryGetOptionIndex(options, out int index))
+                return index;
+
+            throw new CommandOptionException(arg, options);
+        }
+
         public override string ToString() =>
             arg;
     }
