@@ -54,6 +54,15 @@ namespace qASIC.Console
         private Task _fileWriteTask = null;
         private Queue<qLog> _fileWriteQueue = new Queue<qLog>();
 
+        /// <summary>Changes the value of <see cref="FilePath"/>.</summary>
+        /// <param name="newPath">New file path.</param>
+        /// <returns>Returns itself.</returns>
+        public GameLogManager FileChangePath(string newPath)
+        {
+            FilePath = newPath;
+            return this;
+        }
+
         /// <summary>Moves a previous version of the log file to a new location.</summary>
         /// <param name="path">Path to move the old log file to.</param>
         /// <returns>Returns itself.</returns>
@@ -117,7 +126,11 @@ namespace qASIC.Console
             {
                 _fileWriteQueue.Clear();
                 return;
-            }    
+            }
+
+            var dir = Path.GetDirectoryName(FilePath);
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
 
             using (var writer = new StreamWriter(FilePath, true))
             {

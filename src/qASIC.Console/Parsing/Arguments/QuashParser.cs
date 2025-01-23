@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using qASIC.Parsing;
 
 namespace qASIC.Console.Parsing.Arguments
 {
@@ -24,7 +26,7 @@ namespace qASIC.Console.Parsing.Arguments
 
         public override CommandArgument[] ParseArguments(string cmd)
         {
-            var args = new List<CommandArgument>();
+            var args = new List<QuashArgument>();
 
             var readCommand = false;
             var complex = false;
@@ -65,7 +67,11 @@ namespace qASIC.Console.Parsing.Arguments
                 //finish creating argument
                 if (char.IsWhiteSpace(cmd[i]))
                 {
-                    args.Add(CreateCommandArgument(currentString.ToString()));
+                    args.Add(new QuashArgument(ValueParser, currentString.ToString())
+                    {
+                        IsComplex = complex,
+                    });
+
                     currentString.Clear();
                     continue;
                 }
@@ -83,9 +89,43 @@ namespace qASIC.Console.Parsing.Arguments
             }
 
             if (currentString.Length > 0)
-                args.Add(CreateCommandArgument(currentString.ToString()));
+                args.Add(new QuashArgument(ValueParser, currentString.ToString())
+                {
+                    IsComplex = complex,
+                });
             
             return args.ToArray();
+        }
+
+        public override string ConvertToString(string commandName, CommandArgument[] arguments)
+        {
+            var txt = new StringBuilder(commandName);
+
+            foreach (var arg in arguments)
+            {
+                if (arg is QuashArgument quashArg)
+                {
+                    txt.Append(quashArg.IsComplex ? $" \"{quashArg.arg.Replace("\"", "\"\"")}\"" : $" {quashArg.arg}");
+                    continue;   
+                }
+
+                if (arg.arg.Any(x => char.IsWhiteSpace(x)))
+                {
+                    txt.Append($" \"{arg.arg.Replace("\"", "\"\"")}\"");
+                    continue;
+                }
+
+                txt.Append($" {arg.arg}");
+            }
+
+            return txt.ToString().Trim();
+        }
+
+        public class QuashArgument : CommandArgument
+        {
+            public QuashArgument(ModularParser parser, string arg, params object[] values) : base(parser, arg, values) { }
+
+            public bool IsComplex { get; set; }
         }
     }
 }
