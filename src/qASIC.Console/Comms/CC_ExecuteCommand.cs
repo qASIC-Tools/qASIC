@@ -12,8 +12,8 @@ namespace qASIC.Console.Comms
             console.Execute(args.packet.ReadString());
         }
 
-        public static qPacket BuildPacket(GameConsole console, string input) =>
-            new CC_ExecuteCommand().CreateEmptyPacketForConsole(console)
+        public qPacket BuildPacket(GameConsole console, string input) =>
+            CreateEmptyPacketForConsole(console)
             .Write(input);
     }
 }

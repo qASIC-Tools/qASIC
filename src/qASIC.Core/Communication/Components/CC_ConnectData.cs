@@ -39,11 +39,11 @@ namespace qASIC.Communication.Components
             }
         }
 
-        public static qPacket CreateClientConfirmationPacket() =>
-            new CC_ConnectData().CreateEmptyComponentPacket();
+        public qPacket CreateClientConfirmationPacket() =>
+            CreateEmptyComponentPacket();
 
-        public static qPacket CreateServerResponsePacket(qServer server) =>
-            new CC_ConnectData().CreateEmptyComponentPacket()
+        public qPacket CreateServerResponsePacket(qServer server) =>
+            CreateEmptyComponentPacket()
             .Write(server.AppInfo);
     }
 }

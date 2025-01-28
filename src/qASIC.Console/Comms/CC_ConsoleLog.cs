@@ -29,9 +29,9 @@ namespace qASIC.Console.Comms
             OnRead?.Invoke(console, log);
         }
 
-        public static qPacket BuildPacket(GameConsole console, qLog log, bool updatingLog)
+        public qPacket BuildPacket(GameConsole console, qLog log, bool updatingLog)
         {
-            var packet = new CC_ConsoleLog().CreateEmptyPacketForConsole(console)
+            var packet = CreateEmptyPacketForConsole(console)
                 .Write(log);
 
             var index = console.Logs.Logs.IndexOf(log);

@@ -13,7 +13,7 @@ namespace qASIC
             RemoteInspectorComponents = CommsComponentCollection.GetStandardCollection()
                 .AddComponent(cc_log);
 
-            RemoteInspectorServer = new qServer(RemoteInspectorComponents);
+            RemoteInspectorServer = new qServer(RemoteInspectorComponents).WithUpdateLoop();
             RemoteInspectorDiscoveryServer = new DiscoveryServer(RemoteInspectorServer);
             AppInfo = appInfo ?? new RemoteAppInfo();
 
@@ -80,7 +80,7 @@ namespace qASIC
         {
             if (!forwardDebugLogs) return;
             if (!RemoteInspectorServer.IsActive) return;
-            RemoteInspectorServer.SendToAll(CC_Log.BuildLogPacket(log));
+            RemoteInspectorServer.Send(CC_Log.BuildLogPacket(log));
         }
 
         public void Stop()

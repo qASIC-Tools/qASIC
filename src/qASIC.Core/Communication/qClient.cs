@@ -4,16 +4,19 @@ using System.Collections.Generic;
 using System;
 using qASIC.Communication.Components;
 using qASIC.Core;
+using System.Threading.Tasks;
+using System.Threading;
+using System.Linq;
 
 namespace qASIC.Communication
 {
-    public class qClient : IPeer, IHasLogs
+    public class qClient : qPeer
     {
-        public qClient(CommsComponentCollection components, int maxConnectionAttempts = 5) : 
+        public qClient(CommsComponentCollection components, int maxConnectionAttempts = 8) : 
             this(components, IPAddress.Parse("127.0.0.1"), Constants.DEFAULT_PORT, maxConnectionAttempts)
         { }
 
-        public qClient(CommsComponentCollection components, IPAddress address, int port, int maxConnectionAttempts = 5)
+        public qClient(CommsComponentCollection components, IPAddress address, int port, int maxConnectionAttempts = 8)
         {
             Components = components;
 
@@ -47,13 +50,12 @@ namespace qASIC.Communication
             Connected,
         }
 
-        public CommsComponentCollection Components { get; private set; }
         public NetworkServerInfo AppInfo { get; set; } = new NetworkServerInfo();
 
         public IPAddress Address { get; private set; }
         public int Port { get; private set; }
         public State CurrentState { get; internal set; } = State.Offline;
-        public bool IsActive => CurrentState != State.Offline;
+        public override bool IsActive => CurrentState != State.Offline;
 
         public int maxConnectionAttempts;
         private int connectionAttempts = 0;
@@ -62,40 +64,22 @@ namespace qASIC.Communication
         public NetworkStream Stream { get; private set; }
 
 
-        public LogManager Logs { get; set; } = new LogManager();
         public Action OnStart;
         public Action OnConnect;
         public Action<DisconnectReason> OnDisconnect;
         public Func<qPacket, NetworkServerInfo> ProcessAppInfo = null;
 
         private byte[] buffer = new byte[0];
-        private System.Diagnostics.Stopwatch time = new System.Diagnostics.Stopwatch();
-        private long currentTime;
         internal bool receivedPing;
 
         public bool logPacketSend = false;
 
-        qPriorityQueue<KeyValuePair<Action, long>, long> eventQueue = new qPriorityQueue<KeyValuePair<Action, long>, long>();
-
-        public void Update()
+        public qClient WithUpdateLoop(int milisecondsPerUpdate = 50)
         {
-            if (!IsActive) return;
-
-            currentTime = time.ElapsedMilliseconds;
-
-            while (eventQueue.Count > 0 && eventQueue.Peek().Value <= currentTime)
-            {
-                try
-                {
-                    eventQueue.Dequeue().Key.Invoke();
-                }
-                catch (Exception e)
-                {
-                    Logs.LogError($"There was a problem in update loop, {e}");
-                }
-            }
+            StartUpdateLoop(milisecondsPerUpdate);
+            return this;
         }
-
+        
         public void Connect() =>
             Connect(Address, Port);
 
@@ -112,14 +96,13 @@ namespace qASIC.Communication
 
             try
             {
-                currentTime = 0;
+                base.OnStart();
                 connectionAttempts = 0;
-                time.Restart();
 
                 Socket = new TcpClient()
                 {
-                    ReceiveBufferSize = Constants.RECEIVE_BUFFER_SIZE,
-                    SendBufferSize = Constants.SEND_BUFFER_SIZE,
+                    ReceiveBufferSize = Constants.BUFFER_SIZE,
+                    SendBufferSize = Constants.BUFFER_SIZE,
                     NoDelay = false,
                 };
 
@@ -128,6 +111,7 @@ namespace qASIC.Communication
 
                 CurrentState = State.Connecting;
                 Logs.Log($"Client is active, connecting to {Address}:{Port}...");
+                SendLoop();
                 Heartbeat(result);
 
             }
@@ -154,7 +138,7 @@ namespace qASIC.Communication
                             Stream = Socket.GetStream();
                             Stream.BeginRead(buffer, 0, Socket.ReceiveBufferSize, OnDataReceived, null);
 
-                            Send(CC_ConnectData.CreateClientConfirmationPacket());
+                            Send(new CC_ConnectData().CreateClientConfirmationPacket());
 
                             CurrentState = State.Pending;
                             Logs.Log($"Connection established, waiting for connection confirmation");
@@ -224,6 +208,7 @@ namespace qASIC.Communication
 
                 byte[] temp = new byte[length];
                 Array.Copy(buffer, temp, length);
+                Array.Clear(buffer, 0, buffer.Length);
 
                 var packet = new qPacket(temp);
 
@@ -238,23 +223,35 @@ namespace qASIC.Communication
             }
         }
 
-        public void Send(qPacket packet)
+        Queue<qPacket> packetsToSend = new Queue<qPacket>(); 
+
+        public override void Send(qPacket packet)
         {
             try
             {
-                if (logPacketSend)
-                    Logs.Log($"Sending to server - {packet}");
+                var data = Components.FinalizePacket(packet);
 
-                if (Stream?.CanWrite != true)
-                    return;
-
-                var data = packet.ToArray();
-                Stream?.Write(data, 0, data.Length);
+                //Enqueue packets to be send in send loop
+                foreach (var item in data)
+                    packetsToSend.Enqueue(item);
             }
             catch (Exception e)
             {
                 Logs.LogError($"There was a problem while sending: {e}");
             }
+        }
+
+        private void SendLoop()
+        {
+            if (packetsToSend.TryDequeue(out var packet) && Stream?.CanWrite == true)
+            {
+                if (logPacketSend)
+                    Logs.Log($"Sending packet - {packet}");
+
+                Stream?.Write(packet.ToArray(), 0, packet.bytes.Count);
+            }
+
+            ExecuteLater(MilisecondsPerSend, SendLoop);
         }
 
         public void Disconnect(DisconnectReason reason = DisconnectReason.None)
@@ -271,9 +268,8 @@ namespace qASIC.Communication
             {
                 Stream?.Close();
                 Socket?.Close();
-                time.Stop();
-                eventQueue.Clear();
-                currentTime = 0;
+                
+                OnStop();
 
                 Logs.Log("Client disconnected");
                 OnDisconnect?.Invoke(reason);
@@ -282,12 +278,6 @@ namespace qASIC.Communication
             {
                 Logs.LogError($"There was a problem while disconnecting. Please restart application! {e}");
             }
-        }
-
-        internal void ExecuteLater(long inMs, Action delayedAction)
-        {
-            var t = currentTime + inMs;
-            eventQueue.Enqueue(new KeyValuePair<Action, long>(delayedAction, t), t);
         }
     }
 }

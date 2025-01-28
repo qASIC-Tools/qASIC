@@ -2,10 +2,11 @@
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using System.Collections;
 
 namespace qASIC.Communication
 {
-    public class qPacket
+    public class qPacket : IEnumerable<byte>
     {
         public qPacket() : this(new byte[0]) { }
 
@@ -13,6 +14,9 @@ namespace qASIC.Communication
         {
             this.bytes = new List<byte>(bytes);
         }
+
+        public qPacket Clone() =>
+            new qPacket(bytes);
 
         public List<byte> bytes;
         public int position;
@@ -49,9 +53,7 @@ namespace qASIC.Communication
 
         public void RemoveReadBytes()
         {
-            for (int i = 0; i < position; i++)
-                bytes.RemoveAt(0);
-
+            bytes.RemoveRange(0, Math.Min(position, bytes.Count));
             ResetPosition();
         }
 
@@ -84,6 +86,12 @@ namespace qASIC.Communication
             return this;
         }
 
+        public qPacket WriteBytes(IEnumerable<byte> data)
+        {
+            bytes.AddRange(data);
+            return this;
+        }
+
         public qPacket Write(bool value) => WriteBytes(BitConverter.GetBytes(value));
         public qPacket Write(byte value) => WriteBytes(value);
         public qPacket Write(sbyte value) => WriteBytes(unchecked((byte)value));
@@ -110,7 +118,60 @@ namespace qASIC.Communication
         public qPacket Write(INetworkSerializable item) =>
             item.Write(this);
 
+        /// <summary>Injects a byte array at the start of every segment of the specified length.</summary>
+        /// <param name="segmentLength">Length of every segment.</param>
+        /// <param name="bytes">Bytes to inject.</param>
+        /// <returns>Returns itself.</returns>
+        public qPacket InjectEvery(int segmentLength, qPacket packet) =>
+            InjectEvery(segmentLength, packet.bytes.ToArray());
+
+        /// <summary>Injects a byte array at the start of every segment of the specified length.</summary>
+        /// <param name="segmentLength">Length of every segment.</param>
+        /// <param name="bytes">Bytes to inject.</param>
+        /// <returns>Returns itself.</returns>
+        public qPacket InjectEvery(int segmentLength, byte[] bytes)
+        {
+            if (segmentLength <= bytes.Length)
+                throw new ArgumentException("Length of every segment must be bigger than the length of injected bytes.");
+
+            var i = 0;
+            while (i < this.bytes.Count)
+            {
+                this.bytes.InsertRange(i * segmentLength, bytes);
+                i += segmentLength;
+            } 
+
+            position += position / segmentLength * bytes.Length;
+            return this;
+        }
+
+        /// <summary>Removes bytes that were injected in every segment of the specified length.</summary>
+        /// <param name="segmentLength">Length of every segment.</param>
+        /// <param name="injectionLength">Length of injected bytes.</param>
+        /// <returns>Returns itself.</returns>
+        public qPacket RemoveInjection(int segmentLength, int injectionLength)
+        {
+            if (segmentLength <= injectionLength)
+                throw new ArgumentException("Length of every segment must be bigger than the length of injected bytes.");
+
+            var i = bytes.Count - (bytes.Count % segmentLength);
+            while (i > 0)
+            {
+                bytes.RemoveRange(i, injectionLength);
+                i -= segmentLength;
+            }
+
+            position -= position / segmentLength * injectionLength;
+            return this;
+        }
+
         public override string ToString() =>
-            $"Packet length:{bytes.Count} position:{position} bytes:{string.Join(",", bytes)}";
+            $"Packet length:{bytes.Count} position:{position} bytes:{string.Join(",", bytes.GetRange(0, Math.Min(bytes.Count, 16)))}";
+
+        public IEnumerator<byte> GetEnumerator() =>
+            bytes.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() =>
+            GetEnumerator();
     }
 }

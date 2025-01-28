@@ -28,7 +28,7 @@ namespace qASIC.Console
                 {
                     foreach (var item in RegisteredConsoles)
                     {
-                        server.Send(client, CC_ConsoleRegister.CreatePacket(item.Value.Console));
+                        server.Send(client, new CC_ConsoleRegister().CreatePacket(item.Value.Console));
                         _ = 1;
                     }
                 };
@@ -61,7 +61,7 @@ namespace qASIC.Console
             console.Logs.OnUpdateLog += (log) => Console_OnUpdateLog(console, log);
 
             if (Peer is qServer server)
-                server.SendToAll(CC_ConsoleRegister.CreatePacket(console));
+                server.Send(new CC_ConsoleRegister().CreatePacket(console));
 
             OnConsoleRegister?.Invoke(console);
         }
@@ -77,7 +77,7 @@ namespace qASIC.Console
             console.Logs.OnUpdateLog -= (log) => Console_OnUpdateLog(console, log);
 
             if (Peer is qServer server)
-                server.SendToAll(new CC_ConsoleDeregister().CreateEmptyPacketForConsole(console));
+                server.Send(new CC_ConsoleDeregister().CreateEmptyPacketForConsole(console));
         }
 
 
@@ -94,13 +94,13 @@ namespace qASIC.Console
         private void Console_OnLog(GameConsole console, qLog log)
         {
             if (Peer is qServer server)
-                server.SendToAll(CC_ConsoleLog.BuildPacket(console, log, false));
+                server.Send(new CC_ConsoleLog().BuildPacket(console, log, false));
         }
 
         private void Console_OnUpdateLog(GameConsole console, qLog log)
         {
             if (Peer is qServer server)
-                server.SendToAll(CC_ConsoleLog.BuildPacket(console, log, true));
+                server.Send(new CC_ConsoleLog().BuildPacket(console, log, true));
         }
 
         public IEnumerator<RegisteredConsole> GetEnumerator() =>
@@ -128,7 +128,7 @@ namespace qASIC.Console
                 if (!(manager.Peer is qClient client))
                     throw new Exception("Only clients can send commands!");
 
-                var packet = CC_ExecuteCommand.BuildPacket(Console, cmd);
+                var packet = new CC_ExecuteCommand().BuildPacket(Console, cmd);
                 client.Send(packet);
             }
         }

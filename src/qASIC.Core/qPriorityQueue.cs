@@ -32,8 +32,8 @@ namespace qASIC
             int i = 0;
             for (; i < Items.Count; i++)
             {
-                if (i + 1 < Items.Count &&
-                    ComparePriority(Items[i + 1].priority, priority) <= 0)
+                //If item has higher priority value
+                if (ComparePriority(Items[i].priority, priority) > 0)
                     break;
             }
 
@@ -99,13 +99,11 @@ namespace qASIC
         public IEnumerator GetEnumerator() =>
             Items
             .Select(x => x.element)
-            .Reverse()
             .GetEnumerator();
 
         IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() =>
             Items
             .Select(x => x.element)
-            .Reverse()
             .GetEnumerator();
 
         protected class Item

@@ -7,7 +7,7 @@ using qASIC.Core;
 
 namespace qASIC.Communication
 {
-    public class qServer : IPeer, IHasLogs
+    public class qServer : qPeer
     {
         public qServer(CommsComponentCollection components) : this(components, Constants.DEFAULT_PORT) { }
 
@@ -18,11 +18,9 @@ namespace qASIC.Communication
             Port = port;
         }
 
-        public CommsComponentCollection Components { get; private set; }
         public NetworkServerInfo AppInfo { get; set; } = new NetworkServerInfo();
 
         public int Port { get; private set; }
-        public bool IsActive { get; private set; } = false;
 
         public List<Client> Clients { get; private set; } = new List<Client>();
 
@@ -33,13 +31,12 @@ namespace qASIC.Communication
         int nextClientId;
         public bool logPacketSend = false;
 
-        public LogManager Logs { get; set; } = new LogManager();
-
         public void Start()
         {
             if (IsActive)
                 throw new Exception("Cannot start server, server is already active!");
 
+            OnStart();
             Listener = new TcpListener(IPAddress.Any, Port);
             Listener.Start();
             Port = ((IPEndPoint)Listener.LocalEndpoint).Port;
@@ -49,7 +46,15 @@ namespace qASIC.Communication
             nextClientId = 0;
             IsActive = true;
 
+            SendLoop();
+
             Logs.Log("Server is now active!");
+        }
+
+        public qServer WithUpdateLoop(int milisecondsPerUpdate = 50)
+        {
+            StartUpdateLoop(milisecondsPerUpdate);
+            return this;
         }
 
         public void Stop(bool notifyClients = true)
@@ -75,6 +80,7 @@ namespace qASIC.Communication
             Logs.Log("Stopping server...");
             Listener.Stop();
 
+            OnStop();
             IsActive = false;
 
             Logs.Log("Stopped server");
@@ -111,8 +117,8 @@ namespace qASIC.Communication
             {
                 var clientSocket = Listener.EndAcceptTcpClient(result);
                 clientSocket.NoDelay = false;
-                clientSocket.ReceiveBufferSize = Constants.RECEIVE_BUFFER_SIZE;
-                clientSocket.SendBufferSize = Constants.SEND_BUFFER_SIZE;
+                clientSocket.ReceiveBufferSize = Constants.BUFFER_SIZE;
+                clientSocket.SendBufferSize = Constants.BUFFER_SIZE;
 
                 Listener.BeginAcceptTcpClient(new AsyncCallback(HandleClientConnect), null);
 
@@ -149,8 +155,11 @@ namespace qASIC.Communication
                 if (logPacketSend)
                     Logs.Log($"Sending to client id:{client.id} - {packet}");
 
-                var data = packet.ToArray();
-                client.Stream.BeginWrite(data, 0, data.Length, null, null);
+                var data = Components.FinalizePacket(packet);
+                foreach (var item in data)
+                {
+                    client.packetsToSend.Enqueue(item);
+                }
             }
             catch (Exception e)
             {
@@ -158,15 +167,28 @@ namespace qASIC.Communication
             }
         }
 
-        public void SendToAll(qPacket packet)
+        public override void Send(qPacket packet)
         {
             for (int i = 0; i < Clients.Count; i++)
                 if (Clients[i] != null)
                     Send(Clients[i], packet);
         }
 
-        void IPeer.Send(qPacket packet) =>
-            SendToAll(packet);
+        private void SendLoop()
+        {
+            foreach (var client in Clients)
+            {
+                if (client.Stream?.CanWrite == true && client.packetsToSend.TryDequeue(out qPacket packet))
+                {
+                    if (logPacketSend)
+                        Logs.Log($"Sending packet - {packet}");
+
+                    client.Stream.Write(packet.ToArray(), 0, packet.bytes.Count);
+                }
+            }
+
+            ExecuteLater(MilisecondsPerSend, SendLoop);
+        }
         #endregion
 
 
@@ -191,6 +213,8 @@ namespace qASIC.Communication
 
             public LogManager Logs { get; set; } = new LogManager();
             public event Action<OnServerReceiveDataArgs> OnDataReceive;
+
+            public Queue<qPacket> packetsToSend = new Queue<qPacket>();
 
             private byte[] buffer;
 
