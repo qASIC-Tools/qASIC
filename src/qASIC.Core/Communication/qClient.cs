@@ -190,6 +190,8 @@ namespace qASIC.Communication
         {
             if (!IsActive) return;
 
+            receivedPing = true;
+
             try
             {
                 if (Stream?.CanRead != true)

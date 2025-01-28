@@ -152,14 +152,9 @@ namespace qASIC.Communication
         {
             try
             {
-                if (logPacketSend)
-                    Logs.Log($"Sending to client id:{client.id} - {packet}");
-
                 var data = Components.FinalizePacket(packet);
                 foreach (var item in data)
-                {
                     client.packetsToSend.Enqueue(item);
-                }
             }
             catch (Exception e)
             {

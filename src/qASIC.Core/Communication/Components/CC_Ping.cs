@@ -10,7 +10,6 @@
                     args.server.Send(args.targetServerClient, CreateEmptyComponentPacket());
                     break;
                 case PacketType.Client:
-                    args.client.receivedPing = true;
                     break;
             }
         }
