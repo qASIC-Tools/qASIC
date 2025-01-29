@@ -55,6 +55,9 @@ namespace qASIC.Communication.Components
                 .Where(x => type.IsAssignableFrom(x.GetType()))
                 .ToArray();
 
+        /// <summary>Determines after how many more messages a message will be marked as lost.</summary>
+        public uint MaxMessageAge { get; set; } = 2048u;
+
         uint nextMessageId = 0;
         Dictionary<(qServer.Client, uint), MessageData> serverMessages = new Dictionary<(qServer.Client, uint), MessageData>();
         Dictionary<uint, MessageData> clientMessages = new Dictionary<uint, MessageData>();
@@ -80,6 +83,13 @@ namespace qASIC.Communication.Components
         public void HandlePacketForServer(qServer server, qServer.Client serverClient, qPacket packet)
         {
             var messageId = packet.ReadUInt();
+            var oldId = messageId - MaxMessageAge;
+
+            if (serverMessages.ContainsKey((serverClient, oldId)))
+            {
+                server.Logs.LogWarning($"Message id '{oldId}' seems to have been lost.");
+                serverMessages.Remove((serverClient, oldId));
+            }
 
             if (!serverMessages.TryGetValue((serverClient, messageId), out var data))
             {
@@ -131,6 +141,13 @@ namespace qASIC.Communication.Components
         public void HandlePacketForClient(qClient client, qPacket packet)
         {
             var messageId = packet.ReadUInt();
+            var oldId = messageId - MaxMessageAge;
+
+            if (clientMessages.ContainsKey(oldId))
+            {
+                client.Logs.LogWarning($"Message id '{oldId}' seems to have been lost.");
+                clientMessages.Remove(oldId);
+            }
 
             if (!clientMessages.TryGetValue(messageId, out var data))
             {
@@ -149,21 +166,33 @@ namespace qASIC.Communication.Components
             
             //Process full message
             var finalPacket = data.CreateFinalPacket();
-            var id = finalPacket.ReadString();
+            clientMessages.Remove(messageId);
+            
+            var compId = finalPacket.ReadString();
 
             var targetComp = components
-                .Where(x => x.GetId() == id)
+                .Where(x => x.GetId() == compId)
                 .FirstOrDefault();
 
             if (targetComp == null)
+            {
+                client.Logs.LogError($"Communication Component of id '{compId}' does not exist");
                 return;
+            }
 
             var args = new CommsComponentArgs(PacketType.Client, finalPacket)
             {
                 client = client,
             };
 
-            targetComp.Read(args);
+            try
+            {
+                targetComp.Read(args);
+            }
+            catch (Exception e)
+            {
+                client.Logs.LogError($"There was an error while reading packet from server: {e}");
+            }
         }
 
         public class MessageData
