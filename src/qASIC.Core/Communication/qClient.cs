@@ -270,6 +270,8 @@ namespace qASIC.Communication
             {
                 Stream?.Close();
                 Socket?.Close();
+
+                Components?.CleanupClientMessages();
                 
                 OnStop();
 

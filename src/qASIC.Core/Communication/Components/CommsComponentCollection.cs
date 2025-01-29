@@ -59,7 +59,7 @@ namespace qASIC.Communication.Components
         public uint MaxMessageAge { get; set; } = 2048u;
 
         uint nextMessageId = 0;
-        Dictionary<(qServer.Client, uint), MessageData> serverMessages = new Dictionary<(qServer.Client, uint), MessageData>();
+        Dictionary<qServer.Client, Dictionary<uint, MessageData>> serverMessages = new Dictionary<qServer.Client, Dictionary<uint, MessageData>>();
         Dictionary<uint, MessageData> clientMessages = new Dictionary<uint, MessageData>();
 
         public qPacket[] FinalizePacket(qPacket packet)
@@ -85,16 +85,22 @@ namespace qASIC.Communication.Components
             var messageId = packet.ReadUInt();
             var oldId = messageId - MaxMessageAge;
 
-            if (serverMessages.ContainsKey((serverClient, oldId)))
+            if (!serverMessages.TryGetValue(serverClient, out var messages))
             {
-                server.Logs.LogWarning($"Message id '{oldId}' seems to have been lost.");
-                serverMessages.Remove((serverClient, oldId));
+                messages = new Dictionary<uint, MessageData>();
+                serverMessages.Add(serverClient, messages);
             }
 
-            if (!serverMessages.TryGetValue((serverClient, messageId), out var data))
+            if (messages.ContainsKey(oldId))
+            {
+                server.Logs.LogWarning($"Message id '{oldId}' seems to have been lost.");
+                messages.Remove(oldId);
+            }
+
+            if (!messages.TryGetValue(messageId, out var data))
             {
                 data = new MessageData();
-                serverMessages.Add((serverClient, messageId), data);
+                messages.Add(messageId, data);
             }
 
             //Return if there was an error
@@ -108,7 +114,7 @@ namespace qASIC.Communication.Components
 
             //Process full message
             var finalPacket = data.CreateFinalPacket();
-            serverMessages.Remove((serverClient, messageId));
+            messages.Remove(messageId);
 
             var compId = finalPacket.ReadString();
 
@@ -193,6 +199,22 @@ namespace qASIC.Communication.Components
             {
                 client.Logs.LogError($"There was an error while reading packet from server: {e}");
             }
+        }
+
+        public void CleanupServerMessages()
+        {
+            serverMessages.Clear();
+        }
+
+        public void CleanupServerMessages(qServer.Client serverClient)
+        {
+            if (serverMessages.ContainsKey(serverClient))
+                serverMessages.Remove(serverClient);
+        }
+
+        public void CleanupClientMessages()
+        {
+            clientMessages.Clear();
         }
 
         public class MessageData

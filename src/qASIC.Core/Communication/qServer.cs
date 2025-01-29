@@ -92,6 +92,8 @@ namespace qASIC.Communication
             OnStop();
             IsActive = false;
 
+            Components.CleanupServerMessages();
+
             Logs.Log("Stopped server");
         }
 
@@ -105,6 +107,7 @@ namespace qASIC.Communication
         {
             client.DisconnectLocal();
             Clients.Remove(client);
+            Components?.CleanupServerMessages(client);
             Logs.UnregisterLoggable(client);
         }
 
