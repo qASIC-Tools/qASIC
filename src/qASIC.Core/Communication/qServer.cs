@@ -46,6 +46,7 @@ namespace qASIC.Communication
             nextClientId = 0;
             IsActive = true;
 
+            Heartbeat();
             SendLoop();
 
             Logs.Log("Server is now active!");
@@ -55,6 +56,14 @@ namespace qASIC.Communication
         {
             StartUpdateLoop(milisecondsPerUpdate);
             return this;
+        }
+
+        void Heartbeat()
+        {
+            foreach (var item in Clients)
+                Send(item, new CC_Ping().CreateEmptyComponentPacket());
+
+            ExecuteLater(1000, Heartbeat);
         }
 
         public void Stop(bool notifyClients = true)
