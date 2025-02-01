@@ -77,6 +77,12 @@ namespace qASIC.Communication.Components
             }
 
             nextMessageId++;
+
+            //Fill rest of packet with nothing, so that it won't
+            //get merged with new packets
+            var lastPacket = packets[packets.Length - 1];
+            lastPacket.WriteBytes(new byte[Constants.BUFFER_SIZE - lastPacket.bytes.Count]);
+            
             return packets;
         }
 

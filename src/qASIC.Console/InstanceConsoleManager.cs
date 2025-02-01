@@ -29,7 +29,6 @@ namespace qASIC.Console
                     foreach (var item in RegisteredConsoles)
                     {
                         server.Send(client, new CC_ConsoleRegister().CreatePacket(item.Value.Console));
-                        _ = 1;
                     }
                 };
             }

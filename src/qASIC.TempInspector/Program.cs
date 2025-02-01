@@ -122,6 +122,8 @@ namespace qASICRemote
             if (SelectedConsole == null)
                 SelectedConsole = console;
 
+            GConsole?.Log($"Registered console '{console.Name}'");
+
             if (SelectedConsole == console)
                 foreach (var log in console.Logs)
                     CC_Log_OnRead(console, log);

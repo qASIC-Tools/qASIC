@@ -11,6 +11,7 @@ namespace qASIC.Communication.Components
             switch (args.packetType)
             {
                 case PacketType.Server:
+                    args.targetServerClient.Connected = true;
                     args.server.Send(args.targetServerClient, CreateServerResponsePacket(args.server));
                     args.server.Logs.Log($"Client connected id: '{args.targetServerClient.id}'");
                     args.server.OnClientConnect?.Invoke(args.targetServerClient);
@@ -30,7 +31,6 @@ namespace qASIC.Communication.Components
                     args.client?.Logs.Log($"Connected to project using protocol version: {info.protocolVersion}");
                     args.client.AppInfo = info;
                     args.client.CurrentState = qClient.State.Connected;
-                    args.client.receivedPing = true;
                     args.client.Logs.Log("Client connected");
                     args.client.OnConnect?.Invoke();
 

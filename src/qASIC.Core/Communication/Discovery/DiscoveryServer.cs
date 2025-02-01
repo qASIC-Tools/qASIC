@@ -5,6 +5,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using System;
+using System.Threading.Tasks;
 
 namespace qASIC.Communication.Discovery
 {
@@ -21,7 +22,7 @@ namespace qASIC.Communication.Discovery
         private Thread _thread;
         private CancellationTokenSource _cancel;
 
-        /// <summary>Update frequency in miliseconds.</summary>
+        /// <summary>How long does an update loop take in miliseconds.</summary>
         public int UpdateFrequency { get; set; } = 200;
 
         /// <summary>Is the server active?</summary>
@@ -56,7 +57,7 @@ namespace qASIC.Communication.Discovery
                 throw new Exception("Cannot start discovery server, server is already active!");
 
             IsActive = true;
-            _thread = new Thread(Process);
+            _thread = new Thread(async () => await Process());
             _cancel = new CancellationTokenSource();
             _thread.Start();
         }
@@ -75,7 +76,7 @@ namespace qASIC.Communication.Discovery
             _thread = null;
         }
 
-        void Process()
+        async Task Process()
         {
             var sockets = new Dictionary<IPAddress, Socket>();
             var ip6link = IPAddress.Parse("ff02::1");
@@ -83,7 +84,7 @@ namespace qASIC.Communication.Discovery
             var endPoint4 = new IPEndPoint(IPAddress.Broadcast, Port);
             var endPoint6 = new IPEndPoint(ip6link, Port);
 
-            while (!_cancel.Token.WaitHandle.WaitOne(UpdateFrequency))
+            while (!_cancel.IsCancellationRequested)
             {
                 var addresses = NetworkInterface.GetAllNetworkInterfaces()
                     .Where(x => x.OperationalStatus == OperationalStatus.Up || x.OperationalStatus == OperationalStatus.Unknown)
@@ -135,6 +136,8 @@ namespace qASIC.Communication.Discovery
                     }
                     catch { }
                 }
+
+                await Task.Delay(UpdateFrequency);
             }
 
             foreach (var item in sockets.Values)

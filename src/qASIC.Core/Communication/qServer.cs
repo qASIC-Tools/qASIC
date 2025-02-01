@@ -36,7 +36,7 @@ namespace qASIC.Communication
             if (IsActive)
                 throw new Exception("Cannot start server, server is already active!");
 
-            OnStart();
+            PrepareStart();
             Listener = new TcpListener(IPAddress.Any, Port);
             Listener.Start();
             Port = ((IPEndPoint)Listener.LocalEndpoint).Port;
@@ -89,7 +89,7 @@ namespace qASIC.Communication
             Logs.Log("Stopping server...");
             Listener.Stop();
 
-            OnStop();
+            PrepareStop();
             IsActive = false;
 
             Components.CleanupServerMessages();
@@ -100,7 +100,7 @@ namespace qASIC.Communication
         public void DisconnectClient(Client client)
         {
             Send(client, new CC_Disconnect().CreateEmptyComponentPacket());
-            DisconnectClientLocal(client);
+            ExecuteLater(MilisecondsPerSend, () => DisconnectClientLocal(client));
         }
 
         public void DisconnectClientLocal(Client client)
@@ -162,6 +162,8 @@ namespace qASIC.Communication
         #region Send
         public void Send(Client client, qPacket packet)
         {
+            if (!client.Connected) return;
+
             try
             {
                 var data = Components.FinalizePacket(packet);
@@ -185,13 +187,23 @@ namespace qASIC.Communication
         {
             foreach (var client in Clients)
             {
-                if (client.Stream?.CanWrite == true && client.packetsToSend.TryDequeue(out qPacket packet))
+                try
                 {
-                    if (logPacketSend)
-                        Logs.Log($"Sending packet - {packet}");
+                    if (client.Stream?.CanWrite == true && client.packetsToSend.TryDequeue(out qPacket packet))
+                    {
+                        if (logPacketSend)
+                            Logs.Log($"Sending packet - {packet}");
 
-                    client.Stream.Write(packet.ToArray(), 0, packet.bytes.Count);
+                        client.Stream.Write(packet.ToArray(), 0, packet.bytes.Count);
+                        SendLoop();
+                        return;
+                    }
                 }
+                catch
+                {
+                    Logs.LogError($"There was an error while sending data to client '{client.id}', removing...");
+                    DisconnectClientLocal(client);
+                }                
             }
 
             ExecuteLater(MilisecondsPerSend, SendLoop);
@@ -214,6 +226,7 @@ namespace qASIC.Communication
 
             public int id;
             public bool IsActive { get; private set; }
+            public bool Connected { get; set; }
 
             public TcpClient Socket { get; private set; }
             public NetworkStream Stream { get; private set; }

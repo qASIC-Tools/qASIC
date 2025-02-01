@@ -2,7 +2,6 @@ using qASIC.Communication.Components;
 using qASIC.Core;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,14 +18,14 @@ namespace qASIC.Communication
         qPriorityQueue<KeyValuePair<Action, long>, long> eventQueue = new qPriorityQueue<KeyValuePair<Action, long>, long>();
 
         public int MilisecondsPerUpdate { get; set; }
-        public int MilisecondsPerSend { get; set; } = 50;
+        public int MilisecondsPerSend { get; set; } = 10;
 
         private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
         private long CurrentTime { get; set; }
 
         CancellationTokenSource updateCancel;
 
-        public void StartUpdateLoop(int milisecondsPerUpdate = 50)
+        public void StartUpdateLoop(int milisecondsPerUpdate = 10)
         {
             StopUpdateLog();
 
@@ -72,13 +71,13 @@ namespace qASIC.Communication
             }
         }
 
-        protected void OnStart()
+        protected void PrepareStart()
         {
             CurrentTime = 0;
             stopwatch.Restart();
         }
 
-        protected void OnStop()
+        protected void PrepareStop()
         {
             StopUpdateLog();
             eventQueue.Clear();

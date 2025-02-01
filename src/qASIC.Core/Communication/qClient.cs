@@ -3,10 +3,6 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System;
 using qASIC.Communication.Components;
-using qASIC.Core;
-using System.Threading.Tasks;
-using System.Threading;
-using System.Linq;
 
 namespace qASIC.Communication
 {
@@ -40,6 +36,7 @@ namespace qASIC.Communication
             NoResponse,
             /// <summary>General error</summary>
             Error,
+            SendError,
         }
 
         public enum State
@@ -63,18 +60,19 @@ namespace qASIC.Communication
         public TcpClient Socket { get; private set; }
         public NetworkStream Stream { get; private set; }
 
-
         public Action OnStart;
         public Action OnConnect;
         public Action<DisconnectReason> OnDisconnect;
         public Func<qPacket, NetworkServerInfo> ProcessAppInfo = null;
 
+        public int MaxMissedPings { get; set;} = 3;
+
         private byte[] buffer = new byte[0];
-        internal bool receivedPing;
+        internal int missedPings;
 
         public bool logPacketSend = false;
 
-        public qClient WithUpdateLoop(int milisecondsPerUpdate = 50)
+        public qClient WithUpdateLoop(int milisecondsPerUpdate = 10)
         {
             StartUpdateLoop(milisecondsPerUpdate);
             return this;
@@ -96,7 +94,7 @@ namespace qASIC.Communication
 
             try
             {
-                base.OnStart();
+                PrepareStart();
                 connectionAttempts = 0;
 
                 Socket = new TcpClient()
@@ -166,14 +164,14 @@ namespace qASIC.Communication
                         connectionAttempts++;
                         break;
                     case State.Connected:
-                        if (!receivedPing)
+                        if (missedPings > MaxMissedPings)
                         {
                             Logs.Log($"Server didn't respond, disconnecting...");
                             DisconnectLocal(DisconnectReason.NoResponse);
                             return;
                         }
 
-                        receivedPing = false;
+                        missedPings++;
                         Send(new CC_Ping().CreateEmptyComponentPacket());
                         break;
                 }
@@ -190,7 +188,7 @@ namespace qASIC.Communication
         {
             if (!IsActive) return;
 
-            receivedPing = true;
+            missedPings = 0;
 
             try
             {
@@ -229,28 +227,29 @@ namespace qASIC.Communication
 
         public override void Send(qPacket packet)
         {
-            try
-            {
-                var data = Components.FinalizePacket(packet);
+            var data = Components.FinalizePacket(packet);
 
-                //Enqueue packets to be send in send loop
-                foreach (var item in data)
-                    packetsToSend.Enqueue(item);
-            }
-            catch (Exception e)
-            {
-                Logs.LogError($"There was a problem while sending: {e}");
-            }
+            //Enqueue packets to be send in send loop
+            foreach (var item in data)
+                packetsToSend.Enqueue(item);
         }
 
         private void SendLoop()
         {
-            if (packetsToSend.TryDequeue(out var packet) && Stream?.CanWrite == true)
+            try
             {
-                if (logPacketSend)
-                    Logs.Log($"Sending packet - {packet}");
+                if (packetsToSend.TryDequeue(out var packet) && Stream?.CanWrite == true)
+                {
+                    if (logPacketSend)
+                        Logs.Log($"Sending packet - {packet}");
 
-                Stream?.Write(packet.ToArray(), 0, packet.bytes.Count);
+                    Stream?.Write(packet.ToArray(), 0, packet.bytes.Count);
+                }
+            }
+            catch
+            {
+                Logs.LogError($"There was a problem while sending, disconecting...");
+                DisconnectLocal(DisconnectReason.SendError);
             }
 
             ExecuteLater(MilisecondsPerSend, SendLoop);
@@ -259,7 +258,7 @@ namespace qASIC.Communication
         public void Disconnect(DisconnectReason reason = DisconnectReason.None)
         {
             Send(new CC_Disconnect().CreateEmptyComponentPacket());
-            DisconnectLocal(reason);
+            ExecuteLater(MilisecondsPerSend, () =>  DisconnectLocal(reason));
         }
 
         public void DisconnectLocal(DisconnectReason reason = DisconnectReason.None)
@@ -272,8 +271,8 @@ namespace qASIC.Communication
                 Socket?.Close();
 
                 Components?.CleanupClientMessages();
-                
-                OnStop();
+
+                PrepareStop();
 
                 Logs.Log("Client disconnected");
                 OnDisconnect?.Invoke(reason);

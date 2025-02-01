@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace qASIC.Communication.Discovery
 {
@@ -17,11 +17,10 @@ namespace qASIC.Communication.Discovery
         }
 
         private Thread _processThread;
-        private Thread _checkThread;
         private CancellationTokenSource _cancel;
 
-        /// <summary>Update frequency in miliseconds.</summary>
-        public int UpdateFrequency { get; set; } = 200;
+        /// <summary>How long does an update loop take in miliseconds.</summary>
+        public int UpdateFrequency { get; set; } = 1000;
         /// <summary>The maximum amount of missed pings allowed before removing a <see cref="DiscoveredConnection"/> from <see cref="Discovered"/>.</summary>
         public int MaxMissedPings { get; set; } = 3;
 
@@ -65,10 +64,8 @@ namespace qASIC.Communication.Discovery
             IsActive = true;
             Discovered = new List<DiscoveredConnection>();
             _processThread = new Thread(Process);
-            _checkThread = new Thread(Check);
             _cancel = new CancellationTokenSource();
             _processThread.Start();
-            _checkThread.Start();
         }
 
         /// <summary>Stops searching for connections.</summary>
@@ -83,7 +80,6 @@ namespace qASIC.Communication.Discovery
             _processThread.Join();
             _cancel = null;
             _processThread = null;
-            _checkThread = null;
         }
 
         void Process()
@@ -108,7 +104,7 @@ namespace qASIC.Communication.Discovery
             {
                 var checkRead = sockets.ToList();
                 var checkError = new List<Socket>();
-                Socket.Select(checkRead, null, checkError, -1);
+                Socket.Select(checkRead, null, checkError, UpdateFrequency * 100);
 
                 foreach (var socket in checkRead)
                 {
@@ -123,7 +119,7 @@ namespace qASIC.Communication.Discovery
                     var alreadyAdded = Discovered.Where(x => x.Identity.bytes.SequenceEqual(identity.bytes) && x.Port == port);
 
                     foreach (var item in alreadyAdded)
-                        item.MissedPings = 0;
+                        item.MissedPings = -1;
 
                     if (alreadyAdded.Any())
                         continue;
@@ -131,6 +127,21 @@ namespace qASIC.Communication.Discovery
                     var connection = new DiscoveredConnection(ipEndpoint.Address, port, identity);
                     Discovered.Add(connection);
                     OnDiscover?.Invoke(connection);
+                }
+
+                var toRemove = new List<DiscoveredConnection>();
+                foreach (var item in Discovered)
+                {
+                    item.MissedPings++;
+
+                    if (item.MissedPings > MaxMissedPings)
+                        toRemove.Add(item);
+                }
+
+                foreach (var item in toRemove)
+                {
+                    Discovered.Remove(item);
+                    OnRemoved?.Invoke(item);
                 }
             }
 
@@ -158,28 +169,6 @@ namespace qASIC.Communication.Discovery
             socket.Bind(new IPEndPoint(is6 ? IPAddress.IPv6Any : IPAddress.Any, Port));
 
             return socket;
-        }
-
-        void Check()
-        {
-            while (!_cancel.Token.WaitHandle.WaitOne(UpdateFrequency))
-            {
-                var toRemove = new List<DiscoveredConnection>();
-
-                foreach (var item in Discovered)
-                {
-                    item.MissedPings++;
-
-                    if (item.MissedPings >= MaxMissedPings)
-                        toRemove.Add(item);
-                }
-
-                foreach (var item in toRemove)
-                {
-                    Discovered.Remove(item);
-                    OnRemoved?.Invoke(item);
-                }
-            }
         }
     }
 }
