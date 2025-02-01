@@ -185,8 +185,7 @@ namespace qASIC.Communication
 
         private void SendLoop()
         {
-            var toRemove = new List<Client>();
-            foreach (var client in Clients)
+            foreach (var client in Clients.ToArray())
             {
                 try
                 {
@@ -201,12 +200,9 @@ namespace qASIC.Communication
                 catch
                 {
                     Logs.LogError($"There was an error while sending data to client '{client.id}', removing...");
-                    toRemove.Add(client);
+                    DisconnectClientLocal(client);
                 }                
             }
-
-            foreach (var item in toRemove)
-                DisconnectClientLocal(item);
 
             ExecuteLater(MilisecondsPerSend, SendLoop);
         }
