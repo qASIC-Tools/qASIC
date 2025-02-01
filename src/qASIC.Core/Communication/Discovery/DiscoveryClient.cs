@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -63,7 +64,7 @@ namespace qASIC.Communication.Discovery
 
             IsActive = true;
             Discovered = new List<DiscoveredConnection>();
-            _processThread = new Thread(Process);
+            _processThread = new Thread(async () => await Process());
             _cancel = new CancellationTokenSource();
             _processThread.Start();
         }
@@ -82,7 +83,7 @@ namespace qASIC.Communication.Discovery
             _processThread = null;
         }
 
-        void Process()
+        async Task Process()
         {
             var sockets = new List<Socket>();
 
@@ -99,12 +100,17 @@ namespace qASIC.Communication.Discovery
                 Stop();
                 return;
             }
+            var stopwatch = new Stopwatch();
 
             while (!_cancel.IsCancellationRequested)
             {
                 var checkRead = sockets.ToList();
                 var checkError = new List<Socket>();
-                Socket.Select(checkRead, null, checkError, UpdateFrequency * 100);
+
+                stopwatch.Reset();
+                stopwatch.Start();
+
+                Socket.Select(checkRead, null, checkError, UpdateFrequency * 1000);
 
                 foreach (var socket in checkRead)
                 {
@@ -143,6 +149,11 @@ namespace qASIC.Communication.Discovery
                     Discovered.Remove(item);
                     OnRemoved?.Invoke(item);
                 }
+
+                stopwatch.Stop();
+
+                if (stopwatch.ElapsedMilliseconds < UpdateFrequency)
+                    await Task.Delay(UpdateFrequency - (int)stopwatch.ElapsedMilliseconds);
             }
 
             foreach (var item in sockets)
