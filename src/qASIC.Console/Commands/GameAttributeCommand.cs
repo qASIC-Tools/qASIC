@@ -78,7 +78,7 @@ namespace qASIC.Console.Commands
             if (FindCommandAndTryRun(new List<object>()))
                 return returnValue;
 
-            throw new CommandParseException(closestMatch.argTypes[closestMatchCorrectArgsCount], gameContext[closestMatchCorrectArgsCount + 1].arg);
+            throw new CommandParseException(closestMatch?.argTypes[closestMatchCorrectArgsCount], gameContext[closestMatchCorrectArgsCount + 1].arg);
 
             bool FindCommandAndTryRun(List<object> values, bool first = true)
             {
@@ -86,7 +86,7 @@ namespace qASIC.Console.Commands
                 {
                     var index = values.Count;
                     values.Add(new object());
-                    foreach (var value in cmdArgs[index].values)
+                    foreach (var value in cmdArgs[index].GetAllPossibleValues())
                     {
                         values[index] = value;
                         if (FindCommandAndTryRun(values, false))
@@ -263,11 +263,12 @@ namespace qASIC.Console.Commands
                 var parameters = methodInfo.GetParameters();
 
                 contextType = null;
-                if (parameters.Length > 0 && parameters[0].ParameterType.IsAssignableFrom(typeof(CommandContext)))
+                if (parameters.Length > 0 && parameters[0].ParameterType.IsAssignableTo(typeof(CommandContext)))
                     contextType = parameters[0].ParameterType;
 
                 if (contextType != null)
                     parameters = parameters
+                        .Skip(1)
                         .ToArray();
 
                 minArgsCount = parameters

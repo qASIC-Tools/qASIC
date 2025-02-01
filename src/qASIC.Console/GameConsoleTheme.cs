@@ -64,7 +64,7 @@ namespace qASIC.Console
             customColors.Clear();
             int colorCount = packet.ReadInt();
             for (int i = 0; i < colorCount; i++)
-                customColors.Add(packet.ReadString(), packet.ReadNetworkSerializable<qColor>());
+                customColors.SetOrAdd(packet.ReadString(), packet.ReadNetworkSerializable<qColor>());
 
             defaultColor = packet.ReadNetworkSerializable<qColor>();
             warningColor = packet.ReadNetworkSerializable<qColor>();

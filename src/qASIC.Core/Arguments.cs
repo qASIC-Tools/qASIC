@@ -150,6 +150,17 @@ namespace qASIC
             return false;
         }
 
+        public List<object> GetAllPossibleValues()
+        {
+            var list = new List<object>(values);
+
+            foreach (var item in Parser.Parsers)
+                if (item.TryParse(arg, out var val))
+                    list.Add(val);
+                
+            return list;
+        }
+
         public bool CanGetValue<T>() =>
             CanGetValue(typeof(T));
 
