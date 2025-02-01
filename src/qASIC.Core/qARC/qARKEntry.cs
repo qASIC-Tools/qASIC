@@ -138,6 +138,7 @@ namespace qASIC.qARK
             {
                 IsArrayStart = isArrayStart,
                 IsArrayItem = isArrayItem,
+                Parser = doc.Parser,
             };
 
             doc.AddElement(el);
