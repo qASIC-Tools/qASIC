@@ -105,12 +105,12 @@ namespace qASIC.Communication.Components
 
             if (!messages.TryGetValue(messageId, out var data))
             {
-                data = new MessageData();
+                data = new MessageData(messageId);
                 messages.Add(messageId, data);
             }
 
             //Return if there was an error
-            if (!data.HandlePacket(packet, server.Logs))
+            if (!data.HandlePacket(packet, server.Logs, server.logPackets))
                 return;
             
             //If we don't have all packets, wait for the rest to arrive
@@ -123,6 +123,9 @@ namespace qASIC.Communication.Components
             messages.Remove(messageId);
 
             var compId = finalPacket.ReadString();
+
+            if (server.logPackets)
+                server.Logs.Log($"Constructed final packet parts:{data.packetAmount}, client:{serverClient.id}, component:{compId} - {finalPacket}");
 
             var targetComp = components
                 .Where(x => x.GetId() == compId)
@@ -163,12 +166,12 @@ namespace qASIC.Communication.Components
 
             if (!clientMessages.TryGetValue(messageId, out var data))
             {
-                data = new MessageData();
+                data = new MessageData(messageId);
                 clientMessages.Add(messageId, data);
             }
 
             //Return if there was an error
-            if (!data.HandlePacket(packet, client.Logs))
+            if (!data.HandlePacket(packet, client.Logs, client.logPackets))
                 return;
 
             //If we don't have all packets, wait for the rest to arrive
@@ -181,6 +184,9 @@ namespace qASIC.Communication.Components
             clientMessages.Remove(messageId);
             
             var compId = finalPacket.ReadString();
+
+            if (client.logPackets)
+                client.Logs.Log($"Constructed final packet, component:{compId} - {finalPacket}");
 
             var targetComp = components
                 .Where(x => x.GetId() == compId)
@@ -225,10 +231,17 @@ namespace qASIC.Communication.Components
 
         public class MessageData
         {
+            public MessageData(uint messageId)
+            {
+                this.messageId = messageId;
+            }
+
+            public uint messageId;
+
             public int packetAmount = 0;
             public Dictionary<int, qPacket> packets = new Dictionary<int, qPacket>();
 
-            public bool HandlePacket(qPacket packet, LogManager logs)
+            public bool HandlePacket(qPacket packet, LogManager logs, bool logPackets = false)
             {
                 var packetId = packet.ReadInt();
 
@@ -260,6 +273,9 @@ namespace qASIC.Communication.Components
                     logs.LogError("Error processing packet, packet id seems to be greater than the expected amount.");
                     return false;
                 }
+
+                if (logPackets)
+                    logs.Log($"Processed packet for msg:{messageId}, expecting:{packetAmount}, id:{packetId} - {packet}");
 
                 packets.SetOrAdd(packetId, packet);
 

@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System;
 using qASIC.Communication.Components;
+using System.Linq;
 
 namespace qASIC.Communication
 {
@@ -67,10 +68,12 @@ namespace qASIC.Communication
 
         public int MaxMissedPings { get; set;} = 3;
 
+        int bufferPos;
         private byte[] buffer = new byte[0];
+        private byte[] workingBuffer = new byte[0];
         internal int missedPings;
 
-        public bool logPacketSend = false;
+        public bool logPackets = false;
 
         public qClient WithUpdateLoop(int milisecondsPerUpdate = 10)
         {
@@ -104,7 +107,9 @@ namespace qASIC.Communication
                     NoDelay = false,
                 };
 
-                buffer = new byte[Socket.ReceiveBufferSize];
+                bufferPos = 0;
+                buffer = new byte[Constants.BUFFER_SIZE];
+                workingBuffer = new byte[Constants.BUFFER_SIZE];
                 IAsyncResult result = Socket.BeginConnect(Address, Port, null, null);
 
                 CurrentState = State.Connecting;
@@ -134,7 +139,7 @@ namespace qASIC.Communication
                         {
                             Socket.EndConnect(result);
                             Stream = Socket.GetStream();
-                            Stream.BeginRead(buffer, 0, Socket.ReceiveBufferSize, OnDataReceived, null);
+                            Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, OnDataReceived, null);
 
                             Send(new CC_ConnectData().CreateClientConfirmationPacket());
 
@@ -200,22 +205,30 @@ namespace qASIC.Communication
 
                 int length = Stream.EndRead(result);
 
-                if (length <= 0)
+                if (logPackets)
+                    Logs.Log($"Incomming data, length:{length}");
+
+                var limitedLength = Math.Min(length, Constants.BUFFER_SIZE - bufferPos);
+                Array.Copy(buffer, 0, workingBuffer, bufferPos, limitedLength);
+                bufferPos += limitedLength;
+
+                if (bufferPos == Constants.BUFFER_SIZE)
                 {
-                    Logs.LogError("Stream is empty");
-                    return;
+                    var packet = new qPacket(workingBuffer.ToArray());
+
+                    if (logPackets)
+                        Logs.Log($"Received packet - {packet}");
+
+                    Components.HandlePacketForClient(this, packet);
+
+                    Array.Copy(buffer, limitedLength, workingBuffer, 0, length - limitedLength);
+                    bufferPos = length - limitedLength;
                 }
 
-                byte[] temp = new byte[length];
-                Array.Copy(buffer, temp, length);
-                Array.Clear(buffer, 0, buffer.Length);
-
-                var packet = new qPacket(temp);
-
-                Components.HandlePacketForClient(this, packet);
+                Array.Clear(buffer, 0, Constants.BUFFER_SIZE);
 
                 if (IsActive)
-                    Stream.BeginRead(buffer, 0, Socket!.ReceiveBufferSize, OnDataReceived, null);
+                    Stream.BeginRead(buffer, bufferPos, Constants.BUFFER_SIZE - bufferPos, OnDataReceived, null);
             }
             catch (Exception e)
             {
@@ -240,7 +253,7 @@ namespace qASIC.Communication
             {
                 if (packetsToSend.TryDequeue(out var packet) && Stream?.CanWrite == true)
                 {
-                    if (logPacketSend)
+                    if (logPackets)
                         Logs.Log($"Sending packet - {packet}");
 
                     Stream?.Write(packet.ToArray(), 0, packet.bytes.Count);

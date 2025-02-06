@@ -29,7 +29,7 @@ namespace qASIC.Communication
         public Action<Client> OnClientConnect;
 
         int nextClientId;
-        public bool logPacketSend = false;
+        public bool logPackets = false;
 
         public void Start()
         {
@@ -155,6 +155,9 @@ namespace qASIC.Communication
 
             var packet = new qPacket(buffer);
 
+            if (logPackets)
+                Logs.Log($"Received packet from client '{args.client.id}' - {packet}");
+
             Components.HandlePacketForServer(this, args.client, packet);
         }
         #endregion
@@ -167,6 +170,10 @@ namespace qASIC.Communication
             try
             {
                 var data = Components.FinalizePacket(packet);
+
+                if (logPackets)
+                    Logs.Log($"Adding packets to send queue, client: {client.id}, count: {data.Length}");
+
                 foreach (var item in data)
                     client.packetsToSend.Enqueue(item);
             }
@@ -191,8 +198,8 @@ namespace qASIC.Communication
                 {
                     if (client.Stream?.CanWrite == true && client.packetsToSend.TryDequeue(out qPacket packet))
                     {
-                        if (logPacketSend)
-                            Logs.Log($"Sending packet - {packet}");
+                        if (logPackets)
+                            Logs.Log($"Sending packet to client '{client.id}' - {packet}");
 
                         client.Stream.Write(packet.ToArray(), 0, packet.bytes.Count);
                     }
@@ -217,7 +224,7 @@ namespace qASIC.Communication
 
                 Socket = socket;
                 Stream = socket.GetStream();
-                buffer = new byte[Socket.ReceiveBufferSize];
+                buffer = new byte[Constants.BUFFER_SIZE];
 
                 OnDataReceive = onDataReceive;
             }
@@ -239,7 +246,7 @@ namespace qASIC.Communication
             public void Initialize()
             {
                 IsActive = true;
-                Stream.BeginRead(buffer, 0, Socket.ReceiveBufferSize, HandleReceiveData, null);
+                Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, HandleReceiveData, null);
             }
 
             public void DisconnectLocal()
@@ -274,7 +281,7 @@ namespace qASIC.Communication
                     OnDataReceive?.Invoke(new OnServerReceiveDataArgs(this, tempBuffer));
 
                     if (IsActive)
-                        Stream.BeginRead(buffer, 0, Socket.ReceiveBufferSize, HandleReceiveData, null);
+                        Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, HandleReceiveData, null);
                 }
                 catch (Exception e)
                 {
