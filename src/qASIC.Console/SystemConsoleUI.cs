@@ -145,22 +145,6 @@ namespace qASIC.Console
             SysConsole.CursorLeft = left;
         }
 
-        public bool IsReadingInput { get; private set; }
-
-        public int InputCursorPosition
-        {
-            get;
-            private set;
-        } = 0;
-
-        public string InputString { get; private set; } = string.Empty;
-
-        string GetInputAfterCursor() =>
-            InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
-
-        string GetInputBeforeCursor() =>
-            InputString.Substring(0, InputCursorPosition);
-
         /// <summary>Starts reading user input from the console window.</summary>
         /// <param name="readOnce">If true, reading will not be repeated.</param>
         public void StartReading(bool readOnce = false)
@@ -177,6 +161,9 @@ namespace qASIC.Console
             while (CanRead)
             {
                 IsReadingInput = true;
+                inputs.Add(string.Empty);
+                currentInput = inputs.Count - 1;
+
                 bool isDone = false;
                 while (!isDone)
                 {
@@ -195,6 +182,24 @@ namespace qASIC.Console
                 await Console.ExecuteAsync(cmd);
             }
         }
+
+        #region Input
+        public bool IsReadingInput { get; private set; }
+
+        public int InputCursorPosition { get; private set; } = 0;
+        public string InputString { get; private set; } = string.Empty;
+
+        public int PreviousInputsLimit { get; set; } = 3;
+
+        List<string> previousInputs = new List<string>();
+        List<string> inputs = new List<string>();
+        int currentInput = 0;
+
+        string GetInputAfterCursor() =>
+            InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
+
+        string GetInputBeforeCursor() =>
+            InputString.Substring(0, InputCursorPosition);
 
         bool HandleKey(ConsoleKeyInfo key)
         {
@@ -224,9 +229,24 @@ namespace qASIC.Console
                 return true;
             }
 
+            //Apply
             if (key.Key == ConsoleKey.Enter)
                 return true;
 
+            //Swapping current input to previous
+            if (key.Key == ConsoleKey.UpArrow)
+            {
+                ChangeInput(currentInput - 1);
+                return false;
+            }
+
+            if (key.Key == ConsoleKey.DownArrow)
+            {
+                ChangeInput(currentInput + 1);
+                return false;
+            }
+
+            //Navigation
             if (key.Key == ConsoleKey.LeftArrow)
             {
                 var length = key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
@@ -253,6 +273,7 @@ namespace qASIC.Console
                 return false;
             }
 
+            //Deleting
             if (key.Key == ConsoleKey.Backspace)
             {
                 DeleteBeforeCursor(key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
@@ -269,6 +290,7 @@ namespace qASIC.Console
                 return false;
             }
 
+            //Writting
             if (key.KeyChar != 0)
             {
                 var toWrite = InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
@@ -282,6 +304,22 @@ namespace qASIC.Console
             }
 
             return false;
+        }
+
+        void ChangeInput(int newIndex)
+        {
+            if (newIndex < 0 || newIndex >= inputs.Count) return;
+
+            inputs[currentInput] = InputString;
+            SysConsole.Write(new string('\b', InputCursorPosition));
+            SysConsole.Write(new string(' ', InputCursorPosition));
+            SysConsole.Write(new string('\b', InputCursorPosition));
+
+            currentInput = newIndex;
+
+            InputString = inputs[currentInput];
+            SysConsole.Write(InputString);
+            InputCursorPosition = InputString.Length;
         }
 
         int WordAfterLength()
@@ -324,14 +362,38 @@ namespace qASIC.Console
         string FinalizeInput()
         {
             var cmd = InputString;
+
+            //Finish writing input
             SysConsole.WriteLine(InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition));
 
+            //Clear
             InputString = "";
             InputCursorPosition = 0;
             IsReadingInput = false;
 
+            //Saving previous inputs
+            if (!string.IsNullOrWhiteSpace(cmd))
+            {
+                //Add final input and apply
+                previousInputs.Add(cmd);
+                inputs[inputs.Count - 1] = cmd;
+
+                //Ensure limit
+                while (previousInputs.Count > PreviousInputsLimit)
+                {
+                    currentInput--;
+                    previousInputs.RemoveAt(0);
+                    inputs.RemoveAt(0);
+                }
+
+                //If a previous input was modified and executed, revert to old one
+                if (currentInput >= 0)
+                    inputs[currentInput] = previousInputs[currentInput];
+            }
+
             return cmd;
         }
+        #endregion
 
         protected string CreateLogText(qLog log) =>
             string.Format(LogFormat, log.message, log.time.ToString(TimeFormat), log.logType);
