@@ -1,4 +1,4 @@
-﻿using qASIC.Communication;
+using qASIC.Communication;
 using qASIC;
 using qASIC.Console;
 using qASIC.Communication.Discovery;
@@ -237,7 +237,7 @@ namespace qASICRemote
 
             var systems = appInfo.systems
                 .Select(x => $"\n- {x.name} v{x.version}");
-            
+
             GConsole?.Log($"Used systems by projects:{string.Join(string.Empty, systems)}");
         }
 
@@ -339,8 +339,8 @@ namespace qASICRemote
                 log.message = logTxt.ToString();
 
                 context.console.Log(log);
-                return final ? 
-                    null : 
+                return final ?
+                    null :
                     navigationPrompt;
             }
         }
@@ -386,7 +386,7 @@ namespace qASICRemote
                 var cmd = context.inputString.TrimStart();
                 cmd = cmd.Substring(context.commandName.Length, cmd.Length - context.commandName.Length)
                     .TrimStart();
-                
+
                 inspector.consoleManager
                     .Get(inspector.SelectedConsole.Name)
                     .SendCommand(cmd);

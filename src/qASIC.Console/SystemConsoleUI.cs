@@ -1,4 +1,4 @@
-﻿using qASIC.CommandPrompts;
+using qASIC.CommandPrompts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +12,7 @@ namespace qASIC.Console
     {
         public SystemConsoleUI() : this(new GameConsole("MAIN")) { }
 
-        public SystemConsoleUI(qInstance instance) : this (new GameConsole(instance, "MAIN")) { }
+        public SystemConsoleUI(qInstance instance) : this(new GameConsole(instance, "MAIN")) { }
 
         public SystemConsoleUI(GameConsole console)
         {
@@ -145,22 +145,27 @@ namespace qASIC.Console
             SysConsole.CursorLeft = left;
         }
 
+        public bool IsReadingInput { get; private set; }
+
+        public int InputCursorPosition
+        {
+            get;
+            private set;
+        } = 0;
+
+        public string InputString { get; private set; } = string.Empty;
+
+        string GetInputAfterCursor() =>
+            InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
+
+        string GetInputBeforeCursor() =>
+            InputString.Substring(0, InputCursorPosition);
+
         /// <summary>Starts reading user input from the console window.</summary>
         /// <param name="readOnce">If true, reading will not be repeated.</param>
         public void StartReading(bool readOnce = false)
         {
-            CanRead = !readOnce;
-
-            while (CanRead)
-            {
-                string cmd = ConstructCmdString();
-
-                if (CanExecute?.Invoke(cmd) == false)
-                    continue;
-
-                cmd = ProcessCommandString?.Invoke(cmd) ?? cmd;
-                Console.Execute(cmd);
-            }
+            Task.WaitAll(StartReadingAsync(readOnce));
         }
 
         /// <summary>Starts reading user input from the console window asynchronously.</summary>
@@ -171,7 +176,17 @@ namespace qASIC.Console
 
             while (CanRead)
             {
-                string cmd = ConstructCmdString();
+                IsReadingInput = true;
+                bool isDone = false;
+                while (!isDone)
+                {
+                    await Task.Delay(10);
+
+                    while (SysConsole.KeyAvailable && !isDone)
+                        isDone |= HandleKey(SysConsole.ReadKey(true));
+                }
+
+                var cmd = FinalizeInput();
 
                 if (CanExecute?.Invoke(cmd) == false)
                     continue;
@@ -181,46 +196,139 @@ namespace qASIC.Console
             }
         }
 
-        string ConstructCmdString()
+        bool HandleKey(ConsoleKeyInfo key)
         {
-            string cmd = string.Empty;
-            IsReading = true;
-            switch (Console.ReturnedValue)
+            if (Console.ReturnedValue is KeyPrompt prompt)
             {
-                case KeyPrompt:
-                    var key = SysConsole.ReadKey();
+                var promptKey = key.Key switch
+                {
+                    ConsoleKey.UpArrow => KeyPrompt.NavigationKey.Up,
+                    ConsoleKey.DownArrow => KeyPrompt.NavigationKey.Down,
+                    ConsoleKey.LeftArrow => KeyPrompt.NavigationKey.Left,
+                    ConsoleKey.RightArrow => KeyPrompt.NavigationKey.Right,
+                    ConsoleKey.Enter => KeyPrompt.NavigationKey.Confirm,
+                    ConsoleKey.Escape => KeyPrompt.NavigationKey.Cancel,
+                    _ => KeyPrompt.NavigationKey.None,
+                };
 
-                    var promptKey = key.Key switch
-                    {
-                        ConsoleKey.UpArrow => KeyPrompt.NavigationKey.Up,
-                        ConsoleKey.DownArrow => KeyPrompt.NavigationKey.Down,
-                        ConsoleKey.LeftArrow => KeyPrompt.NavigationKey.Left,
-                        ConsoleKey.RightArrow => KeyPrompt.NavigationKey.Right,
-                        ConsoleKey.Enter => KeyPrompt.NavigationKey.Confirm,
-                        ConsoleKey.Escape => KeyPrompt.NavigationKey.Cancel,
-                        _ => KeyPrompt.NavigationKey.None,
-                    };
+                InputString = KeyPrompt.keyNames.Backward[promptKey];
 
-                    cmd = KeyPrompt.keyNames.Backward[promptKey];
+                if (promptKey == KeyPrompt.NavigationKey.None)
+                {
+                    if (!char.IsSymbol(key.KeyChar))
+                        return false;
 
-                    if (promptKey == KeyPrompt.NavigationKey.None)
-                    {
-                        if (!char.IsSymbol(key.KeyChar))
-                        {
-                            cmd = string.Empty;
-                            break;
-                        }
+                    InputString = key.KeyChar.ToString();
+                }
 
-                        cmd = key.KeyChar.ToString();
-                    }
-
-                    break;
-                default:
-                    cmd = SysConsole.ReadLine();
-                    break;
+                return true;
             }
 
-            IsReading = false;
+            if (key.Key == ConsoleKey.Enter)
+                return true;
+
+            if (key.Key == ConsoleKey.LeftArrow)
+            {
+                var length = key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
+                    WordBeforeLength() + 1 :
+                    1;
+
+                length = Math.Min(length, InputCursorPosition);
+                InputCursorPosition -= length;
+                SysConsole.Write(new string('\b', length));
+
+                return false;
+            }
+
+            if (key.Key == ConsoleKey.RightArrow)
+            {
+                var length = key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
+                    WordAfterLength() :
+                    1;
+
+                length = Math.Min(length, InputString.Length - InputCursorPosition);
+                SysConsole.Write(InputString.Substring(InputCursorPosition, length));
+                InputCursorPosition += length;
+
+                return false;
+            }
+
+            if (key.Key == ConsoleKey.Backspace)
+            {
+                DeleteBeforeCursor(key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
+                    WordBeforeLength() :
+                    1);
+                return false;
+            }
+
+            if (key.Key == ConsoleKey.Delete)
+            {
+                DeleteAfterCursor(key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
+                    WordAfterLength() :
+                    1);
+                return false;
+            }
+
+            if (key.KeyChar != 0)
+            {
+                var toWrite = InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
+
+                SysConsole.Write(key.KeyChar);
+                SysConsole.Write(toWrite);
+                SysConsole.Write(new string('\b', toWrite.Length));
+
+                InputString = InputString.Substring(0, InputCursorPosition) + key.KeyChar + toWrite;
+                InputCursorPosition++;
+            }
+
+            return false;
+        }
+
+        int WordAfterLength()
+        {
+            var txt = GetInputAfterCursor();
+            return txt.Length - txt.TrimStart().Length +
+                txt.TrimStart().Split(' ').First().Length;
+        }
+
+        int WordBeforeLength()
+        {
+            var txt = GetInputBeforeCursor();
+            return txt.Length - txt.TrimEnd().Length +
+                txt.TrimEnd().Split(' ').Last().Length;
+        }
+
+        void DeleteBeforeCursor(int amount = 1)
+        {
+            amount = Math.Min(amount, InputCursorPosition);
+            InputCursorPosition -= amount;
+            InputString = InputString.Substring(0, InputCursorPosition) + InputString.Substring(InputCursorPosition + amount, InputString.Length - InputCursorPosition - amount);
+
+            SysConsole.Write(new string('\b', amount));
+
+            var delLength = InputString.Length - InputCursorPosition + amount;
+            SysConsole.Write(InputString.Substring(InputCursorPosition, delLength - amount) + new string(' ', amount));
+            SysConsole.Write(new string('\b', delLength));
+        }
+
+        void DeleteAfterCursor(int amount = 1)
+        {
+            amount = Math.Min(amount, InputString.Length - InputCursorPosition);
+
+            var toWrite = InputString.Substring(InputCursorPosition + amount, InputString.Length - InputCursorPosition - amount);
+            SysConsole.Write(toWrite + new string(' ', amount));
+            SysConsole.Write(new string('\b', toWrite.Length + amount));
+            InputString = InputString.Substring(0, InputCursorPosition) + toWrite;
+        }
+
+        string FinalizeInput()
+        {
+            var cmd = InputString;
+            SysConsole.WriteLine(InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition));
+
+            InputString = "";
+            InputCursorPosition = 0;
+            IsReadingInput = false;
 
             return cmd;
         }
@@ -233,7 +341,7 @@ namespace qASIC.Console
         //txt;
 
         protected string CreateEmptyStringForLog(qLog log) =>
-            ColorText(new string (CreateLogText(log).Select(x => char.IsControl(x) ? x : ' ').ToArray()), log.color);
+            ColorText(new string(CreateLogText(log).Select(x => char.IsControl(x) ? x : ' ').ToArray()), log.color);
 
         class LogData
         {
