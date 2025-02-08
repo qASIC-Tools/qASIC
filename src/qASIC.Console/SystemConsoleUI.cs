@@ -34,7 +34,8 @@ namespace qASIC.Console
                     _console.Logs.OnUpdateLog -= UpdateLog;
                 }
 
-                VisibleLogs.Clear();
+                previousLog = null;
+                previousLogMessage = string.Empty;
                 _console = value;
 
                 if (_console != null)
@@ -45,17 +46,8 @@ namespace qASIC.Console
             }
         }
 
-        /// <summary>Format of a log, where:
-        /// <list type="bullet">
-        /// <item>{0} - <see cref="qLog.message"/></item>
-        /// <item>{1} - <see cref="qLog.time"/></item>
-        /// <item>{2} - <see cref="qLog.logType"/></item>
-        /// </list>
-        /// </summary>
-        public string LogFormat { get; set; } = "[{1}] [{2}] {0}";
-
-        /// <summary>String used for formatting <see cref="qLog.time"/>.</summary>
-        public string TimeFormat { get; set; } = "HH:mm:ss.fff";
+        /// <summary>Format string used for converting logs to text. See <see cref="qLog.ToString(string)"/>.</summary>
+        public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE%] %MESSAGE%";
 
         /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
         public bool CanRead { get; set; }
@@ -63,36 +55,29 @@ namespace qASIC.Console
         /// <summary>Is the console currently reading input from the command line.</summary>
         public bool IsReading { get; set; }
 
-        private Dictionary<qLog, LogData> VisibleLogs { get; set; } = new Dictionary<qLog, LogData>();
-
         /// <summary>Gets invoked before executing a command. If false, command will not be executed.</summary>
         public event Func<string, bool> CanExecute;
 
         /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
         public event Func<string, string> ProcessCommandString;
 
+        string previousLogMessage = string.Empty;
+        qLog previousLog = null;
+
         private void WriteLog(qLog log)
         {
             if (log.logType == LogType.Clear)
             {
                 SysConsole.Clear();
-                VisibleLogs.Clear();
+                previousLogMessage = string.Empty;
+                previousLog = null;
                 return;
             }
 
             var txt = CreateLogText(log);
 
-            //Do not add log to visible logs if reading
-            //if we don't do this, we might freeze until
-            //reading is done
-            if (!IsReading)
-            {
-                VisibleLogs.Add(log, new LogData()
-                {
-                    consoleTop = SysConsole.CursorTop,
-                    emptyString = CreateEmptyStringForLog(log),
-                });
-            }
+            previousLogMessage = log.message;
+            previousLog = log;
 
             SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
         }
@@ -103,10 +88,8 @@ namespace qASIC.Console
             if (log.logType == LogType.Clear)
                 return;
 
-            //Print if console is reading (prevent
-            //from freezing until done) or if log
-            //isn't remembered
-            if (IsReading || !VisibleLogs.ContainsKey(log))
+            //If it wasn't the previous log, just log
+            if (previousLog != log)
             {
                 WriteLog(log);
                 return;
@@ -114,35 +97,31 @@ namespace qASIC.Console
 
             var txt = CreateLogText(log);
 
-            var top = SysConsole.CursorTop;
-            var left = SysConsole.CursorLeft;
+            //Clear input line
+            SysConsole.Write(new string('\b', InputCursorPosition));
+            SysConsole.Write(new string(' ', InputString.Length));
+            SysConsole.Write(new string('\b', InputString.Length));
 
-            var logData = VisibleLogs[log];
+            //Calculate previous message length
+            var consoleWidth = SysConsole.BufferWidth;
+            var lineLength = previousLogMessage.Split('\n')
+                .Select(x => (x.Length - 1) / consoleWidth + 1)
+                .Sum();
+            var top = Math.Max(0, SysConsole.CursorTop - lineLength);
 
-            SysConsole.CursorTop = logData.consoleTop;
-            SysConsole.CursorLeft = 0;
-
-            //Override with garbage data, not sure why it doesn't
-            //work with spaces
-            SysConsole.Write(logData.emptyString.Replace(' ', '@'));
-
-            SysConsole.CursorTop = logData.consoleTop;
-            SysConsole.CursorLeft = 0;
-
-            //Clear
-            SysConsole.Write(logData.emptyString);
-
-            SysConsole.CursorTop = logData.consoleTop;
-            SysConsole.CursorLeft = 0;
-
-            //Write new log
-            SysConsole.Write(ColorText(txt, Console.GetLogColor(log)));
-
-            if (SysConsole.CursorTop >= top)
-                top = SysConsole.CursorTop + 1;
-
+            //Clear previous message
             SysConsole.CursorTop = top;
-            SysConsole.CursorLeft = left;
+            SysConsole.Write(new string(' ', lineLength * consoleWidth));
+            SysConsole.CursorTop = top;
+
+            //Write new message
+            SysConsole.Write(txt);
+            previousLogMessage = log.message;
+
+            //Restore input line
+            SysConsole.WriteLine('\b');
+            SysConsole.Write(InputString);
+            SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
         }
 
         /// <summary>Starts reading user input from the console window.</summary>
@@ -161,8 +140,12 @@ namespace qASIC.Console
             while (CanRead)
             {
                 IsReadingInput = true;
-                inputs.Add(string.Empty);
-                currentInput = inputs.Count - 1;
+
+                if (!(Console.ReturnedValue is CommandPrompt))
+                {
+                    inputs.Add(string.Empty);
+                    currentInput = inputs.Count - 1;
+                }
 
                 bool isDone = false;
                 while (!isDone)
@@ -362,33 +345,38 @@ namespace qASIC.Console
         string FinalizeInput()
         {
             var cmd = InputString;
+            var inputVisible = !(Console.ReturnedValue is CommandPrompt);
 
             //Finish writing input
-            SysConsole.WriteLine(InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition));
+            if (inputVisible)
+                SysConsole.WriteLine(InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition));
 
             //Clear
             InputString = "";
             InputCursorPosition = 0;
             IsReadingInput = false;
 
-            //Saving previous inputs
-            if (!string.IsNullOrWhiteSpace(cmd))
+            if (inputVisible)
             {
-                //Add final input and apply
-                previousInputs.Add(cmd);
-                inputs[inputs.Count - 1] = cmd;
-
-                //Ensure limit
-                while (previousInputs.Count > PreviousInputsLimit)
+                //Saving previous inputs
+                if (!string.IsNullOrWhiteSpace(cmd))
                 {
-                    currentInput--;
-                    previousInputs.RemoveAt(0);
-                    inputs.RemoveAt(0);
-                }
+                    //Add final input and apply
+                    previousInputs.Add(cmd);
+                    inputs[inputs.Count - 1] = cmd;
 
-                //If a previous input was modified and executed, revert to old one
-                if (currentInput >= 0)
-                    inputs[currentInput] = previousInputs[currentInput];
+                    //Ensure limit
+                    while (previousInputs.Count > PreviousInputsLimit)
+                    {
+                        currentInput--;
+                        previousInputs.RemoveAt(0);
+                        inputs.RemoveAt(0);
+                    }
+
+                    //If a previous input was modified and executed, revert to old one
+                    if (currentInput >= 0)
+                        inputs[currentInput] = previousInputs[currentInput];
+                }
             }
 
             return cmd;
@@ -396,7 +384,7 @@ namespace qASIC.Console
         #endregion
 
         protected string CreateLogText(qLog log) =>
-            string.Format(LogFormat, log.message, log.time.ToString(TimeFormat), log.logType);
+            log.ToString(LogFormat);
 
         protected string ColorText(string txt, qColor color) =>
             $"\u001b[38;2;{color.red};{color.green};{color.blue}m{txt}\u001b[0m";
@@ -404,11 +392,5 @@ namespace qASIC.Console
 
         protected string CreateEmptyStringForLog(qLog log) =>
             ColorText(new string(CreateLogText(log).Select(x => char.IsControl(x) ? x : ' ').ToArray()), log.color);
-
-        class LogData
-        {
-            public int consoleTop;
-            public string emptyString;
-        }
     }
 }

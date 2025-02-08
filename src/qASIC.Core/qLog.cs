@@ -1,5 +1,6 @@
-﻿using qASIC.Communication;
+using qASIC.Communication;
 using System;
+using System.Text;
 
 namespace qASIC
 {
@@ -61,6 +62,86 @@ namespace qASIC
         public override string ToString() =>
             $"[{time:HH:mm:ss}] [{logType}] {message}";
 
+        /// <summary>Returns a string that represents the current object using a format.</summary>
+        /// <param name="format">Format of the string.
+        /// <list type="bullet">
+        /// <item>%TIME% or %TIME:[format]% - represents <see cref="time"/>. Optional format will be used in <see cref="DateTime.ToString(string?)"/>.</item>
+        /// <item>%MESSAGE% - represents <see cref="message"/>.</item>
+        /// <item>%TYPE% or %TYPE:Application,User,Internal,Clear% - represents <see cref="logType"/>. Optionally you can specify text that will be used for every value.</item>
+        /// <item>%TAG% - represents <see cref="colorTag"/>.</item>
+        /// <item>%COLOR% - represents <see cref="color"/>.</item>
+        /// <item>%% - represents the '%' character.</item>
+        /// </list>
+        /// </param>
+        /// <returns>A string that represents the current object.</returns>
+        public string ToString(string format)
+        {
+            var txt = new StringBuilder();
+            var block = new StringBuilder();
+            bool buildingBlock = false;
+
+            for (int i = 0; i < format.Length; i++)
+            {
+                if (format[i] == '%')
+                {
+                    buildingBlock = !buildingBlock;
+
+                    if (!buildingBlock)
+                    {
+                        var blockTxt = block.ToString();
+                        var blockTxtLow = blockTxt.ToLower();
+                        block.Clear();
+
+                        //Values with formats
+                        if (blockTxtLow.StartsWith("time:"))
+                        {
+                            txt.Append(time.ToString(blockTxt.Substring(5, blockTxt.Length - 5)));
+                            continue;
+                        }
+
+                        if (blockTxtLow.StartsWith("type:"))
+                        {
+                            var parts = blockTxt.Substring(5, blockTxt.Length - 5).Split(',');
+                            var index = logType switch
+                            {
+                                LogType.User => 0,
+                                LogType.Application => 1,
+                                LogType.Internal => 2,
+                                LogType.Clear => 3,
+                                _ => 4,
+                            };
+
+                            txt.Append(index < parts.Length ? parts[index] : "");
+                            continue;
+                        }
+
+                        //Normal values
+                        txt.Append(blockTxtLow switch
+                        {
+                            "time" => time.ToString(),
+                            "message" => message,
+                            "type" => logType,
+                            "color" => color,
+                            "" => "%",
+                            _ => "",
+                        });
+                    }
+
+                    continue;
+                }
+
+                if (buildingBlock)
+                {
+                    block.Append(format[i]);
+                    continue;
+                }
+
+                txt.Append(format[i]);
+            }
+
+            return txt.ToString();
+        }
+
         /// <summary>Changes message of the log.</summary>
         /// <param name="message">New log message.</param>
         /// <returns>Returns itself.</returns>
@@ -112,7 +193,7 @@ namespace qASIC
             .Write(colorTag == null)
             .Write(colorTag ?? string.Empty)
             .Write(color);
-        
+
         public void Read(qPacket packet)
         {
             time = new DateTime(packet.ReadLong());
