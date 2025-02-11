@@ -1,6 +1,6 @@
-﻿using qASIC.Parsing;
+using qASIC.Parsing;
 
-namespace qASIC.Console.Parsing.Arguments
+namespace qASIC.Console.Parsing
 {
     public abstract class ArgumentsParser
     {
@@ -12,7 +12,7 @@ namespace qASIC.Console.Parsing.Arguments
         /// <param name="cmd">The console input string.</param>
         /// <returns>Returns the parsed command name.</returns>
         public abstract string ParseCommandName(string cmd);
-        
+
         /// <summary>Gets command arguments from a console input string.</summary>
         /// <param name="cmd">The console input string.</param>
         /// <returns>Returns a list of command arguments.</returns>
@@ -24,9 +24,6 @@ namespace qASIC.Console.Parsing.Arguments
         /// <returns>Returns a console input string.</returns>
         public abstract string ConvertToString(string commandName, CommandArgument[] arguments);
 
-        protected CommandArgument CreateCommandArgument(string arg)
-        {
-            return new CommandArgument(ValueParser, arg);
-        }
+        public abstract CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex);
     }
 }

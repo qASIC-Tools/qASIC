@@ -104,8 +104,8 @@ namespace qASIC
                             var parts = blockTxt.Substring(5, blockTxt.Length - 5).Split(',');
                             var index = logType switch
                             {
-                                LogType.User => 0,
-                                LogType.Application => 1,
+                                LogType.Application => 0,
+                                LogType.User => 1,
                                 LogType.Internal => 2,
                                 LogType.Clear => 3,
                                 _ => 4,

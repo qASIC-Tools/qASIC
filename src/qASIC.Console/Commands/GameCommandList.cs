@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Reflection;
 using System.Collections.Generic;
 using System;
@@ -170,6 +170,10 @@ namespace qASIC.Console.Commands
 
         ICommandList ICommandList.RemoveCommand(ICommand command) =>
             RemoveCommand(command);
+
+        public IEnumerable<string> GetSortedCommandNames() =>
+            Commands.SelectMany(x => x.names)
+                .OrderBy(x => x);
 
         public IEnumerator<ICommand> GetEnumerator() =>
             Commands

@@ -1,8 +1,8 @@
-﻿using GameLog = qASIC.qLog;
+using GameLog = qASIC.qLog;
 using System.Diagnostics;
 using qASIC.Console.Commands;
 using System.Reflection;
-using qASIC.Console.Parsing.Arguments;
+using qASIC.Console.Parsing;
 using System;
 using qASIC.CommandPrompts;
 using System.Threading.Tasks;
@@ -15,13 +15,16 @@ namespace qASIC.Console
         public const string SYSTEM_VERSION = "1.0.0";
 
         public GameConsole(ICommandList commandList = null, ArgumentsParser parser = null) :
-            this(Guid.NewGuid().ToString(), commandList, parser) { }
+            this(Guid.NewGuid().ToString(), commandList, parser)
+        { }
 
         public GameConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null) :
-            this(qInstance.Main, name, commandList, parser) { }
+            this(qInstance.Main, name, commandList, parser)
+        { }
 
         public GameConsole(qInstance instance, ICommandList commandList = null, ArgumentsParser parser = null) :
-            this(instance, Guid.NewGuid().ToString(), commandList, parser) { }
+            this(instance, Guid.NewGuid().ToString(), commandList, parser)
+        { }
 
         public GameConsole(qInstance instance, string name, ICommandList commandList = null, ArgumentsParser parser = null)
         {
@@ -89,7 +92,7 @@ namespace qASIC.Console
 
         /// <summary>Should the console log messages from <see cref="qDebug"/>.</summary>
         public bool LogQDebug { get; set; } = true;
-        
+
         /// <summary>Determines if console should try looking for attributes that can change log messages and colors.</summary>
         public bool UseLogModifierAttributes { get; set; } = true;
 
@@ -148,14 +151,14 @@ namespace qASIC.Console
             //Normal
             if (CommandList == null)
                 throw new Exception("Cannot execute commands with no command list!");
-            
+
             if (context.Logs == null)
                 context.Logs = new GameLogManager();
 
             bool registerLogs = context.LogOutput;
             if (registerLogs)
                 Logs.RegisterManager(context.Logs);
-            
+
             if (!CommandList.TryGetCommand(context.commandName, out var command))
             {
                 context.Logs.LogError($"Command {context.commandName} doesn't exist");
@@ -176,7 +179,7 @@ namespace qASIC.Console
             {
                 ReturnedValue = null;
                 closeLogs = false;
-                Task.Run(async () => 
+                Task.Run(async () =>
                 {
                     await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs, false);
                     if (context.CleanupLogger)
@@ -193,9 +196,9 @@ namespace qASIC.Console
             if (closeLogs && context.CleanupLogger)
             {
                 Logs.UnregisterManager(CurrentCommandLogs);
-                CurrentCommandLogs.Close();   
+                CurrentCommandLogs.Close();
             }
-            
+
             CurrentCommandLogs = null;
             CurrentCommand = null;
             return ReturnedValue;
@@ -226,7 +229,7 @@ namespace qASIC.Console
 
             //Executing
             ReturnedValue = Execute(CurrentCommand.CommandName, () => CurrentCommand.Run(context), context.Logs);
-            if (ReturnedValue is Task task) 
+            if (ReturnedValue is Task task)
                 ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs);
 
             //After
@@ -331,10 +334,10 @@ namespace qASIC.Console
         {
             if (CurrentCommand?.CommandName != null)
                 return CurrentCommand.CommandName;
-            
+
             if (CommandParser == null)
                 throw new Exception("Cannot parse commands with no parser!");
-            
+
             return CommandParser.ParseCommandName(cmd);
         }
         #endregion

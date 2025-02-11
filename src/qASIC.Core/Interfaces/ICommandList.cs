@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace qASIC
@@ -13,5 +13,7 @@ namespace qASIC
         event Action<IEnumerable<ICommand>> OnCommandsRemoved;
 
         public bool TryGetCommand(string commandName, out ICommand command);
+
+        public IEnumerable<string> GetSortedCommandNames();
     }
 }

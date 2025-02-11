@@ -1,8 +1,11 @@
-using qASIC.CommandPrompts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
+using qASIC.CommandPrompts;
+using qASIC.Console.Autocomplete;
+
 using SysConsole = System.Console;
 
 namespace qASIC.Console
@@ -38,6 +41,9 @@ namespace qASIC.Console
                 previousLogMessage = string.Empty;
                 _console = value;
 
+                if (autocomplete != null)
+                    autocomplete.Console = value;
+
                 if (_console != null)
                 {
                     _console.Logs.OnLog += WriteLog;
@@ -46,8 +52,19 @@ namespace qASIC.Console
             }
         }
 
+        private AutocompleteEngine autocomplete = new BlockAutocompleteEngine(null);
+        public AutocompleteEngine Autocomplete
+        {
+            get => autocomplete;
+            set
+            {
+                autocomplete = value;
+                autocomplete.Console = _console;
+            }
+        }
+
         /// <summary>Format string used for converting logs to text. See <see cref="qLog.ToString(string)"/>.</summary>
-        public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE%] %MESSAGE%";
+        public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE:App,Usr,Int,Clr%] %MESSAGE%";
 
         /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
         public bool CanRead { get; set; }
@@ -213,19 +230,31 @@ namespace qASIC.Console
             }
 
             //Apply
-            if (key.Key == ConsoleKey.Enter)
+            if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                 return true;
 
             //Swapping current input to previous
-            if (key.Key == ConsoleKey.UpArrow)
+            if (key.Key == ConsoleKey.UpArrow && key.Modifiers == 0)
             {
                 ChangeInput(currentInput - 1);
                 return false;
             }
 
-            if (key.Key == ConsoleKey.DownArrow)
+            if (key.Key == ConsoleKey.DownArrow && key.Modifiers == 0)
             {
                 ChangeInput(currentInput + 1);
+                return false;
+            }
+
+            //Autocorrect
+            if (key.Key == ConsoleKey.Tab && key.Modifiers == 0)
+            {
+                SysConsole.Write(new string('\b', InputCursorPosition));
+                SysConsole.Write(new string(' ', InputString.Length));
+                SysConsole.Write(new string('\b', InputString.Length));
+                (InputString, InputCursorPosition) = Autocomplete.Autocomplete(InputString, InputCursorPosition);
+                SysConsole.Write(InputString);
+                SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
                 return false;
             }
 

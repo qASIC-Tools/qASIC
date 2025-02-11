@@ -1,15 +1,12 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using qASIC.Parsing;
 
-namespace qASIC.Console.Parsing.Arguments
+namespace qASIC.Console.Parsing
 {
     public class QuashParser : ArgumentsParser
     {
-        public string[] textForTrue = new string[] { "true", "on", "yes" };
-        public string[] textForFalse = new string[] { "false", "off", "no" };
-
         public override string ParseCommandName(string cmd)
         {
             cmd = cmd.Trim();
@@ -31,6 +28,7 @@ namespace qASIC.Console.Parsing.Arguments
             var readCommand = false;
             var complex = false;
             var currentString = new StringBuilder();
+            var empty = new StringBuilder();
 
             cmd = cmd.Trim();
 
@@ -42,15 +40,15 @@ namespace qASIC.Console.Parsing.Arguments
                 {
                     if (char.IsWhiteSpace(cmd[i]))
                         readCommand = true;
-                    
+
                     continue;
                 }
 
                 //CASE: surrounded by quotation marks
                 if (complex)
                 {
-                    if (cmd[i] == '"' && 
-                        (cmd.Length <= i + 1 ||char.IsWhiteSpace(cmd[i + 1])))
+                    if (cmd[i] == '"' &&
+                        (cmd.Length <= i + 1 || char.IsWhiteSpace(cmd[i + 1])))
                     {
                         complex = false;
                         continue;
@@ -65,20 +63,27 @@ namespace qASIC.Console.Parsing.Arguments
 
                 //CASE: whitespace
                 //finish creating argument
-                if (char.IsWhiteSpace(cmd[i]))
+                if (char.IsWhiteSpace(cmd[i]) && currentString.Length > 0)
                 {
-                    args.Add(new QuashArgument(ValueParser, currentString.ToString())
+                    if (currentString.Length > 0)
                     {
-                        IsComplex = complex,
-                    });
+                        args.Add(new QuashArgument(ValueParser, currentString.ToString())
+                        {
+                            IsComplex = complex,
+                            StartEmptySpace = empty.ToString(),
+                        });
 
-                    currentString.Clear();
+                        currentString.Clear();
+                        empty.Clear();
+                    }
+
+                    empty.Append(cmd[i]);
                     continue;
                 }
 
                 //CASE: quotation mark after white space
-                if (cmd[i] == '"' && 
-                    (i != 0 && char.IsWhiteSpace(cmd[i - 1]) || i == 0) && 
+                if (cmd[i] == '"' &&
+                    (i != 0 && char.IsWhiteSpace(cmd[i - 1]) || i == 0) &&
                     currentString.Length == 0)
                 {
                     complex = true;
@@ -93,8 +98,50 @@ namespace qASIC.Console.Parsing.Arguments
                 {
                     IsComplex = complex,
                 });
-            
+
             return args.ToArray();
+        }
+
+        public override CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex)
+        {
+            //Prefixes and postfixes
+            var prefix = cmd.Substring(0, cmd.Length - cmd.TrimStart().Length);
+            var postfixStartIndex = cmd.TrimEnd().Length;
+            var postfix = cmd.Substring(postfixStartIndex, cmd.Length - postfixStartIndex);
+
+            //Normalize parameters
+            characterIndex -= prefix.Length;
+            cmd = cmd.Trim();
+
+            //Parsed info
+            var commandName = ParseCommandName(cmd);
+            var args = ParseArguments(cmd);
+
+            //Final info
+            var info = new CmdCharacterInfo(prefix, postfix, commandName, args);
+
+            //If it's before the command name
+            if (characterIndex < 0)
+                return info.WithScope(CmdCharacterInfo.Scope.CommandName, characterIndex);
+
+            var quashArgs = args.Select(x => x as QuashArgument)
+                .ToArray();
+
+            //If it's between command name and first argument
+            if (characterIndex < commandName.Length || quashArgs.Length == 0)
+                return info.WithScope(CmdCharacterInfo.Scope.CommandName, characterIndex);
+
+            //Looking for the target argument
+            var argIndex = 0;
+            while (argIndex < quashArgs.Length)
+            {
+                var argLength = quashArgs[argIndex].arg.Length + quashArgs[argIndex].StartEmptySpace.Length;
+                if (characterIndex > argLength) break;
+                characterIndex -= argLength;
+                argIndex++;
+            }
+
+            return info.WithScope(CmdCharacterInfo.Scope.Argument, characterIndex, argIndex);
         }
 
         public override string ConvertToString(string commandName, CommandArgument[] arguments)
@@ -105,8 +152,8 @@ namespace qASIC.Console.Parsing.Arguments
             {
                 if (arg is QuashArgument quashArg)
                 {
-                    txt.Append(quashArg.IsComplex ? $" \"{quashArg.arg.Replace("\"", "\"\"")}\"" : $" {quashArg.arg}");
-                    continue;   
+                    txt.Append(quashArg.IsComplex ? $"{quashArg.StartEmptySpace}\"{quashArg.arg.Replace("\"", "\"\"")}\"" : $" {quashArg.arg}");
+                    continue;
                 }
 
                 if (arg.arg.Any(x => char.IsWhiteSpace(x)))
@@ -126,6 +173,7 @@ namespace qASIC.Console.Parsing.Arguments
             public QuashArgument(ModularParser parser, string arg, params object[] values) : base(parser, arg, values) { }
 
             public bool IsComplex { get; set; }
+            public string StartEmptySpace { get; set; }
         }
     }
 }
