@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-
 using qASIC.CommandPrompts;
 using qASIC.Console.Autocomplete;
 
@@ -189,7 +188,7 @@ namespace qASIC.Console
         public int InputCursorPosition { get; private set; } = 0;
         public string InputString { get; private set; } = string.Empty;
 
-        public int PreviousInputsLimit { get; set; } = 3;
+        public int PreviousInputsLimit { get; set; } = 128;
 
         List<string> previousInputs = new List<string>();
         List<string> inputs = new List<string>();
@@ -387,25 +386,30 @@ namespace qASIC.Console
 
             if (inputVisible)
             {
-                //Saving previous inputs
-                if (!string.IsNullOrWhiteSpace(cmd))
+                //Ignore rest if empty
+                if (string.IsNullOrWhiteSpace(cmd))
                 {
-                    //Add final input and apply
-                    previousInputs.Add(cmd);
-                    inputs[inputs.Count - 1] = cmd;
-
-                    //Ensure limit
-                    while (previousInputs.Count > PreviousInputsLimit)
-                    {
-                        currentInput--;
-                        previousInputs.RemoveAt(0);
-                        inputs.RemoveAt(0);
-                    }
-
-                    //If a previous input was modified and executed, revert to old one
-                    if (currentInput >= 0)
-                        inputs[currentInput] = previousInputs[currentInput];
+                    inputs.RemoveAt(inputs.Count - 1);
+                    return cmd;
                 }
+
+                //Saving previous inputs
+
+                //Add final input and apply
+                previousInputs.Add(cmd);
+                inputs[inputs.Count - 1] = cmd;
+
+                //Ensure limit
+                while (previousInputs.Count > PreviousInputsLimit)
+                {
+                    currentInput--;
+                    previousInputs.RemoveAt(0);
+                    inputs.RemoveAt(0);
+                }
+
+                //If a previous input was modified and executed, revert to old one
+                if (currentInput >= 0)
+                    inputs[currentInput] = previousInputs[currentInput];
             }
 
             return cmd;
