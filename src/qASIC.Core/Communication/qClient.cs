@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
 using System;
@@ -9,7 +9,7 @@ namespace qASIC.Communication
 {
     public class qClient : qPeer
     {
-        public qClient(CommsComponentCollection components, int maxConnectionAttempts = 8) : 
+        public qClient(CommsComponentCollection components, int maxConnectionAttempts = 8) :
             this(components, IPAddress.Parse("127.0.0.1"), Constants.DEFAULT_PORT, maxConnectionAttempts)
         { }
 
@@ -66,11 +66,12 @@ namespace qASIC.Communication
         public Action<DisconnectReason> OnDisconnect;
         public Func<qPacket, NetworkServerInfo> ProcessAppInfo = null;
 
-        public int MaxMissedPings { get; set;} = 3;
+        public int MaxMissedPings { get; set; } = 3;
 
-        int bufferPos;
         private byte[] buffer = new byte[0];
-        private byte[] workingBuffer = new byte[0];
+        public qPacket currentRead = null;
+        public int readLength;
+
         internal int missedPings;
 
         public bool logPackets = false;
@@ -80,7 +81,7 @@ namespace qASIC.Communication
             StartUpdateLoop(milisecondsPerUpdate);
             return this;
         }
-        
+
         public void Connect() =>
             Connect(Address, Port);
 
@@ -107,9 +108,7 @@ namespace qASIC.Communication
                     NoDelay = false,
                 };
 
-                bufferPos = 0;
                 buffer = new byte[Constants.BUFFER_SIZE];
-                workingBuffer = new byte[Constants.BUFFER_SIZE];
                 IAsyncResult result = Socket.BeginConnect(Address, Port, null, null);
 
                 CurrentState = State.Connecting;
@@ -203,32 +202,39 @@ namespace qASIC.Communication
                     return;
                 }
 
-                int length = Stream.EndRead(result);
+                int streamLength = Stream.EndRead(result);
 
                 if (logPackets)
-                    Logs.Log($"Incomming data, length:{length}");
+                    Logs.Log($"Incomming data, length:{streamLength}");
 
-                var limitedLength = Math.Min(length, Constants.BUFFER_SIZE - bufferPos);
-                Array.Copy(buffer, 0, workingBuffer, bufferPos, limitedLength);
-                bufferPos += limitedLength;
+                var packet = new qPacket();
+                packet.bytes.AddRange(buffer.Take(streamLength));
 
-                if (bufferPos == Constants.BUFFER_SIZE)
+                while (packet.bytes.Count > 0)
                 {
-                    var packet = new qPacket(workingBuffer.ToArray());
+                    if (currentRead == null)
+                    {
+                        currentRead = new qPacket();
+                        readLength = packet.ReadInt();
+                        packet.RemoveReadBytes();
+                    }
 
-                    if (logPackets)
-                        Logs.Log($"Received packet - {packet}");
+                    var dataLength = Math.Min(packet.bytes.Count, readLength - currentRead.bytes.Count);
+                    currentRead.WriteBytes(packet.ReadCurrentBytes(dataLength));
+                    packet.RemoveReadBytes();
 
-                    Components.HandlePacketForClient(this, packet);
-
-                    Array.Copy(buffer, limitedLength, workingBuffer, 0, length - limitedLength);
-                    bufferPos = length - limitedLength;
+                    if (currentRead.bytes.Count == readLength)
+                    {
+                        Components.HandlePacketForClient(this, currentRead);
+                        currentRead = null;
+                        readLength = 0;
+                    }
                 }
 
                 Array.Clear(buffer, 0, Constants.BUFFER_SIZE);
 
                 if (IsActive)
-                    Stream.BeginRead(buffer, bufferPos, Constants.BUFFER_SIZE - bufferPos, OnDataReceived, null);
+                    Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, OnDataReceived, null);
             }
             catch (Exception e)
             {
@@ -236,15 +242,15 @@ namespace qASIC.Communication
             }
         }
 
-        Queue<qPacket> packetsToSend = new Queue<qPacket>(); 
+        Queue<qPacket> packetsToSend = new Queue<qPacket>();
 
         public override void Send(qPacket packet)
         {
-            var data = Components.FinalizePacket(packet);
+            packet.bytes.InsertRange(0, new qPacket()
+                .Write(packet.bytes.Count));
 
-            //Enqueue packets to be send in send loop
-            foreach (var item in data)
-                packetsToSend.Enqueue(item);
+            //Enqueue packet to be send in send loop
+            packetsToSend.Enqueue(packet);
         }
 
         private void SendLoop()
@@ -271,7 +277,7 @@ namespace qASIC.Communication
         public void Disconnect(DisconnectReason reason = DisconnectReason.None)
         {
             Send(new CC_Disconnect().CreateEmptyComponentPacket());
-            ExecuteLater(MilisecondsPerSend, () =>  DisconnectLocal(reason));
+            ExecuteLater(MilisecondsPerSend, () => DisconnectLocal(reason));
         }
 
         public void DisconnectLocal(DisconnectReason reason = DisconnectReason.None)
@@ -282,8 +288,6 @@ namespace qASIC.Communication
             {
                 Stream?.Close();
                 Socket?.Close();
-
-                Components?.CleanupClientMessages();
 
                 PrepareStop();
 

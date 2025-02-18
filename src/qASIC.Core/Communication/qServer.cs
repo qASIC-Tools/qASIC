@@ -1,9 +1,10 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Sockets;
 using qASIC.Communication.Components;
 using System.Collections.Generic;
 using System;
 using qASIC.Core;
+using System.Linq;
 
 namespace qASIC.Communication
 {
@@ -92,8 +93,6 @@ namespace qASIC.Communication
             PrepareStop();
             IsActive = false;
 
-            Components.CleanupServerMessages();
-
             Logs.Log("Stopped server");
         }
 
@@ -107,7 +106,6 @@ namespace qASIC.Communication
         {
             client.DisconnectLocal();
             Clients.Remove(client);
-            Components?.CleanupServerMessages(client);
             Logs.UnregisterLoggable(client);
         }
 
@@ -151,14 +149,10 @@ namespace qASIC.Communication
 
         private void HandleDataReceive(OnServerReceiveDataArgs args)
         {
-            byte[] buffer = (byte[])args.data.Clone();
-
-            var packet = new qPacket(buffer);
-
             if (logPackets)
-                Logs.Log($"Received packet from client '{args.client.id}' - {packet}");
+                Logs.Log($"Received packet from client '{args.client.id}' - {args.data}");
 
-            Components.HandlePacketForServer(this, args.client, packet);
+            Components.HandlePacketForServer(this, args.client, args.data);
         }
         #endregion
 
@@ -167,20 +161,13 @@ namespace qASIC.Communication
         {
             if (!client.Connected) return;
 
-            try
-            {
-                var data = Components.FinalizePacket(packet);
+            packet.bytes.InsertRange(0, new qPacket()
+                .Write(packet.bytes.Count));
 
-                if (logPackets)
-                    Logs.Log($"Adding packets to send queue, client: {client.id}, count: {data.Length}");
+            if (logPackets)
+                Logs.Log($"Adding packets to send queue, client: {client.id}, count: {packet.bytes.Count}");
 
-                foreach (var item in data)
-                    client.packetsToSend.Enqueue(item);
-            }
-            catch (Exception e)
-            {
-                Logs.LogError($"There was an error while sending data to client '{client.id}': {e}");
-            }
+            client.packetsToSend.Enqueue(packet);
         }
 
         public override void Send(qPacket packet)
@@ -208,7 +195,7 @@ namespace qASIC.Communication
                 {
                     Logs.LogError($"There was an error while sending data to client '{client.id}', removing...");
                     DisconnectClientLocal(client);
-                }                
+                }
             }
 
             ExecuteLater(MilisecondsPerSend, SendLoop);
@@ -242,6 +229,8 @@ namespace qASIC.Communication
             public Queue<qPacket> packetsToSend = new Queue<qPacket>();
 
             private byte[] buffer;
+            private qPacket readPacket = null;
+            private int readLength;
 
             public void Initialize()
             {
@@ -268,17 +257,34 @@ namespace qASIC.Communication
                     if (!IsActive || !Stream.CanRead)
                         return;
 
-                    int byteLength = Stream.EndRead(result);
-                    if (byteLength <= 0)
+                    int streamLength = Stream.EndRead(result);
+                    if (streamLength <= 0)
                     {
                         Logs.LogError($"Couldn't process data for client id '{id}'");
                         return;
                     }
 
-                    byte[] tempBuffer = new byte[byteLength];
-                    Array.Copy(buffer, tempBuffer, byteLength);
+                    var packet = new qPacket();
+                    packet.bytes.AddRange(buffer.Take(streamLength));
 
-                    OnDataReceive?.Invoke(new OnServerReceiveDataArgs(this, tempBuffer));
+                    while (packet.position < packet.bytes.Count)
+                    {
+                        if (readPacket == null)
+                        {
+                            readPacket = new qPacket();
+                            readLength = packet.ReadInt();
+                        }
+
+                        var dataLength = Math.Min(packet.bytes.Count - packet.position, readLength - readPacket.bytes.Count);
+                        readPacket.WriteBytes(packet.ReadCurrentBytes(dataLength));
+
+                        if (readPacket.bytes.Count == readLength)
+                        {
+                            OnDataReceive?.Invoke(new OnServerReceiveDataArgs(this, readPacket));
+                            readPacket = null;
+                            readLength = 0;
+                        }
+                    }
 
                     if (IsActive)
                         Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, HandleReceiveData, null);

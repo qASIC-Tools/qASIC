@@ -1,17 +1,15 @@
-﻿using System.Diagnostics;
-
 namespace qASIC.Communication
 {
     public class OnServerReceiveDataArgs
     {
-        public OnServerReceiveDataArgs(qServer.Client client, byte[] buffer)
+        public OnServerReceiveDataArgs(qServer.Client client, qPacket packet)
         {
             this.client = client;
-            data = buffer;
+            data = packet;
         }
 
         public qServer.Client client;
-        public byte[] data;
+        public qPacket data;
     }
 
     public class CommsComponentArgs
