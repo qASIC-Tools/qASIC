@@ -209,6 +209,9 @@ namespace qASIC.Console
         {
             if (Console.ReturnedValue is KeyPrompt prompt)
             {
+                if (key.Modifiers != 0)
+                    return false;
+
                 var promptKey = key.Key switch
                 {
                     ConsoleKey.UpArrow => KeyPrompt.NavigationKey.Up,
@@ -233,58 +236,100 @@ namespace qASIC.Console
                 return true;
             }
 
+            //Handling modifiers
+            if (key.Modifiers != 0)
+            {
+                if (key.Modifiers == ConsoleModifiers.Control ||
+                    key.Modifiers == ConsoleModifiers.Alt)
+                {
+                    //Navigation
+                    if (key.Key == ConsoleKey.LeftArrow)
+                    {
+                        var length = Math.Min(WordBeforeLength() + 1, InputCursorPosition);
+                        InputCursorPosition -= length;
+                        SysConsole.Write(new string('\b', length));
+
+                        return false;
+                    }
+
+                    if (key.Key == ConsoleKey.RightArrow)
+                    {
+                        var length = Math.Min(WordAfterLength(), InputString.Length - InputCursorPosition);
+                        SysConsole.Write(InputString.Substring(InputCursorPosition, length));
+                        InputCursorPosition += length;
+
+                        return false;
+                    }
+
+                    //Deleting
+                    if (key.Key == ConsoleKey.Backspace)
+                    {
+                        DeleteBeforeCursor(WordBeforeLength());
+                        return false;
+                    }
+
+                    if (key.Key == ConsoleKey.Delete)
+                    {
+                        DeleteAfterCursor(WordAfterLength());
+                        return false;
+                    }
+                }
+
+                return false;
+            }
+
             //Apply
             if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                 return true;
 
-            //Swapping current input to previous
-            if (key.Key == ConsoleKey.UpArrow && key.Modifiers == 0)
+            if (!(Console.ReturnedValue is TextPrompt))
             {
-                ChangeInput(currentInput - 1);
-                return false;
+                //Swapping current input to previous
+                if (key.Key == ConsoleKey.UpArrow && key.Modifiers == 0)
+                {
+                    ChangeInput(currentInput - 1);
+                    return false;
+                }
+
+                if (key.Key == ConsoleKey.DownArrow && key.Modifiers == 0)
+                {
+                    ChangeInput(currentInput + 1);
+                    return false;
+                }
+
+                //Autocorrect
+                if (key.Key == ConsoleKey.Tab && key.Modifiers == 0)
+                {
+                    SysConsole.Write(new string('\b', InputCursorPosition));
+                    SysConsole.Write(new string(' ', InputString.Length));
+                    SysConsole.Write(new string('\b', InputString.Length));
+                    (InputString, InputCursorPosition) = Autocomplete.Autocomplete(InputString, InputCursorPosition);
+                    SysConsole.Write(InputString);
+                    SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
+                    return false;
+                }
             }
 
-            if (key.Key == ConsoleKey.DownArrow && key.Modifiers == 0)
-            {
-                ChangeInput(currentInput + 1);
-                return false;
-            }
-
-            //Autocorrect
-            if (key.Key == ConsoleKey.Tab && key.Modifiers == 0)
-            {
-                SysConsole.Write(new string('\b', InputCursorPosition));
-                SysConsole.Write(new string(' ', InputString.Length));
-                SysConsole.Write(new string('\b', InputString.Length));
-                (InputString, InputCursorPosition) = Autocomplete.Autocomplete(InputString, InputCursorPosition);
-                SysConsole.Write(InputString);
-                SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
-                return false;
-            }
 
             //Navigation
             if (key.Key == ConsoleKey.LeftArrow)
             {
-                var length = key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
-                    WordBeforeLength() + 1 :
-                    1;
-
-                length = Math.Min(length, InputCursorPosition);
-                InputCursorPosition -= length;
-                SysConsole.Write(new string('\b', length));
+                if (InputCursorPosition > 0)
+                {
+                    InputCursorPosition -= 1;
+                    SysConsole.Write('\b');
+                }
 
                 return false;
             }
 
             if (key.Key == ConsoleKey.RightArrow)
             {
-                var length = key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
-                    WordAfterLength() :
-                    1;
-
-                length = Math.Min(length, InputString.Length - InputCursorPosition);
-                SysConsole.Write(InputString.Substring(InputCursorPosition, length));
-                InputCursorPosition += length;
+                if (InputCursorPosition < InputString.Length)
+                {
+                    SysConsole.Write(InputString.Substring(InputCursorPosition, 1));
+                    InputCursorPosition += 1;
+                }
 
                 return false;
             }
@@ -292,17 +337,13 @@ namespace qASIC.Console
             //Deleting
             if (key.Key == ConsoleKey.Backspace)
             {
-                DeleteBeforeCursor(key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
-                    WordBeforeLength() :
-                    1);
+                DeleteBeforeCursor(1);
                 return false;
             }
 
             if (key.Key == ConsoleKey.Delete)
             {
-                DeleteAfterCursor(key.Modifiers == ConsoleModifiers.Control || key.Modifiers == ConsoleModifiers.Alt ?
-                    WordAfterLength() :
-                    1);
+                DeleteAfterCursor(1);
                 return false;
             }
 
