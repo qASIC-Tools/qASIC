@@ -85,6 +85,7 @@ namespace qASIC.Console
             if (log.logType == LogType.Clear)
             {
                 SysConsole.Clear();
+                SysConsole.Write(InputString);
                 previousLogMessage = string.Empty;
                 previousLog = null;
                 return;
@@ -95,7 +96,14 @@ namespace qASIC.Console
             previousLogMessage = log.message;
             previousLog = log;
 
+            SysConsole.Write(new string('\b', InputCursorPosition));
+            SysConsole.Write(new string(' ', InputString.Length));
+            SysConsole.Write(new string('\b', InputString.Length));
+
             SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
+
+            SysConsole.Write(InputString);
+            SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
         }
 
         private void UpdateLog(qLog log)
