@@ -19,6 +19,7 @@ namespace qASIC.Console
         public SystemConsoleUI(GameConsole console)
         {
             Console = console;
+            inputs = new List<string>(new string[1]);
         }
 
         GameConsole _console;
@@ -165,11 +166,7 @@ namespace qASIC.Console
             {
                 IsReadingInput = true;
 
-                if (!(Console.ReturnedValue is CommandPrompt))
-                {
-                    inputs.Add(string.Empty);
-                    currentInput = inputs.Count - 1;
-                }
+                currentInput = inputs.Count - 1;
 
                 bool isDone = false;
                 while (!isDone)
@@ -199,7 +196,7 @@ namespace qASIC.Console
         public int PreviousInputsLimit { get; set; } = 128;
 
         List<string> previousInputs = new List<string>();
-        List<string> inputs = new List<string>();
+        List<string> inputs;
         int currentInput = 0;
 
         string GetInputAfterCursor() =>
@@ -396,10 +393,7 @@ namespace qASIC.Console
             {
                 //Ignore rest if empty
                 if (string.IsNullOrWhiteSpace(cmd))
-                {
-                    inputs.RemoveAt(inputs.Count - 1);
                     return cmd;
-                }
 
                 //Saving previous inputs
 
@@ -418,6 +412,8 @@ namespace qASIC.Console
                 //If a previous input was modified and executed, revert to old one
                 if (currentInput >= 0)
                     inputs[currentInput] = previousInputs[currentInput];
+
+                inputs.Add(string.Empty);
             }
 
             return cmd;
