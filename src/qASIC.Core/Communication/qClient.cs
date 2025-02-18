@@ -257,7 +257,8 @@ namespace qASIC.Communication
         {
             try
             {
-                if (packetsToSend.TryDequeue(out var packet) && Stream?.CanWrite == true)
+                while (Stream?.CanWrite == true &&
+                    packetsToSend.TryDequeue(out var packet))
                 {
                     if (logPackets)
                         Logs.Log($"Sending packet - {packet}");
