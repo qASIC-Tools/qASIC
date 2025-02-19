@@ -1,5 +1,4 @@
 using qASIC.Communication.Components;
-using qASIC.Core;
 using System;
 using System.Collections.Generic;
 using System.Threading;

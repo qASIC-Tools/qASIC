@@ -1,7 +1,6 @@
-﻿using qASIC.Communication;
+using qASIC.Communication;
 using qASIC.Communication.Components;
 using qASIC.CommComponents;
-using qASIC.Core;
 using qASIC.Communication.Discovery;
 
 namespace qASIC

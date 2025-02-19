@@ -1,4 +1,3 @@
-﻿using qASIC.Core.qARK;
 using System.Collections.Generic;
 
 namespace qASIC.qARK

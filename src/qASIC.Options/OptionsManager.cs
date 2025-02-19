@@ -1,4 +1,3 @@
-﻿using qASIC.Core;
 using System;
 using System.Linq;
 
@@ -144,7 +143,7 @@ namespace qASIC.Options
                 Logs.Log($"Changed option '{optionName}' to '{value}'.", "settings_set");
         }
 
-        /// <summary>Changes the value of a given option and applies it. 
+        /// <summary>Changes the value of a given option and applies it.
         /// It's the same as calling <see cref="SetOption(string, object)"/> and <see cref="Apply"/>.</summary>
         /// <param name="optionName">Name of the option.</param>
         /// <param name="value">Value to set.</param>
@@ -165,7 +164,7 @@ namespace qASIC.Options
                 Logs.Log($"Applied options: {string.Join("\n", list.Select(x => $"- {x}"))}", "settings_set_multiple");
         }
 
-        /// <summary>Changes values from a different <see cref="Options.OptionsList"> and applies them 
+        /// <summary>Changes values from a different <see cref="Options.OptionsList"> and applies them
         /// It's the same as calling <see cref="SetOptions"/> and <see cref="Apply"/>.</summary>
         /// <param name="list">List containing options to set.</param>
         /// <param name="log">If the change should be logged.</param>

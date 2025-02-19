@@ -3,7 +3,6 @@ using System.Net.Sockets;
 using qASIC.Communication.Components;
 using System.Collections.Generic;
 using System;
-using qASIC.Core;
 using System.Linq;
 
 namespace qASIC.Communication

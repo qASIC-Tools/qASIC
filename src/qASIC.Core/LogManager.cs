@@ -1,4 +1,3 @@
-﻿using qASIC.Core;
 using System;
 
 namespace qASIC
@@ -21,7 +20,7 @@ namespace qASIC
         #region Closing
         public bool Closed { get; private set; } = false;
         public Action<LogManager> OnClose;
-        
+
         public virtual void Close()
         {
             Closed = true;
@@ -78,7 +77,7 @@ namespace qASIC
         {
             if (other != null && other != this)
                 other.OnLog += Log;
-            
+
             return this;
         }
 
@@ -100,7 +99,7 @@ namespace qASIC
         {
             if (other != null && other != this)
                 other.OnLog -= Log;
-            
+
             return this;
         }
         #endregion
