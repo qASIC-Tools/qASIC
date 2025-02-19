@@ -1,15 +1,14 @@
-﻿using qASIC.Parsing;
-using qASIC.qARK;
+using qASIC.Parsing;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.Core.qARK
+namespace qASIC.qARK
 {
     public abstract class qARKHolder : IEnumerable<qARKElement>
     {
-        public qARKHolder() : this (new ModularParser()) { }
+        public qARKHolder() : this(new ModularParser()) { }
         public qARKHolder(IEnumerable<qARKElement> elements) : this(new ModularParser(), elements) { }
 
         public qARKHolder(ModularParser parser)
@@ -172,7 +171,9 @@ namespace qASIC.Core.qARK
         {
             var dict = new Dictionary<string, qARKObject>();
 
-            int pathPartsCount = $"{PathPrefix}{path}".Split('.').Length;
+            int pathPartsCount = string.IsNullOrWhiteSpace(path) ?
+                0 :
+                $"{PathPrefix}{path}".Split('.').Length;
 
             foreach (var item in Entries)
             {
