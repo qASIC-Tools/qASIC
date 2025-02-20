@@ -46,7 +46,7 @@ namespace qASICRemote
                 .AddCommand(new SendCmdCommand(this))
                 .FindAttributeCommands<InspectorCommand>();
 
-            GConsole = new GameConsole(QasicInstance, "MAIN", commands);
+            GConsole = new GameConsole("MAIN", commands);
             GConsole.Targets.Register(this);
 
             Interface = new SystemConsoleUI(GConsole);
@@ -80,6 +80,8 @@ namespace qASICRemote
             consoleManager = new InstanceConsoleManager(client);
             consoleManager.CC_Log.OnRead += CC_Log_OnRead;
             consoleManager.OnConsoleRegister += ConsoleManager_OnConsoleRegister;
+
+            QasicInstance.Services.Add(GConsole);
         }
 
         const int UPDATE_FREQUENCY = 200;

@@ -14,7 +14,7 @@ namespace qASIC.Console
     {
         public SystemConsoleUI() : this(new GameConsole("MAIN")) { }
 
-        public SystemConsoleUI(qInstance instance) : this(new GameConsole(instance, "MAIN")) { }
+        public SystemConsoleUI(qInstance instance) : this(new GameConsole("MAIN")) { }
 
         public SystemConsoleUI(GameConsole console)
         {
