@@ -1,4 +1,4 @@
-﻿using qASIC.CommandPrompts;
+using qASIC.CommandPrompts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,20 +52,20 @@ namespace qASIC.Options.Commands
             {
                 //Set
 
-                var value = targetOption.Value;
+                var value = targetOption.value;
                 if (!(value is string))
                 {
                     try
                     {
-                        value = Convert.ChangeType(valuePrompt.Text, targetOption.Value?.GetType());
+                        value = Convert.ChangeType(valuePrompt.Text, targetOption.value?.GetType());
                     }
                     catch
                     {
-                        throw new CommandParseException(targetOption.Value?.GetType(), valuePrompt.Text);
+                        throw new CommandParseException(targetOption.value?.GetType(), valuePrompt.Text);
                     }
                 }
 
-                Manager.SetOption(targetOption.Name, value);
+                Manager.SetOption(targetOption.name, value);
 
                 return null;
             }
@@ -91,12 +91,12 @@ namespace qASIC.Options.Commands
 
             //All args
             targetOption = GetOption(context[1].arg);
-            var settType = targetOption.Value?.GetType();
+            var settType = targetOption.value?.GetType();
             var val = settType == null ?
                 context[2].values.First() :
                 context[2].GetValue(settType);
 
-            Manager.SetOption(targetOption.Name, val);
+            Manager.SetOption(targetOption.name, val);
             return null;
         }
 
@@ -116,7 +116,7 @@ namespace qASIC.Options.Commands
             {
                 txt.Append("\n");
                 txt.Append(i == index ? (final ? "]" : ">") : " ");
-                txt.Append($" {items[i].Name}: {items[i].Value} (default value:{items[i].DefaultValue})");
+                txt.Append($" {items[i].name}: {items[i].value} (default value:{items[i].defaultValue})");
             }
 
             listLog.message = txt.ToString();

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace qASIC.Options.Commands
 {
@@ -17,7 +17,7 @@ namespace qASIC.Options.Commands
             StringBuilder txt = new StringBuilder("List of options:");
 
             foreach (var item in Manager.OptionsList)
-                txt.Append($"\n- {item.Key}:{item.Value.Value} (default: {item.Value.DefaultValue})");
+                txt.Append($"\n- {item.Key}:{item.Value.value} (default: {item.Value.defaultValue})");
 
             context.Logs.Log(txt.ToString());
             return null;

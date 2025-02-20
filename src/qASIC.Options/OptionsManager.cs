@@ -3,52 +3,21 @@ using System.Linq;
 
 namespace qASIC.Options
 {
-    public class OptionsManager : IHasLogs, IService
+    public class OptionsManager : IService, IHasLogs
     {
         public OptionsManager(OptionsSerializer serializer = null) :
-            this(new OptionTargetList().FindOptions(), serializer: serializer)
+            this(new OptionsList(), serializer: serializer)
         { }
 
-        public OptionsManager(OptionTargetList targetList, OptionsSerializer serializer = null) :
-            this(qInstance.Main, targetList, serializer)
-        { }
-
-        public OptionsManager(qInstance instance, OptionsSerializer serializer = null) :
-            this(instance, new OptionTargetList().FindOptions(), serializer: serializer)
-        { }
-
-        public OptionsManager(qInstance instance, OptionTargetList targetList, OptionsSerializer serializer = null)
+        public OptionsManager(OptionsList optionsList, OptionsSerializer serializer = null)
         {
-            Instance = instance;
-
-            TargetList = targetList;
+            OptionsList = optionsList;
             Serializer = serializer ?? new OptionsSerializer();
-
-            OptionsList.OnValueSet += List_OnChanged;
-
-            RegisteredObjects.OnObjectRegistered += RegisteredObjects_OnObjectRegistered;
-        }
-
-        private void List_OnChanged(OptionsList.ListItem[] items)
-        {
-            foreach (var item in items)
-            {
-                TargetList.Set(RegisteredObjects, item.Name, item.Value);
-                OnOptionChanged?.Invoke(new ChangeOptionArgs()
-                {
-                    optionName = item.Name,
-                    value = item.Value,
-                });
-            }
-        }
-
-        private void RegisteredObjects_OnObjectRegistered(object obj)
-        {
-            TargetList.LoadValuesForObject(obj, OptionsList);
         }
 
         /// <summary>Main static instance of <see cref="OptionsManager"/> that was set using <see cref="SetAsMain"/>.</summary>
         public static OptionsManager Main { get; private set; }
+
         /// <summary>Sets this instance as main to make it accessible from property <see cref="Main"/>.</summary>
         /// <returns>Returns itself.</returns>
         public OptionsManager SetAsMain()
@@ -57,36 +26,19 @@ namespace qASIC.Options
             return this;
         }
 
-        private qInstance _instance;
-        public qInstance Instance
-        {
-            get => _instance;
-            set
-            {
-                RegisteredObjects.StopSyncingWithOther(_instance?.RegisteredObjects);
-                _instance = value;
-                RegisteredObjects.SyncWithOther(_instance?.RegisteredObjects);
-            }
-        }
-
         public LogManager Logs { get; set; } = new LogManager();
 
         public OptionsSerializer Serializer { get; set; }
 
-
-        /// <summary>List of registered objects that will have members marked with the <see cref="OptionAttribute"/> invoked when an option gets set.</summary>
-        public qRegisteredObjects RegisteredObjects { get; set; } = new qRegisteredObjects();
         /// <summary>List containing options and their values.</summary>
-        public OptionsList OptionsList { get; private set; } = new OptionsList();
+        public OptionsList OptionsList { get; private set; }
 
-        /// <summary>List of found options and registered objects.</summary>
-        public OptionTargetList TargetList { get; private set; }
+        public qInstance Instance { get; set; }
 
         /// <summary>Initializes the options manager.</summary>
         /// <param name="log">If the change should be logged.</param>
         public void Initialize(bool log = true)
         {
-            EnsureListHasAllTargets();
             Revert(log);
             Apply(log);
 
@@ -104,7 +56,7 @@ namespace qASIC.Options
         /// <param name="optionName">Name of the option.</param>
         /// <returns>The value.</returns>
         public object GetOption(string optionName) =>
-            OptionsList[optionName].Value;
+            OptionsList[optionName].value;
 
         /// <summary>Gets the value of an option.</summary>
         /// <param name="optionName">Name of the option.</param>
@@ -112,7 +64,7 @@ namespace qASIC.Options
         /// <returns>The value.</returns>
         public object GetOption(string optionName, object defaultValue) =>
             OptionsList.TryGetValue(optionName, out var val) ?
-            val.Value :
+            val.value :
             defaultValue;
 
         /// <summary>Gets the value of an option.</summary>
@@ -120,7 +72,7 @@ namespace qASIC.Options
         /// <param name="optionName">Name of the option.</param>
         /// <returns>The value.</returns>
         public T GetOption<T>(string optionName) =>
-            (T)OptionsList[optionName].Value;
+            (T)OptionsList[optionName].value;
 
         /// <summary>Gets the value of an option.</summary>
         /// <typeparam name="T">Value type.</typeparam>
@@ -129,7 +81,7 @@ namespace qASIC.Options
         /// <returns>The value.</returns>
         public T GetOption<T>(string optionName, T defaultValue) =>
             OptionsList.TryGetValue(optionName, out var val) ?
-            (T)val.Value :
+            (T)val.value :
             defaultValue;
 
         /// <summary>Changes the value of a given option.</summary>
@@ -139,6 +91,12 @@ namespace qASIC.Options
         public void SetOption(string optionName, object value, bool log = true)
         {
             OptionsList.Set(optionName, value);
+            OnOptionChanged.Invoke(optionName, new ChangeOptionArgs()
+            {
+                optionName = optionName,
+                value = value,
+            });
+
             if (log)
                 Logs.Log($"Changed option '{optionName}' to '{value}'.", "settings_set");
         }
@@ -159,7 +117,17 @@ namespace qASIC.Options
         /// <param name="log">If the change should be logged.</param>
         public void SetOptions(OptionsList list, bool log = true)
         {
-            OptionsList.MergeList(list);
+            foreach (var item in list)
+            {
+                if (!OptionsList.ContainsKey(item.Key)) continue;
+                OptionsList.Set(item.Key, item.Value.value);
+                OnOptionChanged.Invoke(item.Key, new ChangeOptionArgs()
+                {
+                    optionName = item.Key,
+                    value = item.Value.value,
+                });
+            }
+
             if (log)
                 Logs.Log($"Applied options: {string.Join("\n", list.Select(x => $"- {x}"))}", "settings_set_multiple");
         }
@@ -198,7 +166,8 @@ namespace qASIC.Options
         {
             try
             {
-                Serializer.Load(OptionsList);
+                var result = Serializer.Load(OptionsList);
+                SetOptions(result, log);
             }
             catch (Exception e)
             {
@@ -210,30 +179,9 @@ namespace qASIC.Options
                 Logs.Log("Successfully loaded options.", "settings_load_success");
         }
 
-        /// <summary>Ensures the list of options is properly generated using the list of targets that were found in <see cref="TargetList"/>.</summary>
-        /// <param name="log">If the change should be logged.</param>
-        public void EnsureListHasAllTargets(bool log = true)
-        {
-            OptionsList.EnsureTargets(TargetList, RegisteredObjects);
-            if (log)
-                Logs.Log($"Created options from target list.", "settings_ensure_targets");
-        }
-
         #region Callbacks
         /// <summary>Called whenever an option gets changed.</summary>
-        public Action<ChangeOptionArgs> OnOptionChanged;
-
-        /// <summary>Register on changed callback for an option.</summary>
-        /// <param name="optionName">Name of the option.</param>
-        /// <param name="onChanged">Action to register.</param>
-        public void RegisterOnChangedCallback(string optionName, Action<ChangeOptionArgs> onChanged)
-        {
-            OnOptionChanged += (ChangeOptionArgs args) =>
-            {
-                if (FormatKeyString(optionName) == args.optionName)
-                    onChanged?.Invoke(args);
-            };
-        }
+        public ActionDictionary<string, ChangeOptionArgs> OnOptionChanged = new ActionDictionary<string, ChangeOptionArgs>();
         #endregion
     }
 }

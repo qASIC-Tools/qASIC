@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -7,22 +7,26 @@ using System;
 namespace qASIC.Options
 {
     /// <summary>List of found option targets that were marked with an <see cref="OptionAttribute"/>.</summary>
-    public class OptionTargetList : IEnumerable<KeyValuePair<string, OptionTargetList.Target>>
+    public class OptionTargetList : IEnumerable<KeyValuePair<string, OptionTargetList.Target>>, IService
     {
-        public OptionTargetList()
+        public OptionTargetList(OptionsManager manager = null) : this(null, manager) { }
+        public OptionTargetList(qInstance instance, OptionsManager manager = null)
         {
+            Instance = instance;
+            Manager = manager;
 
-        }
-
-        public OptionTargetList(OptionTargetList other)
-        {
-            Targets = new Dictionary<string, List<Target>>(other.Targets);
-            Flags = other.Flags;
+            RegisteredObjects = new qRegisteredObjects();
+            RegisteredObjects.OnObjectRegistered += LoadValuesForObject;
         }
 
         public BindingFlags Flags { get; set; } = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
         Dictionary<string, List<Target>> Targets { get; set; } = new Dictionary<string, List<Target>>();
+
+        public qRegisteredObjects RegisteredObjects { get; private set; }
+
+        public qInstance Instance { get; set; }
+        public OptionsManager Manager { get; set; }
 
         public List<Target> this[string name]
         {
@@ -34,18 +38,6 @@ namespace qASIC.Options
                     Targets.Add(name, new List<Target>());
 
                 return Targets[name];
-            }
-            set
-            {
-                name = OptionsManager.FormatKeyString(name);
-
-                if (Targets.ContainsKey(name))
-                {
-                    Targets.Add(name, value);
-                    return;
-                }
-
-                Targets[name] = value;
             }
         }
 
@@ -66,7 +58,7 @@ namespace qASIC.Options
             foreach (var item in methods)
             {
                 var attr = item.GetCustomAttribute<TOption>();
-                this[OptionsManager.FormatKeyString(attr.Name ?? item.Name)].Add(new MethodTarget(item)
+                AddTarget(attr.Name ?? item.Name, new MethodTarget(item)
                 {
                     HasDefaultValue = attr.HasDefaultValue,
                     DefaultValue = attr.DefaultValue,
@@ -76,7 +68,7 @@ namespace qASIC.Options
             foreach (var item in properties)
             {
                 var attr = item.GetCustomAttribute<TOption>();
-                this[OptionsManager.FormatKeyString(attr.Name ?? item.Name)].Add(new PropertyTarget(item)
+                AddTarget(attr.Name ?? item.Name, new PropertyTarget(item)
                 {
                     HasDefaultValue = attr.HasDefaultValue,
                     DefaultValue = attr.DefaultValue,
@@ -86,7 +78,7 @@ namespace qASIC.Options
             foreach (var item in fields)
             {
                 var attr = item.GetCustomAttribute<TOption>();
-                this[OptionsManager.FormatKeyString(attr.Name ?? item.Name)].Add(new FieldTarget(item)
+                AddTarget(attr.Name ?? item.Name, new FieldTarget(item)
                 {
                     HasDefaultValue = attr.HasDefaultValue,
                     DefaultValue = attr.DefaultValue,
@@ -96,17 +88,60 @@ namespace qASIC.Options
             return this;
         }
 
-        /// <summary>Gets a value for an option.</summary>
-        /// <param name="registeredObjects">List of registered objects.</param>
+        public OptionTargetList PopulateManagerFromTargets()
+        {
+            if (Manager == null)
+                throw new NullReferenceException("You have to assign an Options Manager to populate it's list!");
+
+            foreach (var item in Targets)
+            {
+                if (Manager.OptionsList.ContainsKey(item.Key)) continue;
+
+                if (!TryGetDefalutValue(item.Key, out var defaultValue))
+                    defaultValue = null;
+
+                Manager.SetOption(item.Key, defaultValue);
+            }
+
+            return this;
+        }
+
+        void AddTarget(string key, Target target)
+        {
+            key = OptionsManager.FormatKeyString(key);
+
+            if (!Targets.ContainsKey(key))
+                Targets.Add(key, new List<Target>());
+
+            if (!Manager.OptionsList.TryGetValue(key, out var val))
+                return;
+
+            Targets[key].Add(target);
+            target.SetValue(RegisteredObjects, new ChangeOptionArgs()
+            {
+                optionName = key,
+                value = val,
+            });
+        }
+
+        /// <summary>Gets a default value for an option.</summary>
         /// <param name="name">Name of the option.</param>
         /// <param name="value">The default value.</param>
-        /// <returns>If a value was able to be extracted.</returns>
-        public bool TryGetValue(qRegisteredObjects registeredObjects, string name, out object value)
+        /// <returns>If a default value was able to be extracted.</returns>
+        bool TryGetDefalutValue(string name, out object value)
         {
             name = OptionsManager.FormatKeyString(name);
             value = null;
 
             var items = this[name];
+
+            foreach (var item in items)
+            {
+                if (!item.HasDefaultValue) continue;
+
+                value = item.DefaultValue;
+                return true;
+            }
 
             foreach (var item in items)
             {
@@ -123,8 +158,8 @@ namespace qASIC.Options
                     continue;
                 }
 
-                var targets = registeredObjects.Where(x => x?.GetType() == item.DeclaringType);
-                    
+                var targets = RegisteredObjects.Where(x => x?.GetType() == item.DeclaringType);
+
                 foreach (var obj in targets)
                 {
                     try
@@ -140,33 +175,11 @@ namespace qASIC.Options
             return false;
         }
 
-        /// <summary>Gets a default value for an option.</summary>
-        /// <param name="name">Name of the option.</param>
-        /// <param name="value">The default value.</param>
-        /// <returns>If a default value was able to be extracted.</returns>
-        public bool TryGetDefalutValue(string name, out object value)
-        {
-            name = OptionsManager.FormatKeyString(name);
-            value = null;
-
-            var items = this[name];
-
-            foreach (var item in items)
-            {
-                if (!item.HasDefaultValue) continue;
-
-                value = item.DefaultValue;
-                return true;
-            }
-
-            return false;
-        }
-
         /// <summary>Sets a value for an option.</summary>
         /// <param name="registeredObjects">List of registered objects.</param>
         /// <param name="name">Name of the option.</param>
         /// <param name="value">Value to set.</param>
-        public void Set(qRegisteredObjects registeredObjects, string name, object value)
+        void Set(string name, object value)
         {
             name = OptionsManager.FormatKeyString(name);
 
@@ -191,7 +204,7 @@ namespace qASIC.Options
                     continue;
                 }
 
-                var targets = registeredObjects.Where(x => x?.GetType() == item.DeclaringType);
+                var targets = RegisteredObjects.Where(x => x?.GetType() == item.DeclaringType);
 
                 foreach (var obj in targets)
                 {
@@ -206,19 +219,18 @@ namespace qASIC.Options
 
         /// <summary>Loads values of options for an object.</summary>
         /// <param name="obj">Object to load values for.</param>
-        /// <param name="list">List of option data.</param>
-        public void LoadValuesForObject(object obj, OptionsList list)
+        public void LoadValuesForObject(object obj)
         {
             var type = obj.GetType();
 
             foreach (var target in Targets)
             {
-                if (!list.TryGetValue(target.Key, out var val)) continue;
+                if (!Manager.OptionsList.TryGetValue(target.Key, out var val)) continue;
 
                 var args = new ChangeOptionArgs()
                 {
-                    optionName = val.Name,
-                    value = val.Value,
+                    optionName = val.name,
+                    value = val.value,
                 };
 
                 foreach (var item in target.Value)
@@ -245,7 +257,13 @@ namespace qASIC.Options
 
             public bool HasDefaultValue { get; set; }
             public object DefaultValue { get; set; }
-            
+
+            public void SetValue(qRegisteredObjects registeredObjects, ChangeOptionArgs args)
+            {
+                foreach (var item in registeredObjects.Where(x => x.GetType() == DeclaringType))
+                    SetValue(item, args);
+            }
+
             public abstract void SetValue(object obj, ChangeOptionArgs args);
 
             public virtual bool CanGetValue => true;
@@ -253,7 +271,7 @@ namespace qASIC.Options
             public virtual object GetValue(object obj) =>
                 null;
         }
-        
+
         public class MethodTarget : Target
         {
             public MethodTarget(MethodInfo method)

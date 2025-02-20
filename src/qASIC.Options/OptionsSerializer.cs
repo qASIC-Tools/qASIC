@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,21 +14,21 @@ namespace qASIC.Options
         {
             Path = path;
 
-            OnSave = list =>
+            OnSave = args =>
             {
                 var serializer = new qARKSerializer();
                 var doc = new qARKDocument();
 
-                foreach (var item in list)
-                    doc.AddEntry(item.Key, item.Value?.ToString());
+                foreach (var item in args.list)
+                    doc.AddEntry(item.Key, item.Value.value.ToString());
 
                 return serializer.Serialize(doc);
             };
 
-            OnLoad = (txt, list) =>
+            OnLoad = args =>
             {
                 var serializer = new qARKSerializer();
-                var doc = serializer.Deserialize(txt);
+                var doc = serializer.Deserialize(args.txt);
 
                 var dict = new Dictionary<string, object>();
 
@@ -36,10 +36,10 @@ namespace qASIC.Options
                     .Where(x => x is qARKEntry)
                     .Select(x => x as qARKEntry)
                     .GroupBy(x => x.Path)
-                    .Where(x => list.ContainsKey(x.Key));
+                    .Where(x => args.list.ContainsKey(x.Key));
 
                 foreach (var item in items)
-                    dict.Add(item.Key, item.First().GetValue(list[item.Key].DefaultValue.GetType()));
+                    dict.Add(item.Key, item.First().GetValue(args.list[item.Key].defaultValue.GetType()));
 
                 return dict;
             };
@@ -47,19 +47,19 @@ namespace qASIC.Options
 
         public string Path { get; set; }
 
-        public event Func<Dictionary<string, object>, string> OnSave;
-        public event Func<string, OptionsList, Dictionary<string, object>> OnLoad;
+        public event Func<OptionsSaveArgs, string> OnSave;
+        public event Func<OptionsLoadArgs, Dictionary<string, object>> OnLoad;
 
         public void Save(OptionsList list)
         {
             if (string.IsNullOrWhiteSpace(Path))
                 return;
 
-            var itemsList = list
-                .GroupBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.First().Value?.Value);
+            var txt = OnSave(new OptionsSaveArgs()
+            {
+                list = list,
+            });
 
-            var txt = OnSave(itemsList);
             var directory = System.IO.Path.GetDirectoryName(Path);
 
             if (!Directory.Exists(directory))
@@ -69,23 +69,27 @@ namespace qASIC.Options
                 writer.Write(txt);
         }
 
-        public void Load(OptionsList list)
+        public OptionsList Load(OptionsList list)
         {
+            var loadedList = new OptionsList();
+
             if (string.IsNullOrWhiteSpace(Path) || !File.Exists(Path))
-                return;
+                return loadedList;
 
             using (var reader = new StreamReader(Path))
             {
                 var txt = reader.ReadToEnd();
-                var loadedItemList = OnLoad(txt, list);
-
-                var loadedList = new OptionsList();
+                var loadedItemList = OnLoad(new OptionsLoadArgs()
+                {
+                    list = list,
+                    txt = txt,
+                });
 
                 foreach (var item in loadedItemList)
-                    loadedList.Set(item.Key, item.Value, true);
-
-                list.MergeList(loadedList);
+                    loadedList.Set(item.Key, item.Value);
             }
+
+            return loadedList;
         }
     }
 }
