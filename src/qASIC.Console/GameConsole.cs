@@ -18,19 +18,9 @@ namespace qASIC.Console
             this(Guid.NewGuid().ToString(), commandList, parser)
         { }
 
-        public GameConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null) :
-            this(qInstance.Main, name, commandList, parser)
-        { }
-
-        public GameConsole(qInstance instance, ICommandList commandList = null, ArgumentsParser parser = null) :
-            this(instance, Guid.NewGuid().ToString(), commandList, parser)
-        { }
-
-        public GameConsole(qInstance instance, string name, ICommandList commandList = null, ArgumentsParser parser = null)
+        public GameConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null)
         {
             Logs = new GameLogManager();
-
-            Instance = instance;
 
             Name = name;
             CommandList = commandList ?? new GameCommandList()

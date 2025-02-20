@@ -8,7 +8,7 @@ namespace qASIC.Options
 {
     public class OptionsSerializer
     {
-        public OptionsSerializer() : this($"{System.IO.Path.GetDirectoryName(Environment.ProcessPath)}/settings.txt") { }
+        public OptionsSerializer() : this($"{System.IO.Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory)}/settings.txt") { }
 
         public OptionsSerializer(string path)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,18 +31,22 @@ namespace qASIC
             items.Where(x => x is T)
             .Select(x => (T)x);
 
-        public void Add(object obj)
+        public qServices Add(object obj)
         {
             items.Add(obj);
             if (obj is IService service)
                 service.Instance = Instance;
+
+            return this;
         }
 
-        public void Remove(object obj)
+        public qServices Remove(object obj)
         {
             items.Remove(obj);
             if (obj is IService service)
                 service.Instance = null;
+
+            return this;
         }
 
         public IEnumerator<object> GetEnumerator() =>
