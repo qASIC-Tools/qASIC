@@ -1,5 +1,3 @@
-﻿using System.Text;
-
 namespace qASIC.qARK
 {
     public class qARKGroupBorder : qARKElement

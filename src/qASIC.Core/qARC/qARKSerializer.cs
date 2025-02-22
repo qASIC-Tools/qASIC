@@ -1,4 +1,4 @@
-﻿using qASIC.Parsing;
+using qASIC.Parsing;
 using System.Text;
 
 namespace qASIC.qARK

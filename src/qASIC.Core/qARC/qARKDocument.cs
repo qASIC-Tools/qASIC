@@ -82,45 +82,54 @@ namespace qASIC.qARK
         public qARKDocument SetValues(string path, object[] values)
         {
             var entries = GetEntries(path);
-            var valueCount = values.Count();
-            int min = Math.Min(valueCount, entries.Length);
-            int max = Math.Max(valueCount, entries.Length);
-            bool moreValues = valueCount > entries.Length;
+            int min = Math.Min(values.Length, entries.Length);
+            int max = Math.Max(values.Length, entries.Length);
+            bool moreValues = values.Length > entries.Length;
+
+            //If there are no existing values
+            if (values.Length == 0)
+            {
+                var group = Elements.Where(x => x is qARKGroupBorder)
+                    .Select(x => x as qARKGroupBorder)
+                    .Where(x => !x.IsEnding && path.StartsWith($"{x.Path}."))
+                    .MaxBy(x => x.Path.Split('.').Length);
+
+                int index = NewElementInGroupIndex(group);
+                var relativePath = path.Substring(0, group?.Path.Length + 1 ?? 0);
+                Entries.Add(path, new List<qARKEntry>());
+
+                for (int i = 0; i < values.Length; i++)
+                {
+                    var entry = new qARKEntry(path, relativePath, Parser.ConvertToString(values))
+                    {
+                        Parser = Parser,
+                    };
+
+                    Elements.Insert(index + i, entry);
+                    Entries[path].Add(entry);
+                }
+
+                return this;
+            }
 
             for (int i = 0; i < min; i++)
                 entries[i].Value = values[i]?.ToString() ?? string.Empty;
 
             if (moreValues)
             {
-                var insertAtIndex = entries.Length > 0 ?
-                    Elements.IndexOf(entries[min - 1]) + 1 :
-                    -1;
-
-                var relativePath = entries.Length > 0 ?
-                    entries[min - 1].RelativePath :
-                    path;
-
-                if (insertAtIndex == -1)
-                {
-                    //Finish if in group
-                    if (GetLastElementOfType<qARKGroupBorder>()?.IsEnding == false)
-                    {
-                        FinishGroup();
-                        AddSpace();
-                    }
-
-                    StartArrayEntry(path);
-                    insertAtIndex = Elements.Count;
-                }
+                var target = entries.Last();
+                var index = Elements.IndexOf(target) + 1;
 
                 for (int i = min; i < max; i++)
                 {
-                    Elements.Insert(insertAtIndex, new qARKEntry(path, relativePath, Parser.ConvertToString(values[i]) ?? string.Empty)
+                    var entry = new qARKEntry(target.Path, target.RelativePath, Parser.ConvertToString(values[i]))
                     {
                         Parser = Parser,
-                        IsArrayItem = true,
-                    });
-                    insertAtIndex++;
+                        IsArrayItem = target.IsArrayItem || target.IsArrayStart,
+                    };
+
+                    Elements.Insert(index + i, entry);
+                    Entries[path].Add(entry);
                 }
 
                 return this;
@@ -130,6 +139,78 @@ namespace qASIC.qARK
                 Elements.Remove(entries[i]);
 
             return this;
+        }
+        #endregion
+
+        #region Modifying
+        private int NewElementInGroupIndex(qARKGroupBorder group)
+        {
+            if (group?.IsEnding == false)
+                group = FindEndOfGroup(group);
+
+            if (group == null || Elements.Contains(group))
+                return PreviousNonSpaceElement(Elements.Count - 1) + 1;
+
+            return Elements.IndexOf(group);
+        }
+
+        private int PreviousNonSpaceElement(int index)
+        {
+            while (index >= 0 && Elements[index] is qARKSpace)
+                index--;
+
+            return index;
+        }
+
+        private int NextNonSpaceElement(int index)
+        {
+            while (index < Elements.Count && Elements[index] is qARKSpace)
+                index++;
+
+            return index;
+        }
+
+        private qARKGroupBorder FindEndOfGroup(qARKGroupBorder group)
+        {
+            if (group == null)
+                return null;
+
+            int index = Elements.IndexOf(group);
+            if (index == -1) return null;
+
+            for (index += 1; index < Elements.Count; index++)
+                if (Elements[index] is qARKGroupBorder)
+                    break;
+
+            return index < Elements.Count ?
+                Elements[index] as qARKGroupBorder :
+                null;
+        }
+
+        private void EnsureCorrectPrefix()
+        {
+            var lastgroup = GetLastElementOfType<qARKGroupBorder>();
+            if (lastgroup.IsEnding)
+            {
+                NewElementPrefix = string.Empty;
+                return;
+            }
+
+            NewElementPrefix = $"{lastgroup.Path}.";
+        }
+
+        private void RemoveGroupBorder(qARKGroupBorder group)
+        {
+            var index = Elements.IndexOf(group);
+            if (index == -1) return;
+
+            do
+            {
+                Elements.RemoveAt(index);
+                if (group.IsEnding)
+                    index--;
+            }
+            while (Elements.IndexInRange(index) && Elements[index] is qARKSpace);
         }
         #endregion
     }

@@ -1,4 +1,4 @@
-﻿namespace qASIC.qARK
+namespace qASIC.qARK
 {
     public abstract class qARKElement
     {

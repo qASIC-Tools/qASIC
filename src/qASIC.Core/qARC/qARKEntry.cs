@@ -1,4 +1,4 @@
-﻿using qASIC.Parsing;
+using qASIC.Parsing;
 using System;
 using System.Linq;
 

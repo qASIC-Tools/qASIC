@@ -1,16 +1,16 @@
-﻿using System;
+using System;
 
 namespace qASIC.qARK
 {
     public class qARKSpace : qARKElement
     {
-        public qARKSpace(int count = 1) : base() 
+        public qARKSpace(int count = 1) : base()
         {
             Count = count;
         }
 
         private int count;
-        public int Count 
+        public int Count
         {
             get => count;
             set => count = Math.Max(value, 1);

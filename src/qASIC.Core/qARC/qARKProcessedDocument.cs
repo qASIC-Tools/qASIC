@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -14,7 +14,7 @@ namespace qASIC.qARK
 
         public string[] Lines { get; set; }
         public int Position { get; set; }
-        public string Prefix { get; set;}
+        public string Prefix { get; set; }
 
         public qARKEntry PreviousEntry { get; set; } = null;
 
@@ -52,7 +52,7 @@ namespace qASIC.qARK
                         part = GetNextPathInsertIndex(txt.ToString()).ToString();
                         break;
                 }
-                
+
                 if (i > 0) txt.Append('.');
                 txt.Append(part);
             }
@@ -121,7 +121,7 @@ namespace qASIC.qARK
                     }
 
                     //If it's not empty
-                    
+
                     if (i != 0) //Ignore if first
                     {
                         //If two non-empty parts were after each other,
