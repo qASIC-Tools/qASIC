@@ -138,6 +138,7 @@ namespace qASIC.Console
             SysConsole.CursorTop = top;
             SysConsole.Write(new string(' ', lineLength * consoleWidth));
             SysConsole.CursorTop = top;
+            SysConsole.CursorLeft = 0;
 
             //Write new message
             SysConsole.Write(txt);
@@ -237,7 +238,7 @@ namespace qASIC.Console
             }
 
             //Handling modifiers
-            if (key.Modifiers != 0)
+            if (key.Modifiers != 0 && key.Modifiers != ConsoleModifiers.Shift)
             {
                 if (key.Modifiers == ConsoleModifiers.Control ||
                     key.Modifiers == ConsoleModifiers.Alt)

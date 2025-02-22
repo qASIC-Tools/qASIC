@@ -160,7 +160,7 @@ namespace qASIC.qARK
         public List<object> GetValueArray(Type type, string path)
         {
             List<object> list = new List<object>();
-            foreach (var entry in GetEntries($"{PathPrefix}{path}"))
+            foreach (var entry in GetEntries(path))
                 if (entry.TryGetValue(type, out object obj))
                     list.Add(obj);
 

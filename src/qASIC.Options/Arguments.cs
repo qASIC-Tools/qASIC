@@ -5,15 +5,4 @@ namespace qASIC.Options
         public string optionName;
         public object value;
     }
-
-    public struct OptionsLoadArgs
-    {
-        public OptionsList list;
-        public string txt;
-    }
-
-    public struct OptionsSaveArgs
-    {
-        public OptionsList list;
-    }
 }

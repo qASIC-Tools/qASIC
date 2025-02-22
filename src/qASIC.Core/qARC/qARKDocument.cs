@@ -98,6 +98,15 @@ namespace qASIC.qARK
                 var relativePath = path.Substring(0, group?.Path.Length + 1 ?? 0);
                 Entries.Add(path, new List<qARKEntry>());
 
+                var start = new qARKEntry(path, relativePath, string.Empty)
+                {
+                    Parser = Parser,
+                    IsArrayStart = true,
+                };
+
+                Elements.Insert(index, start);
+                Entries[path].Add(start);
+
                 for (int i = 0; i < values.Length; i++)
                 {
                     var entry = new qARKEntry(path, relativePath, Parser.ConvertToString(values))
@@ -105,7 +114,7 @@ namespace qASIC.qARK
                         Parser = Parser,
                     };
 
-                    Elements.Insert(index + i, entry);
+                    Elements.Insert(index + i + 1, entry);
                     Entries[path].Add(entry);
                 }
 

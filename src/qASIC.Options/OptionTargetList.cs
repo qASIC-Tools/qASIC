@@ -26,7 +26,22 @@ namespace qASIC.Options
         public qRegisteredObjects RegisteredObjects { get; private set; }
 
         public qInstance Instance { get; set; }
-        public OptionsManager Manager { get; set; }
+
+        private OptionsManager manager;
+        public OptionsManager Manager
+        {
+            get => manager;
+            set
+            {
+                if (manager != null)
+                    manager.OnOptionChanged.mainAction -= Manager_OnOptionChanged;
+
+                manager = value;
+
+                if (manager != null)
+                    manager.OnOptionChanged.mainAction += Manager_OnOptionChanged;
+            }
+        }
 
         public List<Target> this[string name]
         {
@@ -41,20 +56,54 @@ namespace qASIC.Options
             }
         }
 
+        private void Manager_OnOptionChanged(string key, ChangeOptionArgs args)
+        {
+            if (!Targets.ContainsKey(args.optionName)) return;
+            Set(args.optionName, args.value);
+        }
+
         /// <summary>Finds and adds options to the list.</summary>
-        /// <returns>Itself.</returns>
+        /// <returns>Returns itself.</returns>
         public OptionTargetList FindOptions() =>
             FindOptions<OptionAttribute>();
 
+        /// <summary>Finds and adds options marked in a class to the list.</summary>
+        /// <typeparam name="TClass">Class to search.</typeparam>
+        /// <returns>Returns itself.</returns>
+        public OptionTargetList FindOptionsInClass<TClass>() where TClass : class =>
+            FindOptionsInClass<TClass, OptionAttribute>();
+
+        /// <summary>Finds and adds options marked with the specified attribute in a class to the list.</summary>
+        /// <typeparam name="TClass">Class to search.</typeparam>
+        /// <typeparam name="TOption">Attribute for marking options.</typeparam>
+        /// <returns>Returns itself.</returns>
+        public OptionTargetList FindOptionsInClass<TClass, TOption>() where TClass : class
+            where TOption : OptionAttribute
+        {
+            var methods = TypeFinder.FindMethodsWithAttributeInClass<TClass, TOption>(Flags);
+            var properties = TypeFinder.FindPropertiesWithAttributeInClass<TClass, TOption>(Flags);
+            var fields = TypeFinder.FindFieldsWithAttributeInClass<TClass, TOption>(Flags);
+
+            CreateTargets<TOption>(methods, properties, fields);
+            return this;
+        }
+
         /// <summary>Finds and adds options marked with the specified attribute to the list.</summary>
         /// <typeparam name="TOption">Attribute for marking options.</typeparam>
-        /// <returns>Itself.</returns>
+        /// <returns>Returns itself.</returns>
         public OptionTargetList FindOptions<TOption>() where TOption : OptionAttribute
         {
             var methods = TypeFinder.FindMethodsWithAttribute<TOption>(Flags);
             var properties = TypeFinder.FindPropertiesWithAttribute<TOption>(Flags);
             var fields = TypeFinder.FindFieldsWithAttribute<TOption>(Flags);
 
+            CreateTargets<TOption>(methods, properties, fields);
+            return this;
+        }
+
+        private void CreateTargets<TOption>(IEnumerable<MethodInfo> methods, IEnumerable<PropertyInfo> properties, IEnumerable<FieldInfo> fields)
+            where TOption : OptionAttribute
+        {
             foreach (var item in methods)
             {
                 var attr = item.GetCustomAttribute<TOption>();
@@ -84,8 +133,6 @@ namespace qASIC.Options
                     DefaultValue = attr.DefaultValue,
                 });
             }
-
-            return this;
         }
 
         public OptionTargetList PopulateManagerFromTargets()
@@ -113,15 +160,7 @@ namespace qASIC.Options
             if (!Targets.ContainsKey(key))
                 Targets.Add(key, new List<Target>());
 
-            if (!Manager.OptionsList.TryGetValue(key, out var val))
-                return;
-
             Targets[key].Add(target);
-            target.SetValue(RegisteredObjects, new ChangeOptionArgs()
-            {
-                optionName = key,
-                value = val,
-            });
         }
 
         /// <summary>Gets a default value for an option.</summary>
@@ -170,6 +209,16 @@ namespace qASIC.Options
                     }
                     catch { }
                 }
+            }
+
+            foreach (var item in items)
+            {
+                try
+                {
+                    value = TypeFinder.CreateConstructorFromType(item.ValueType);
+                    return true;
+                }
+                catch { }
             }
 
             return false;

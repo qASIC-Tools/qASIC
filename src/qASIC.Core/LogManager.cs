@@ -73,7 +73,7 @@ namespace qASIC
         /// <summary>Subscribes to messages from a <see cref="LogManager"/>.</summary>
         /// <param name="other">The other manager to register.</param>
         /// <returns>Returns itself.</returns>
-        public LogManager RegisterManager(LogManager other)
+        public virtual LogManager RegisterManager(LogManager other)
         {
             if (other != null && other != this)
                 other.OnLog += Log;
@@ -95,7 +95,7 @@ namespace qASIC
         /// <summary>Unsubscribes from messages from a <see cref="LogManager"/>.</summary>
         /// <param name="other">The other manager to deregister.</param>
         /// <returns>Returns itself.</returns>
-        public LogManager UnregisterManager(LogManager other)
+        public virtual LogManager UnregisterManager(LogManager other)
         {
             if (other != null && other != this)
                 other.OnLog -= Log;

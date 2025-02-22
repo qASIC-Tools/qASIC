@@ -71,7 +71,7 @@ namespace qASIC.qARK
                 return false;
             }
 
-            if (Parser.TryParse(Value, out result))
+            if (Parser.TryParse(type, Value, out result))
                 return true;
 
             result = defaultValue;

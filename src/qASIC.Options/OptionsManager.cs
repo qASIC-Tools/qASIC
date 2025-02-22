@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using qASIC.Options.Serialization;
 
 namespace qASIC.Options
 {
@@ -12,7 +13,7 @@ namespace qASIC.Options
         public OptionsManager(OptionsList optionsList, OptionsSerializer serializer = null)
         {
             OptionsList = optionsList;
-            Serializer = serializer ?? new OptionsSerializer();
+            Serializer = serializer ?? new qARKOptionsSerializer();
         }
 
         /// <summary>Main static instance of <see cref="OptionsManager"/> that was set using <see cref="SetAsMain"/>.</summary>
@@ -50,7 +51,7 @@ namespace qASIC.Options
         /// <param name="text">String to format.</param>
         /// <returns>The formatted string.</returns>
         public static string FormatKeyString(string text) =>
-            text?.ToLower();
+            text ?? string.Empty;
 
         /// <summary>Gets the value of an option.</summary>
         /// <param name="optionName">Name of the option.</param>
@@ -121,6 +122,7 @@ namespace qASIC.Options
             {
                 if (!OptionsList.ContainsKey(item.Key)) continue;
                 OptionsList.Set(item.Key, item.Value.value);
+                Console.WriteLine(item.Key);
                 OnOptionChanged.Invoke(item.Key, new ChangeOptionArgs()
                 {
                     optionName = item.Key,
@@ -157,7 +159,7 @@ namespace qASIC.Options
             }
 
             if (log)
-                Logs.Log($"Successfully saved options at {Serializer.Path.Replace('\\', '/')}", "settings_save_success");
+                Logs.Log($"Successfully saved options", "settings_save_success");
         }
 
         /// <summary>Reverts options from the save file.</summary>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -23,7 +23,7 @@ namespace qASIC.Console
         {
             if (Closed)
                 throw new Exception("Can't clear logs, log manager closed!");
-            
+
             Logs?.Clear();
         }
 
@@ -44,6 +44,30 @@ namespace qASIC.Console
             Logs.Add(log);
             InvokeOnLog(log);
             FileWrite(log);
+        }
+        #endregion
+
+        #region Registering
+        public override LogManager RegisterManager(LogManager other)
+        {
+            if (other != null)
+                other.OnLog += Log;
+
+            if (other is GameLogManager gameOther)
+                gameOther.OnUpdateLog += Log;
+
+            return this;
+        }
+
+        public override LogManager UnregisterManager(LogManager other)
+        {
+            if (other != null)
+                other.OnLog -= Log;
+
+            if (other is GameLogManager gameOther)
+                gameOther.OnUpdateLog -= Log;
+
+            return this;
         }
         #endregion
 
