@@ -27,7 +27,7 @@ namespace qASIC.Parsing
         public ValueParser GetParser(Type type)
         {
             foreach (var item in Parsers)
-                if (item.ValueType == type)
+                if (item.TypeValid(type))
                     return item;
 
             return null;
@@ -45,52 +45,39 @@ namespace qASIC.Parsing
             return parser != null;
         }
 
-        public string ConvertToString<T>(T obj)
-        {
-            if (obj == null)
-                return string.Empty;
-
-            var parser = GetParser<T>();
-            return parser?.ConvertToString(obj) ?? obj.ToString();
-        }
-
         public string ConvertToString(object obj)
         {
             if (obj == null)
                 return string.Empty;
 
-            var parser = GetParser(obj.GetType());
+            var type = obj.GetType();
+            var parser = GetParser(type);
             return parser?.ConvertToString(obj) ?? obj.ToString();
         }
 
-        public T Parse<T>(string s)
-        {
-            var parser = GetParser<T>();
-            return parser?.TryParse(s, out T result) == true ?
-                result :
-                default;
-        }
+        public T Parse<T>(string s) =>
+            (T)Parse(typeof(T), s);
 
         public object Parse(Type type, string s)
         {
             var parser = GetParser(type);
-            return parser?.TryParse(s, out object result) == true ?
+            return parser?.TryParse(type, s, out object result) == true ?
                 result :
                 null;
         }
 
         public bool TryParse<T>(string s, out T result)
         {
-            var parser = GetParser<T>();
-            result = default;
-            return parser?.TryParse(s, out result) == true;
+            var val = TryParse(typeof(T), s, out var obj);
+            result = val ? (T)obj : default;
+            return val;
         }
 
         public bool TryParse(Type type, string s, out object result)
         {
             var parser = GetParser(type);
             result = null;
-            return parser?.TryParse(s, out result) == true;
+            return parser?.TryParse(type, s, out result) == true;
         }
 
         public IEnumerator<ValueParser> GetEnumerator() =>

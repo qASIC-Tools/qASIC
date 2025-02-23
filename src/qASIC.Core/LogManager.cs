@@ -64,9 +64,7 @@ namespace qASIC
         /// <returns>Returns itself.</returns>
         public LogManager RegisterLoggable(IHasLogs loggable)
         {
-            if (loggable?.Logs != null && loggable.Logs != this)
-                loggable.Logs.OnLog += Log;
-
+            RegisterManager(loggable?.Logs);
             return this;
         }
 
@@ -86,9 +84,7 @@ namespace qASIC
         /// <returns>Returns itself.</returns>
         public LogManager UnregisterLoggable(IHasLogs loggable)
         {
-            if (loggable?.Logs != null && loggable.Logs != this)
-                loggable.Logs.OnLog -= Log;
-
+            UnregisterManager(loggable?.Logs);
             return this;
         }
 

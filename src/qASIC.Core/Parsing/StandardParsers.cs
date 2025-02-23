@@ -1,5 +1,35 @@
-﻿namespace qASIC.Parsing
+using System;
+
+namespace qASIC.Parsing
 {
+    public class EnumParser : ValueParser
+    {
+        public override Type ValueType => typeof(Enum);
+
+        public override bool TypeValid(Type type) =>
+            type.IsEnum;
+
+        public override string ConvertToString(object obj) =>
+            obj?.ToString() ?? string.Empty;
+
+        public override bool TryParse(Type type, string s, out object obj)
+        {
+            obj = null;
+            if (type == ValueType)
+                return false;
+
+            var vals = Enum.GetValues(type);
+            foreach (var item in vals)
+            {
+                if (item.ToString() != s) continue;
+                obj = item;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
     public class BoolParser : ValueParser<bool>
     {
         public override bool TryParse(string s, out bool result)
@@ -21,7 +51,8 @@
                 default:
                     result = false;
                     return false;
-            };
+            }
+            ;
         }
     }
 

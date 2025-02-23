@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace qASIC.Parsing
 {
@@ -12,6 +12,7 @@ namespace qASIC.Parsing
                 new qColorParser(),
                 new DateTimeParser(),
                 new TimeSpanParser(),
+                new EnumParser(),
                 new IntParser(),
                 new UIntParser(),
                 new FloatParser(),
@@ -30,7 +31,14 @@ namespace qASIC.Parsing
 
         public abstract Type ValueType { get; }
 
-        public abstract bool TryParse(string s, out object result);
+        public virtual bool TypeValid(Type type) =>
+            ValueType == type;
+
+        public bool TryParse(string s, out object result) =>
+            TryParse(ValueType, s, out result);
+
+        public abstract bool TryParse(Type type, string s, out object result);
+
         public virtual string ConvertToString(object obj) =>
             obj?.ToString() ?? string.Empty;
     }
@@ -39,7 +47,7 @@ namespace qASIC.Parsing
     {
         public override Type ValueType => typeof(T);
 
-        public override bool TryParse(string s, out object result)
+        public override bool TryParse(Type type, string s, out object result)
         {
             var value = TryParse(s, out T parseResult);
             result = parseResult;

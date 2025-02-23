@@ -34,7 +34,7 @@ namespace qASIC.Options.Serialization
             if (string.IsNullOrWhiteSpace(Path))
                 return;
 
-            var doc = new qARKDocument();
+            var doc = LoadDoc();
             foreach (var item in list)
             {
                 if (item.Value.value is IEnumerable<object> enumerable)
@@ -75,11 +75,8 @@ namespace qASIC.Options.Serialization
                         .ToArray();
 
                     var array = Array.CreateInstance(itemType, result.Length);
-
-
                     Array.Copy(result, array, array.Length);
 
-                    qDebug.Log(array is string[]);
                     loadedList.Set(item.Key, array);
                     continue;
                 }

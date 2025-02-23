@@ -122,7 +122,6 @@ namespace qASIC.Options
             {
                 if (!OptionsList.ContainsKey(item.Key)) continue;
                 OptionsList.Set(item.Key, item.Value.value);
-                Console.WriteLine(item.Key);
                 OnOptionChanged.Invoke(item.Key, new ChangeOptionArgs()
                 {
                     optionName = item.Key,
