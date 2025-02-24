@@ -349,7 +349,7 @@ namespace qASIC.Console
             }
 
             //Writting
-            if (key.KeyChar != 0)
+            if (!new int[] {0, 7, 27}.Contains(key.KeyChar))
             {
                 var toWrite = InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
 

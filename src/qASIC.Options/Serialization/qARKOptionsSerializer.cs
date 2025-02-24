@@ -67,7 +67,9 @@ namespace qASIC.Options.Serialization
 
             foreach (var item in list)
             {
+                if (item.Value == null) continue;
                 var type = item.Value.value.GetType();
+                
                 if (type.IsArray)
                 {
                     var itemType = type.GetElementType();
@@ -103,7 +105,8 @@ namespace qASIC.Options.Serialization
                     continue;
                 }
 
-                loadedList.Set(item.Key, doc.GetValue(item.Key, type));
+                if (doc.TryGetValue(type, item.Key, out var value))
+                    loadedList.Set(item.Key, value);
             }
 
             return loadedList;

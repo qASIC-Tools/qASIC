@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
-namespace qASIC
+namespace qASIC.Text
 {
     public class TextTreeItem
     {

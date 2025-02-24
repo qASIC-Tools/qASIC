@@ -116,10 +116,10 @@ namespace qASIC.qARK
             return false;
         }
 
-        public bool TryGetValue(string path, Type type, out object result) =>
-            TryGetValue(path, type, default, out result);
+        public bool TryGetValue(Type type, string path, out object result) =>
+            TryGetValue(type, path, default, out result);
 
-        public bool TryGetValue(string path, Type type, object defaultValue, out object result)
+        public bool TryGetValue(Type type, string path, object defaultValue, out object result)
         {
             if (Parser == null)
             {
@@ -129,7 +129,7 @@ namespace qASIC.qARK
 
             var val = GetEntry(path)?.Value;
 
-            if (Parser.TryParse(val, out result))
+            if (Parser.TryParse(type, val, out result))
                 return true;
 
             result = defaultValue;

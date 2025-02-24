@@ -1,4 +1,4 @@
-﻿namespace qASIC
+namespace qASIC.Text
 {
     /// <summary>Class for generating text trees.</summary>
     public class TextTree

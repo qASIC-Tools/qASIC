@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace qASIC.CommandPrompts
@@ -50,6 +50,31 @@ namespace qASIC.CommandPrompts
             {
                 new CommandArgument(s, values),
             };
+        }
+
+        public object UseTextMenu(Text.ITextMenu menu)
+        {
+            switch (Key)
+            {
+                case NavigationKey.Up:
+                    menu.Move(-1);
+                    break;
+                case NavigationKey.Down:
+                    menu.Move(1);
+                    break;
+                case NavigationKey.Left:
+                    menu.Deselect();
+                    break;
+                case NavigationKey.Right:
+                    menu.Select();
+                    break;
+                case NavigationKey.Confirm:
+                    return menu.Confirm();
+                case NavigationKey.Cancel:
+                    return menu.Cancel() ? null : new KeyPrompt();
+            }
+
+            return new KeyPrompt();
         }
     }
 }

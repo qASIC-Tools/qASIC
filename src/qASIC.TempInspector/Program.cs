@@ -6,6 +6,7 @@ using System.Text;
 using System.Net;
 using qASIC.Console.Commands;
 using qASIC.CommandPrompts;
+using qASIC.Text;
 
 namespace qASICRemote
 {
