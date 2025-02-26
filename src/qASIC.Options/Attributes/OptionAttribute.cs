@@ -2,7 +2,7 @@
 
 namespace qASIC.Options
 {
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class)]
     public class OptionAttribute : Attribute
     {
         public OptionAttribute() : this(null) { }
