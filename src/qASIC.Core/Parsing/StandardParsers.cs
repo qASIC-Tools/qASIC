@@ -140,7 +140,7 @@ namespace qASIC.Parsing
         public override bool TryParse(string s, out string result)
         {
             result = s;
-            return true;
+            return s != null;
         }
     }
 }
