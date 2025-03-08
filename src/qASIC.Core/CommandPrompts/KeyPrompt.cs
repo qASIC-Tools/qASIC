@@ -14,6 +14,8 @@ namespace qASIC.CommandPrompts
             Right,
             Confirm,
             Cancel,
+            Delete,
+            Switch,
         }
 
         public static readonly Map<string, NavigationKey> keyNames = new Map<string, NavigationKey>(new Dictionary<string, NavigationKey>()
@@ -25,22 +27,28 @@ namespace qASIC.CommandPrompts
             ["right"] = NavigationKey.Right,
             ["confirm"] = NavigationKey.Confirm,
             ["cancel"] = NavigationKey.Cancel,
+            ["delete"] = NavigationKey.Delete,
+            ["switch"] = NavigationKey.Switch,
         });
 
         public NavigationKey Key { get; private set; } = NavigationKey.None;
+        public char Character { get; private set; }
 
         public override bool CanExecute(CommandContext context) =>
             context.inputString.Length > 0;
 
         public override CommandArgument[] Prepare(CommandContext context)
         {
-            string s = context.inputString.First().ToString();
+            string s = context.inputString.FirstOrDefault().ToString();
 
             if (keyNames.Forward.TryGetValue(context.inputString.ToLower(), out var key))
             {
                 Key = key;
                 s = context.inputString.ToLower();
             }
+
+            if (s.Length == 1)
+                Character = s[0];
 
             var values = s.Length == 1 ?
                 new object[] { s[0], s } :

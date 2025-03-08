@@ -19,11 +19,11 @@ namespace qASIC.Text
 
         public TextMenuItem<T> ChangeSelectable(bool newValue)
         {
-            Selectable = Selectable;
+            Selectable = newValue;
             return this;
         }
 
-        public bool Selectable { get; set; } = true;
+        public bool Selectable { get; set; } = false;
     }
 
     public class TextMenuItem : TextMenuItem<string>
