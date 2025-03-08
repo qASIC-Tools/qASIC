@@ -82,6 +82,9 @@ namespace qASIC.CommandPrompts
                     return menu.Cancel() ? null : new KeyPrompt();
             }
 
+            if (menu.TryInvokeItemAction(Character, out var itemActionResult))
+                return itemActionResult;
+
             return new KeyPrompt();
         }
     }

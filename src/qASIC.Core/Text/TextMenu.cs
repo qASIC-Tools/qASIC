@@ -63,6 +63,23 @@ namespace qASIC.Text
             return CanCancel?.Invoke() != false;
         }
 
+        public bool TryInvokeItemAction(char key, out object result)
+        {
+            result = null;
+            if (!Items.IndexInRange(Position))
+                return false;
+
+            var target = Items[Position].actions
+                .Where(x => x.key == key)
+                .FirstOrDefault();
+
+            if (target == null)
+                return false;
+
+            target.action.Invoke(Items[Position].value);
+            return true;
+        }
+
         public void Select()
         {
             if (Position == -1) return;
@@ -96,6 +113,12 @@ namespace qASIC.Text
                 txt.Append(Items[i].displayName);
             }
 
+            if (Items.IndexInRange(Position) && Items[Position].actions.Count > 0)
+            {
+                txt.Append('\n');
+                txt.Append(string.Join(" ", Items[Position].actions.Select(x => x.displayName)));
+            }
+
             txt.Append('\n');
             txt.Append(Footer);
 
@@ -106,6 +129,6 @@ namespace qASIC.Text
     public class TextMenu : TextMenu<string>
     {
         public TextMenu(string header = "") : base(header) { }
-        public TextMenu(string header, IEnumerable<TextMenuItem> items, string footer = "") : base(header, items, footer) { }
+        public TextMenu(string header, IEnumerable<TextMenuItem<string>> items, string footer = "") : base(header, items, footer) { }
     }
 }

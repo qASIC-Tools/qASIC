@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace qASIC.Text
 {
@@ -15,6 +16,7 @@ namespace qASIC.Text
 
         public string displayName;
         public T value;
+        public List<TextMenuItemAction<T>> actions = new List<TextMenuItemAction<T>>();
         public Func<T, object> OnConfirm;
 
         public TextMenuItem<T> ChangeSelectable(bool newValue)
@@ -24,12 +26,5 @@ namespace qASIC.Text
         }
 
         public bool Selectable { get; set; } = false;
-    }
-
-    public class TextMenuItem : TextMenuItem<string>
-    {
-        public TextMenuItem() : base(default) { }
-        public TextMenuItem(string value) : base(value.ToString(), value) { }
-        public TextMenuItem(string displayName, string value, Func<string, object> onConfirm = null) : base() { }
     }
 }
