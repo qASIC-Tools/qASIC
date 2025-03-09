@@ -26,6 +26,15 @@ namespace qASIC.Text
 
         public Func<bool> CanCancel;
 
+        /// <summary>
+        /// Return new position based on the provided delta. Position will be clamped.
+        /// <code>
+        /// //Default behaviour
+        /// return Position + arg;
+        /// </code>
+        /// </summary>
+        public Func<int, int> HandleMove;
+
         int _position;
         public int Position
         {
@@ -35,13 +44,17 @@ namespace qASIC.Text
 
         public void Move(int delta)
         {
+            var newPos = Position + delta;
+            if (HandleMove != null)
+                newPos = HandleMove(delta);
+
             if (Items.Count == 0)
             {
                 Position = 0;
                 return;
             }
 
-            Position = Math.Clamp(Position + delta, 0, Items.Count - 1);
+            Position = Math.Clamp(newPos, 0, Items.Count - 1);
         }
 
         public object Confirm()
