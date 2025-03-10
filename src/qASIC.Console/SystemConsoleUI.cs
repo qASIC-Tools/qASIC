@@ -161,9 +161,10 @@ namespace qASIC.Console
         /// <param name="readOnce">If true, reading will not be repeated.</param>
         public async Task StartReadingAsync(bool readOnce = false)
         {
-            CanRead = !readOnce;
+            if (!CanRead)
+                return;
 
-            while (CanRead)
+            do
             {
                 IsReadingInput = true;
 
@@ -186,6 +187,7 @@ namespace qASIC.Console
                 cmd = ProcessCommandString?.Invoke(cmd) ?? cmd;
                 await Console.ExecuteAsync(cmd);
             }
+            while (CanRead && !readOnce);
         }
 
         #region Input
@@ -221,6 +223,8 @@ namespace qASIC.Console
                     ConsoleKey.RightArrow => KeyPrompt.NavigationKey.Right,
                     ConsoleKey.Enter => KeyPrompt.NavigationKey.Confirm,
                     ConsoleKey.Escape => KeyPrompt.NavigationKey.Cancel,
+                    ConsoleKey.Delete => KeyPrompt.NavigationKey.Delete,
+                    ConsoleKey.Tab => KeyPrompt.NavigationKey.Switch,
                     _ => KeyPrompt.NavigationKey.None,
                 };
 
@@ -228,7 +232,10 @@ namespace qASIC.Console
 
                 if (promptKey == KeyPrompt.NavigationKey.None)
                 {
-                    if (!char.IsSymbol(key.KeyChar))
+                    if (!char.IsLetterOrDigit(key.KeyChar) &&
+                        !char.IsWhiteSpace(key.KeyChar) &&
+                        !char.IsPunctuation(key.KeyChar) &&
+                        !char.IsSymbol(key.KeyChar))
                         return false;
 
                     InputString = key.KeyChar.ToString();
