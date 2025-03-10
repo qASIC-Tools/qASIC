@@ -89,7 +89,7 @@ namespace qASIC.Text
             if (target == null)
                 return false;
 
-            target.action.Invoke(Items[Position].value);
+            result = target.action.Invoke(Items[Position].value);
             return true;
         }
 
