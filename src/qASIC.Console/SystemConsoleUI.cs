@@ -67,7 +67,7 @@ namespace qASIC.Console
         public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE:App,Usr,Int,Clr%] %MESSAGE%";
 
         /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
-        public bool CanRead { get; set; }
+        public bool CanRead { get; set; } = true;
 
         /// <summary>Is the console currently reading input from the command line.</summary>
         public bool IsReading { get; set; }

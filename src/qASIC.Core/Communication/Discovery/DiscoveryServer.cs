@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace qASIC.Communication.Discovery
 {
@@ -56,8 +57,13 @@ namespace qASIC.Communication.Discovery
             if (IsActive)
                 throw new Exception("Cannot start discovery server, server is already active!");
 
+            Sockets = new Dictionary<IPAddress, Socket>();
+            Ip6Link = IPAddress.Parse("ff02::1");
+            EndPoint4 = new IPEndPoint(IPAddress.Broadcast, Port);
+            EndPoint6 = new IPEndPoint(Ip6Link, Port);
+
             IsActive = true;
-            _thread = new Thread(async () => await Process());
+            _thread = new Thread(async () => await UpdateLoop());
             _cancel = new CancellationTokenSource();
             _thread.Start();
         }
@@ -74,74 +80,98 @@ namespace qASIC.Communication.Discovery
             _thread.Join();
             _cancel = null;
             _thread = null;
+
+            Sockets = null;
+            Ip6Link = null;
+            EndPoint4 = null;
+            EndPoint6 = null;
         }
 
-        async Task Process()
+        Dictionary<IPAddress, Socket> Sockets { get; set; }
+        IPAddress Ip6Link { get; set; }
+        IPEndPoint EndPoint4 { get; set; }
+        IPEndPoint EndPoint6 { get; set; }
+
+        async Task UpdateLoop()
         {
-            var sockets = new Dictionary<IPAddress, Socket>();
-            var ip6link = IPAddress.Parse("ff02::1");
+            var cancel = _cancel;
 
-            var endPoint4 = new IPEndPoint(IPAddress.Broadcast, Port);
-            var endPoint6 = new IPEndPoint(ip6link, Port);
+            var stopwatch = new Stopwatch();
+            bool serverState = false;
 
-            while (!_cancel.IsCancellationRequested)
+            while (!cancel.IsCancellationRequested)
             {
-                var addresses = NetworkInterface.GetAllNetworkInterfaces()
-                    .Where(x => x.OperationalStatus == OperationalStatus.Up || x.OperationalStatus == OperationalStatus.Unknown)
-                    .SelectMany(x => x.GetIPProperties().UnicastAddresses)
-                    .Select(x => x.Address)
-                    .Where(x => (UseIPv4 && x.AddressFamily == AddressFamily.InterNetwork) || 
-                        (UseIPv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
+                stopwatch.Reset();
+                stopwatch.Start();
 
-                var added = addresses.Except(sockets.Select(x => x.Key));
-                var removed = sockets.Select(x => x.Key).Except(addresses);
+                Process();
 
-                foreach (var item in removed)
+                if (!TargetServer.IsActive && serverState)
                 {
-                    sockets[item].Dispose();
-                    sockets.Remove(item);
+                    foreach (var item in Sockets.Values)
+                        item.Dispose();
                 }
 
-                foreach (var item in added)
-                {
-                    var is6 = item.AddressFamily == AddressFamily.InterNetworkV6;
+                serverState = TargetServer.IsActive;
 
-                    var socket = new Socket(item.AddressFamily, SocketType.Dgram, ProtocolType.Udp)
-                    {
-                        EnableBroadcast = true,
-                        ExclusiveAddressUse = false,
-                    };
+                stopwatch.Stop();
+                if (stopwatch.ElapsedMilliseconds < UpdateFrequency)
+                    await Task.Delay(UpdateFrequency - (int)stopwatch.ElapsedMilliseconds);
+            }
+        }
 
-                    socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        void Process()
+        {
+            var addresses = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(x => x.OperationalStatus == OperationalStatus.Up || x.OperationalStatus == OperationalStatus.Unknown)
+                .SelectMany(x => x.GetIPProperties().UnicastAddresses)
+                .Select(x => x.Address)
+                .Where(x => (UseIPv4 && x.AddressFamily == AddressFamily.InterNetwork) || 
+                    (UseIPv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
 
-                    if (is6)
-                        socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new IPv6MulticastOption(ip6link));
+            var added = addresses.Except(Sockets.Select(x => x.Key));
+            var removed = Sockets.Select(x => x.Key).Except(addresses);
 
-                    socket.Bind(new IPEndPoint(item, Port));
-
-                    sockets.Add(item, socket);
-                }
-
-                var identity = new qPacket()
-                    .Write(TargetServer.Port)
-                    .Write(TargetServer.AppInfo)
-                    .ToArray();
-
-                foreach (var item in sockets)
-                {
-                    try
-                    {
-                        var is6 = item.Key.AddressFamily == AddressFamily.InterNetworkV6;
-                        item.Value.SendTo(identity, is6 ? endPoint6 : endPoint4);
-                    }
-                    catch { }
-                }
-
-                await Task.Delay(UpdateFrequency);
+            foreach (var item in removed)
+            {
+                Sockets[item].Dispose();
+                Sockets.Remove(item);
             }
 
-            foreach (var item in sockets.Values)
-                item.Dispose();
-        }
+            foreach (var item in added)
+            {
+                var is6 = item.AddressFamily == AddressFamily.InterNetworkV6;
+
+                var socket = new Socket(item.AddressFamily, SocketType.Dgram, ProtocolType.Udp)
+                {
+                    EnableBroadcast = true,
+                    ExclusiveAddressUse = false,
+                };
+
+                socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
+                if (is6)
+                    socket.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership, new IPv6MulticastOption(Ip6Link));
+
+                socket.Bind(new IPEndPoint(item, Port));
+
+                Sockets.Add(item, socket);
+            }
+
+            var identity = new qPacket()
+                .Write(TargetServer.Port)
+                .Write(TargetServer.AppInfo)
+                .ToArray();
+
+            foreach (var item in Sockets)
+            {
+                try
+                {
+                    var is6 = item.Key.AddressFamily == AddressFamily.InterNetworkV6;
+                    item.Value.SendTo(identity, is6 ? EndPoint6 : EndPoint4);
+                }
+                catch { }
+            }
+         }
     }
 }
