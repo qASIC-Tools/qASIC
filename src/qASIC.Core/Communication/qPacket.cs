@@ -104,7 +104,7 @@ namespace qASIC.Communication
 
         public qPacket Write(string value)
         {
-            if (value == string.Empty)
+            if (string.IsNullOrEmpty(value))
             {
                 Write(0);
                 return this;

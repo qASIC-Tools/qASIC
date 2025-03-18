@@ -198,11 +198,19 @@ namespace qASIC.Communication
             {
                 if (Stream?.CanRead != true)
                 {
-                    Logs.LogError("Stream couldn't be read");
+                    Logs.LogError("Stream couldn't be read, disconnecting...");
+                    DisconnectLocal();
                     return;
                 }
 
                 int streamLength = Stream.EndRead(result);
+
+                if (streamLength == 0)
+                {
+                    Logs.LogError("Stream was empty, disconnecting...");
+                    DisconnectLocal();
+                    return;
+                }
 
                 if (logPackets)
                     Logs.Log($"Incomming data, length:{streamLength}");

@@ -27,6 +27,9 @@ namespace qASIC.Communication
         public TcpListener Listener { get; private set; }
 
         public Action<Client> OnClientConnect;
+        public event Action<Client> OnClientDisconnect;
+        public event Action OnStart;
+        public event Action OnStop;
 
         int nextClientId;
         public bool logPackets = false;
@@ -50,6 +53,8 @@ namespace qASIC.Communication
             SendLoop();
 
             Logs.Log("Server is now active!");
+
+            OnStart?.Invoke();
         }
 
         public qServer WithUpdateLoop(int milisecondsPerUpdate = 50)
@@ -93,6 +98,8 @@ namespace qASIC.Communication
             IsActive = false;
 
             Logs.Log("Stopped server");
+
+            OnStop?.Invoke();
         }
 
         public void DisconnectClient(Client client)
@@ -106,6 +113,8 @@ namespace qASIC.Communication
             client.DisconnectLocal();
             Clients.Remove(client);
             Logs.UnregisterLoggable(client);
+
+            OnClientDisconnect?.Invoke(client);
         }
 
         public void ChangePort(int port)
