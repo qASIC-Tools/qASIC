@@ -8,6 +8,8 @@ namespace qASIC.Communication
 {
     public class qPacket : IEnumerable<byte>
     {
+        public const int DEFAULT_MAX_STRING_LENGTH = 8192;
+
         public qPacket() : this(new byte[0]) { }
 
         public qPacket(IEnumerable<byte> bytes)
@@ -63,7 +65,7 @@ namespace qASIC.Communication
         public double ReadDouble() => BitConverter.ToDouble(ReadCurrentBytes(sizeof(double)), 0);
         public long ReadLong() => BitConverter.ToInt64(ReadCurrentBytes(sizeof(long)), 0);
         public ulong ReadULong() => BitConverter.ToUInt64(ReadCurrentBytes(sizeof(ulong)), 0);
-        public string ReadString()
+        public string ReadString(int maxLength = DEFAULT_MAX_STRING_LENGTH)
         {
             var length = ReadInt();
             return length > 0 ?
@@ -139,7 +141,7 @@ namespace qASIC.Communication
             {
                 this.bytes.InsertRange(i * segmentLength, bytes);
                 i += segmentLength;
-            } 
+            }
 
             position += position / segmentLength * bytes.Length;
             return this;

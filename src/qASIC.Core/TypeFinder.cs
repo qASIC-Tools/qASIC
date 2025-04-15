@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 
 namespace qASIC
 {
@@ -27,7 +28,7 @@ namespace qASIC
 
         public static IEnumerable<Type> FindClassesWithAttribute(Type type, BindingFlags bindingFlags = _DEFAULT_FLAGS) =>
             AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(x => x.GetTypes())
+                .SelectMany(x => x.GetTypesSafely())
                 .Where(x => x.IsClass)
                 .Where(x => x.GetCustomAttributes(type, false).Count() > 0);
 
@@ -47,7 +48,7 @@ namespace qASIC
 
         public static IEnumerable<MethodInfo> FindMethodsWithAttribute(Type type, BindingFlags bindingFlags = _DEFAULT_FLAGS) =>
             AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(x => x.GetTypes())
+                .SelectMany(x => x.GetTypesSafely())
                 .Where(x => x.IsClass)
                 .SelectMany(x => x.GetMethods(bindingFlags))
                 .Where(x => x.GetCustomAttributes(type, false).Count() > 0);
@@ -67,7 +68,7 @@ namespace qASIC
 
         public static IEnumerable<FieldInfo> FindFieldsWithAttribute(Type attributeType, BindingFlags bindingFlags = _DEFAULT_FLAGS) =>
             AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(x => x.GetTypes())
+                .SelectMany(x => x.GetTypesSafely())
                 .SelectMany(x => FindFieldsWithAttributeInClass(x, attributeType, bindingFlags));
 
         //Properties
@@ -85,7 +86,7 @@ namespace qASIC
 
         public static IEnumerable<PropertyInfo> FindPropertiesWithAttribute(Type attributeType, BindingFlags bindingFlags = _DEFAULT_FLAGS) =>
             AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(x => x.GetTypes())
+                .SelectMany(x => x.GetTypesSafely())
                 .SelectMany(x => FindPropertiesWithAttributeInClass(x, attributeType, bindingFlags));
         #endregion
 
@@ -112,5 +113,17 @@ namespace qASIC
                 if (constructor == null || constructor.IsAbstract) return new T[0];
                 return new T[] { (T)constructor.Invoke(null) };
             });
+
+        private static IEnumerable<Type> GetTypesSafely(this Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                return e.Types.Where(x => x != null);
+            }
+        }
     }
 }

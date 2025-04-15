@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using qASIC.CommandPrompts;
 using qASIC.Console.Autocomplete;
-
 using SysConsole = System.Console;
 
 namespace qASIC.Console
@@ -78,6 +77,8 @@ namespace qASIC.Console
         /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
         public event Func<string, string> ProcessCommandString;
 
+        bool previousLogSticky;
+        qColor previousLogColor;
         string previousLogMessage = string.Empty;
         qLog previousLog = null;
 
@@ -86,22 +87,46 @@ namespace qASIC.Console
             if (log.logType == LogType.Clear)
             {
                 SysConsole.Clear();
+
+                if (previousLogSticky)
+                {
+                    WritePreviousLog();
+                }
+
                 SysConsole.Write(InputString);
-                previousLogMessage = string.Empty;
-                previousLog = null;
+
+                if (!previousLogSticky)
+                {
+                    previousLogMessage = string.Empty;
+                    previousLog = null;
+                }
+
                 return;
             }
 
             var txt = CreateLogText(log);
 
-            previousLogMessage = log.message;
-            previousLog = log;
-
             SysConsole.Write(new string('\b', InputCursorPosition));
             SysConsole.Write(new string(' ', InputString.Length));
             SysConsole.Write(new string('\b', InputString.Length));
 
+            if (previousLogSticky)
+                ClearPreviousLog();
+
             SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
+
+            if (previousLogSticky)
+            {
+                WritePreviousLog();
+                SysConsole.Write('\n');
+            }
+            else
+            {
+                previousLogMessage = txt;
+                previousLogColor = log.color;
+                previousLog = log;
+                previousLogSticky = log.sticky;
+            }
 
             SysConsole.Write(InputString);
             SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
@@ -120,29 +145,19 @@ namespace qASIC.Console
                 return;
             }
 
-            var txt = CreateLogText(log);
-
             //Clear input line
             SysConsole.Write(new string('\b', InputCursorPosition));
             SysConsole.Write(new string(' ', InputString.Length));
             SysConsole.Write(new string('\b', InputString.Length));
 
-            //Calculate previous message length
-            var consoleWidth = SysConsole.BufferWidth;
-            var lineLength = previousLogMessage.Split('\n')
-                .Select(x => (x.Length - 1) / consoleWidth + 1)
-                .Sum();
-            var top = Math.Max(0, SysConsole.CursorTop - lineLength);
-
-            //Clear previous message
-            SysConsole.CursorTop = top;
-            SysConsole.Write(new string(' ', lineLength * consoleWidth));
-            SysConsole.CursorTop = top;
-            SysConsole.CursorLeft = 0;
+            ClearPreviousLog();
 
             //Write new message
-            SysConsole.Write(txt);
-            previousLogMessage = log.message;
+            previousLogMessage = CreateLogText(log);
+            previousLogColor = log.color;
+            previousLogSticky = log.sticky;
+            previousLog = log;
+            WritePreviousLog();
 
             //Restore input line
             SysConsole.WriteLine('\b');
@@ -356,7 +371,7 @@ namespace qASIC.Console
             }
 
             //Writting
-            if (!new int[] {0, 7, 27}.Contains(key.KeyChar))
+            if (!new int[] { 0, 7, 27 }.Contains(key.KeyChar))
             {
                 var toWrite = InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
 
@@ -478,5 +493,27 @@ namespace qASIC.Console
 
         protected string CreateEmptyStringForLog(qLog log) =>
             ColorText(new string(CreateLogText(log).Select(x => char.IsControl(x) ? x : ' ').ToArray()), log.color);
+
+        protected void ClearPreviousLog()
+        {
+            //Calculate previous message length
+            var consoleWidth = SysConsole.BufferWidth;
+            var lineLength = previousLogMessage.Split('\n')
+                .Select(x => (x.Length - 1) / consoleWidth + 1)
+                .Sum();
+            var top = Math.Max(0, SysConsole.CursorTop - lineLength);
+
+            //Clear previous message
+            SysConsole.CursorTop = top;
+            SysConsole.CursorLeft = 0;
+            SysConsole.Write(new string(' ', lineLength * consoleWidth));
+            SysConsole.CursorTop = top;
+            SysConsole.CursorLeft = 0;
+        }
+
+        protected void WritePreviousLog()
+        {
+            SysConsole.Write(ColorText(previousLogMessage, previousLogColor));
+        }
     }
 }

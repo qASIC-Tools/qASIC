@@ -110,6 +110,8 @@ namespace qASIC.Communication.Discovery
                 {
                     foreach (var item in Sockets.Values)
                         item.Dispose();
+
+                    Sockets.Clear();
                 }
 
                 serverState = TargetServer.IsActive;
@@ -126,7 +128,7 @@ namespace qASIC.Communication.Discovery
                 .Where(x => x.OperationalStatus == OperationalStatus.Up || x.OperationalStatus == OperationalStatus.Unknown)
                 .SelectMany(x => x.GetIPProperties().UnicastAddresses)
                 .Select(x => x.Address)
-                .Where(x => (UseIPv4 && x.AddressFamily == AddressFamily.InterNetwork) || 
+                .Where(x => (UseIPv4 && x.AddressFamily == AddressFamily.InterNetwork) ||
                     (UseIPv6 && x.AddressFamily == AddressFamily.InterNetworkV6));
 
             var added = addresses.Except(Sockets.Select(x => x.Key));
@@ -172,6 +174,6 @@ namespace qASIC.Communication.Discovery
                 }
                 catch { }
             }
-         }
+        }
     }
 }

@@ -43,6 +43,7 @@ namespace qASIC
         public LogType logType = LogType.Application;
         public string colorTag = qDebug.DEFAULT_COLOR_TAG;
         public qColor color = qColor.White;
+        public bool sticky = false;
 
         public static qLog CreateNow(string message) =>
             new qLog(DateTime.Now, message);
@@ -171,6 +172,22 @@ namespace qASIC
             return this;
         }
 
+        /// <summary>Makes the log sticky.</summary>
+        /// <returns>Returns itself.</returns>
+        public qLog Sticky()
+        {
+            sticky = true;
+            return this;
+        }
+
+        /// <summary>Stops the log from being sticky.</summary>
+        /// <returns>Returns itself.</returns>
+        public qLog UnStick()
+        {
+            sticky = false;
+            return this;
+        }
+
         /// <summary>Copies data from a different log to itself.</summary>
         /// <param name="other">Log to copy data from.</param>
         /// <returns>Returns itself.</returns>
@@ -192,7 +209,8 @@ namespace qASIC
             .Write((byte)logType)
             .Write(colorTag == null)
             .Write(colorTag ?? string.Empty)
-            .Write(color);
+            .Write(color)
+            .Write(sticky);
 
         public void Read(qPacket packet)
         {
@@ -206,6 +224,7 @@ namespace qASIC
                 colorTag = null;
 
             color = packet.ReadNetworkSerializable<qColor>();
+            sticky = packet.ReadBool();
         }
     }
 }

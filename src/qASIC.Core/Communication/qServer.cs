@@ -22,6 +22,9 @@ namespace qASIC.Communication
 
         public int Port { get; private set; }
 
+        /// <summary>If discovery should be limited to just this maschine.</summary>
+        public bool LocalOnly { get; set; } = true;
+
         public List<Client> Clients { get; private set; } = new List<Client>();
 
         public TcpListener Listener { get; private set; }
@@ -40,7 +43,7 @@ namespace qASIC.Communication
                 throw new Exception("Cannot start server, server is already active!");
 
             PrepareStart();
-            Listener = new TcpListener(IPAddress.Any, Port);
+            Listener = new TcpListener(LocalOnly ? IPAddress.Loopback : IPAddress.Any, Port);
             Listener.Start();
             Port = ((IPEndPoint)Listener.LocalEndpoint).Port;
             Logs.Log($"Starting server on port {Port}...");

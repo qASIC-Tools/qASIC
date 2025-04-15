@@ -97,7 +97,14 @@ namespace qASIC.Text
         {
             if (Position == -1) return;
             if (!Selection.Contains(Position) && Items[Position].Selectable)
-                Selection.Add(Position);
+            {
+                int i = 0;
+                while (i < Selection.Count &&
+                    Selection[i] < Position)
+                    i++;
+
+                Selection.Insert(i, Position);
+            }
         }
 
         public void Deselect()
