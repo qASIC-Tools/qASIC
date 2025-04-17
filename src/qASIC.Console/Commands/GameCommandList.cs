@@ -173,7 +173,8 @@ namespace qASIC.Console.Commands
 
         public IEnumerable<string> GetSortedCommandNames() =>
             Commands.SelectMany(x => x.names)
-                .OrderBy(x => x);
+                .OrderBy(x => x)
+                .Distinct();
 
         public IEnumerator<ICommand> GetEnumerator() =>
             Commands
