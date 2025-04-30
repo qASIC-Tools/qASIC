@@ -17,22 +17,18 @@ namespace qASIC.Console.Commands.BuiltIn
 
         public override object Run(GameCommandContext context)
         {
-            //Ignore page argument if multipage and detailed description is off
-            if (!MultiplePages)
-                context.CheckArgumentCount(0);
-
             context.CheckArgumentCount(0, 1);
 
             string targetCommand = null;
             int index = 0;
 
-            //help <index>
-            if (context.Length == 2)
+            //help <index> or help <command>
+            if (context.Length == 1)
             {
-                switch (context[0].CanGetValue<int>())
+                switch (context[0].TryGetValue(out int pageIndex) && MultiplePages)
                 {
                     case true:
-                        index = context[0].GetValue<int>();
+                        index = pageIndex;
                         break;
                     case false:
                         targetCommand = context[0].arg;
