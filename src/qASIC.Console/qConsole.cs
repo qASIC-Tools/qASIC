@@ -362,19 +362,19 @@ namespace qASIC.Console
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void Log(string message, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, qDebug.DEFAULT_COLOR_TAG), stackTraceIndex, true);
+            Log(qLog.CreateNow(message, qDebug.DEFAULT_TAG), stackTraceIndex, true);
 
         /// <summary>Logs a warning message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void LogWarning(string message, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, qDebug.WARNING_COLOR_TAG), stackTraceIndex);
+            Log(qLog.CreateNow(message, qDebug.WARNING_TAG), stackTraceIndex);
 
         /// <summary>Logs an error message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void LogError(string message, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, qDebug.ERROR_COLOR_TAG), stackTraceIndex);
+            Log(qLog.CreateNow(message, qDebug.ERROR_TAG), stackTraceIndex);
 
         /// <summary>Logs a message to the console with a color.</summary>
         /// <param name="message">Message to log.</param>
@@ -405,7 +405,7 @@ namespace qASIC.Console
 
                 if (TryGetColorAttributeOfTrace(method, declaringType, out var colorAttr))
                 {
-                    log.colorTag = colorAttr.ColorTag;
+                    log.tag = colorAttr.ColorTag;
                     log.color = colorAttr.Color;
                 }
 
@@ -420,7 +420,7 @@ namespace qASIC.Console
 
         /// <summary>Clears the console. Previous logs will still be there, but they won't show up in the output.</summary>
         public void Clear() =>
-            Log(qLog.CreateNow(string.Empty, LogType.Clear, qDebug.DEFAULT_COLOR_TAG));
+            Log(qLog.CreateNow(string.Empty, LogType.Clear, qDebug.DEFAULT_TAG));
 
         public qColor GetLogColor(qLog log) =>
             Theme.GetLogColor(log);

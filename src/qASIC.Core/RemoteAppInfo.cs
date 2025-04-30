@@ -1,6 +1,7 @@
 ﻿using qASIC.Communication;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace qASIC
 {
@@ -57,8 +58,39 @@ namespace qASIC
             }
         }
 
-        public override string ToString() =>
-            $"Remote App Info, '{projectName}' v{version} made with {engine} v{engineVersion} using protocol version {protocolVersion}";
+        public override string ToString()
+        {
+            var txt = new StringBuilder("Remote App Info, ");
+
+            switch (string.IsNullOrWhiteSpace(projectName), string.IsNullOrWhiteSpace(version))
+            {
+                case (false, false):
+                    txt.Append($" '{projectName}' v{version}");
+                    break;
+                case (false, true):
+                    txt.Append($" project version: {version}");
+                    break;
+                case (true, false):
+                    txt.Append($" '{projectName}'");
+                    break;
+            }
+
+            switch (string.IsNullOrWhiteSpace(engine), string.IsNullOrWhiteSpace(engineVersion))
+            {
+                case (false, false):
+                    txt.Append($" '{engine}' v{engineVersion}");
+                    break;
+                case (false, true):
+                    txt.Append($" engine version: {engineVersion}");
+                    break;
+                case (true, false):
+                    txt.Append($" '{engine}'");
+                    break;
+            }
+
+            txt.Append($" using protocol version {protocolVersion}");
+            return txt.ToString();
+        }
 
         public struct SystemInfo
         {

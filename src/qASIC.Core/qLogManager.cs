@@ -4,8 +4,8 @@ namespace qASIC
 {
     public class qLogManager
     {
-        public qLogManager() : this(qDebug.DEFAULT_COLOR_TAG, qDebug.WARNING_COLOR_TAG, qDebug.ERROR_COLOR_TAG) { }
-        public qLogManager(string defaultColorTag) : this(defaultColorTag, qDebug.WARNING_COLOR_TAG, qDebug.ERROR_COLOR_TAG) { }
+        public qLogManager() : this(qDebug.DEFAULT_TAG, qDebug.WARNING_TAG, qDebug.ERROR_TAG) { }
+        public qLogManager(string defaultColorTag) : this(defaultColorTag, qDebug.WARNING_TAG, qDebug.ERROR_TAG) { }
         public qLogManager(string defaultColorTag, string warningColor, string errorColor)
         {
             DefaultColorTag = defaultColorTag;

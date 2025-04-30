@@ -14,9 +14,11 @@ namespace qASIC
 
     public class qLog : INetworkSerializable
     {
+        public const string DEFAULT_TAG = "default";
+
         public qLog() { }
 
-        public qLog(DateTime time, string message) : this(time, message, qDebug.DEFAULT_COLOR_TAG) { }
+        public qLog(DateTime time, string message) : this(time, message, qDebug.DEFAULT_TAG) { }
 
         public qLog(DateTime time, string message, qColor color) : this(time, message, LogType.Application, color) { }
         public qLog(DateTime time, string message, string colorTag) : this(time, message, LogType.Application, colorTag) { }
@@ -27,7 +29,7 @@ namespace qASIC
             this.message = message;
             this.logType = logType;
             this.color = color;
-            colorTag = null;
+            tag = null;
         }
 
         public qLog(DateTime time, string message, LogType logType, string colorTag)
@@ -35,13 +37,13 @@ namespace qASIC
             this.time = time;
             this.message = message;
             this.logType = logType;
-            this.colorTag = colorTag;
+            this.tag = colorTag;
         }
 
         public DateTime time;
         public string message = string.Empty;
         public LogType logType = LogType.Application;
-        public string colorTag = qDebug.DEFAULT_COLOR_TAG;
+        public string tag = DEFAULT_TAG;
         public qColor color = qColor.White;
         public bool sticky = false;
 
@@ -69,7 +71,7 @@ namespace qASIC
         /// <item>%TIME% or %TIME:[format]% - represents <see cref="time"/>. Optional format will be used in <see cref="DateTime.ToString(string?)"/>.</item>
         /// <item>%MESSAGE% - represents <see cref="message"/>.</item>
         /// <item>%TYPE% or %TYPE:Application,User,Internal,Clear% - represents <see cref="logType"/>. Optionally you can specify text that will be used for every value.</item>
-        /// <item>%TAG% - represents <see cref="colorTag"/>.</item>
+        /// <item>%TAG% - represents <see cref="tag"/>.</item>
         /// <item>%COLOR% - represents <see cref="color"/>.</item>
         /// <item>%% - represents the '%' character.</item>
         /// </list>
@@ -158,7 +160,7 @@ namespace qASIC
         public qLog ChangeColor(qColor color)
         {
             this.color = color;
-            colorTag = null;
+            tag = null;
             return this;
         }
 
@@ -168,7 +170,7 @@ namespace qASIC
         public qLog ChangeColor(string colorTag)
         {
             color = qColor.White;
-            this.colorTag = colorTag;
+            this.tag = colorTag;
             return this;
         }
 
@@ -196,7 +198,7 @@ namespace qASIC
             time = other.time;
             message = other.message;
             logType = other.logType;
-            colorTag = other.colorTag;
+            tag = other.tag;
             color = other.color;
 
             return this;
@@ -207,8 +209,8 @@ namespace qASIC
             .Write(time.Ticks)
             .Write(message)
             .Write((byte)logType)
-            .Write(colorTag == null)
-            .Write(colorTag ?? string.Empty)
+            .Write(tag == null)
+            .Write(tag ?? string.Empty)
             .Write(color)
             .Write(sticky);
 
@@ -219,9 +221,9 @@ namespace qASIC
             logType = (LogType)packet.ReadByte();
 
             bool nullColorTag = packet.ReadBool();
-            colorTag = packet.ReadString();
+            tag = packet.ReadString();
             if (nullColorTag)
-                colorTag = null;
+                tag = null;
 
             color = packet.ReadNetworkSerializable<qColor>();
             sticky = packet.ReadBool();

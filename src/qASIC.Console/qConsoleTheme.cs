@@ -29,11 +29,11 @@ namespace qASIC.Console
             {
                 switch (s)
                 {
-                    case qDebug.DEFAULT_COLOR_TAG:
+                    case qDebug.DEFAULT_TAG:
                         return defaultColor;
-                    case qDebug.WARNING_COLOR_TAG:
+                    case qDebug.WARNING_TAG:
                         return warningColor;
-                    case qDebug.ERROR_COLOR_TAG:
+                    case qDebug.ERROR_TAG:
                         return errorColor;
                     default:
                         return customColors.TryGetValue(s, out var cl) ? cl : defaultColor;
@@ -53,10 +53,10 @@ namespace qASIC.Console
 
         public qColor GetLogColor(qLog log)
         {
-            if (log.colorTag == null)
+            if (log.tag == null)
                 return log.color;
 
-            return this[log.colorTag];
+            return this[log.tag];
         }
 
         public void Read(qPacket packet)
