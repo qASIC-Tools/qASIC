@@ -41,6 +41,7 @@ namespace qASIC.Console.Commands
                 new BuiltIn.Cmd_Help(),
                 new BuiltIn.Cmd_Version(),
                 new BuiltIn.Cmd_Unstick(),
+                new BuiltIn.Cmd_RemoteInfo(),
             });
 
         /// <summary>Finds and adds commands to the list that use <see cref="ConsoleCommandAttribute"/>.</summary>
