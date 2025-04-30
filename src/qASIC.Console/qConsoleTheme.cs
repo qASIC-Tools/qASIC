@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace qASIC.Console
 {
-    public class GameConsoleTheme : INetworkSerializable
+    public class qConsoleTheme : INetworkSerializable
     {
-        public static GameConsoleTheme Default =>
-            new GameConsoleTheme();
+        public static qConsoleTheme Default =>
+            new qConsoleTheme();
 
         public qColor defaultColor = qColor.White;
         public qColor warningColor = qColor.Yellow;

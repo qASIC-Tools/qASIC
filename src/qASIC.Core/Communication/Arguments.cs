@@ -27,7 +27,7 @@ namespace qASIC.Communication
 
         public qServer.Client targetServerClient;
 
-        public LogManager Logs
+        public qLogManager Logs
         {
             get
             {

@@ -2,7 +2,7 @@
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Exit : GameCommand
+    public class Cmd_Exit : qConsoleCommand
     {
         public override string CommandName => "exit";
         public override string Description => "Closes the application.";

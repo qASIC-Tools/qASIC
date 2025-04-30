@@ -2,11 +2,11 @@ using System;
 
 namespace qASIC
 {
-    public class LogManager
+    public class qLogManager
     {
-        public LogManager() : this(qDebug.DEFAULT_COLOR_TAG, qDebug.WARNING_COLOR_TAG, qDebug.ERROR_COLOR_TAG) { }
-        public LogManager(string defaultColorTag) : this(defaultColorTag, qDebug.WARNING_COLOR_TAG, qDebug.ERROR_COLOR_TAG) { }
-        public LogManager(string defaultColorTag, string warningColor, string errorColor)
+        public qLogManager() : this(qDebug.DEFAULT_COLOR_TAG, qDebug.WARNING_COLOR_TAG, qDebug.ERROR_COLOR_TAG) { }
+        public qLogManager(string defaultColorTag) : this(defaultColorTag, qDebug.WARNING_COLOR_TAG, qDebug.ERROR_COLOR_TAG) { }
+        public qLogManager(string defaultColorTag, string warningColor, string errorColor)
         {
             DefaultColorTag = defaultColorTag;
             WarningColorTag = warningColor;
@@ -19,7 +19,7 @@ namespace qASIC
 
         #region Closing
         public bool Closed { get; private set; } = false;
-        public Action<LogManager> OnClose;
+        public Action<qLogManager> OnClose;
 
         public virtual void Close()
         {
@@ -62,16 +62,16 @@ namespace qASIC
         /// <summary>Subscribes to messages from a <see cref="IHasLogs"/>.</summary>
         /// <param name="loggable">The loggable to register.</param>
         /// <returns>Returns itself.</returns>
-        public LogManager RegisterLoggable(IHasLogs loggable)
+        public qLogManager RegisterLoggable(IHasLogs loggable)
         {
             RegisterManager(loggable?.Logs);
             return this;
         }
 
-        /// <summary>Subscribes to messages from a <see cref="LogManager"/>.</summary>
+        /// <summary>Subscribes to messages from a <see cref="qLogManager"/>.</summary>
         /// <param name="other">The other manager to register.</param>
         /// <returns>Returns itself.</returns>
-        public virtual LogManager RegisterManager(LogManager other)
+        public virtual qLogManager RegisterManager(qLogManager other)
         {
             if (other != null && other != this)
                 other.OnLog += Log;
@@ -82,16 +82,16 @@ namespace qASIC
         /// <summary>Unsubscribes from messages from a <see cref="IHasLogs"/>.</summary>
         /// <param name="loggable">The loggable to deregister.</param>
         /// <returns>Returns itself.</returns>
-        public LogManager UnregisterLoggable(IHasLogs loggable)
+        public qLogManager UnregisterLoggable(IHasLogs loggable)
         {
             UnregisterManager(loggable?.Logs);
             return this;
         }
 
-        /// <summary>Unsubscribes from messages from a <see cref="LogManager"/>.</summary>
+        /// <summary>Unsubscribes from messages from a <see cref="qLogManager"/>.</summary>
         /// <param name="other">The other manager to deregister.</param>
         /// <returns>Returns itself.</returns>
-        public virtual LogManager UnregisterManager(LogManager other)
+        public virtual qLogManager UnregisterManager(qLogManager other)
         {
             if (other != null && other != this)
                 other.OnLog -= Log;

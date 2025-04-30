@@ -7,7 +7,7 @@ using System.Net.Sockets;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_RemoteInfo : GameCommand
+    public class Cmd_RemoteInfo : qConsoleCommand
     {
         public override string CommandName => "remote";
         public override string Description => "Shows information about the remote inspector server.";

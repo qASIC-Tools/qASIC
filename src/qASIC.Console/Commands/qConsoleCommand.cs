@@ -1,6 +1,6 @@
 ﻿namespace qASIC.Console.Commands
 {
-    public abstract class GameCommand : ICommand
+    public abstract class qConsoleCommand : ICommand
     {
         public abstract string CommandName { get; }
 

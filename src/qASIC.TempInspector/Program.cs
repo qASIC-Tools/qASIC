@@ -10,7 +10,7 @@ using qASIC.Text;
 
 namespace qASICRemote
 {
-    public class InspectorCommand : CommandAttribute
+    public class InspectorCommand : qCommandAttribute
     {
         public InspectorCommand(string name) : base(name) { }
         public InspectorCommand(string name, params string[] aliases) : base(name, aliases) { }
@@ -41,13 +41,13 @@ namespace qASICRemote
                 autoStartRemoteInspectorServer = false,
             };
 
-            var commands = new GameCommandList()
+            var commands = new qCommandList()
                 .AddBuiltInCommands()
                 .AddCommand(new ConnectionsListCommand(this))
                 .AddCommand(new SendCmdCommand(this))
                 .FindAttributeCommands<InspectorCommand>();
 
-            GConsole = new GameConsole("MAIN", commands);
+            GConsole = new qConsole("MAIN", commands);
             GConsole.Targets.Register(this);
 
             Interface = new SystemConsoleUI(GConsole);
@@ -90,7 +90,7 @@ namespace qASICRemote
         public qClient client = null;
 
         public qInstance QasicInstance { get; private set; } = null;
-        public GameConsole GConsole { get; private set; } = null;
+        public qConsole GConsole { get; private set; } = null;
         public SystemConsoleUI Interface { get; private set; } = null;
         public DiscoveryClient DiscoveryClient { get; private set; } = null;
 
@@ -98,7 +98,7 @@ namespace qASICRemote
 
         bool AutoConnect { get; set; } = false;
 
-        public GameConsole SelectedConsole { get; private set; }
+        public qConsole SelectedConsole { get; private set; }
 
         [LogColor(GenericColor.White)]
         public void Run(string[] args)
@@ -120,7 +120,7 @@ namespace qASICRemote
             Interface.StartReading();
         }
 
-        private void ConsoleManager_OnConsoleRegister(GameConsole console)
+        private void ConsoleManager_OnConsoleRegister(qConsole console)
         {
             if (SelectedConsole == null)
                 SelectedConsole = console;
@@ -132,7 +132,7 @@ namespace qASICRemote
                     CC_Log_OnRead(console, log);
         }
 
-        private void CC_Log_OnRead(GameConsole console, qLog log)
+        private void CC_Log_OnRead(qConsole console, qLog log)
         {
             if (SelectedConsole != console) return;
             log.message = $"[R:{console.Name}] {log.message}";
@@ -271,7 +271,7 @@ namespace qASICRemote
             DiscoveryClient?.Stop();
         }
 
-        class ConnectionsListCommand : GameCommand
+        class ConnectionsListCommand : qConsoleCommand
         {
             public ConnectionsListCommand(Inspector inspector)
             {
@@ -348,7 +348,7 @@ namespace qASICRemote
             }
         }
 
-        class SendCmdCommand : GameCommand
+        class SendCmdCommand : qConsoleCommand
         {
             public SendCmdCommand(Inspector inspector)
             {

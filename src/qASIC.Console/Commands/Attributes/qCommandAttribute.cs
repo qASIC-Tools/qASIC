@@ -3,11 +3,11 @@
 namespace qASIC.Console
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false, Inherited = true)]
-    public class CommandAttribute : Attribute
+    public class qCommandAttribute : Attribute
     {
-        public CommandAttribute(string name) : this(name, null) { }
+        public qCommandAttribute(string name) : this(name, null) { }
 
-        public CommandAttribute(string name, params string[] aliases)
+        public qCommandAttribute(string name, params string[] aliases)
         {
             Name = name;
             Aliases = aliases;

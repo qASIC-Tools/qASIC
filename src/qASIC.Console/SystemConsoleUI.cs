@@ -8,22 +8,22 @@ using SysConsole = System.Console;
 
 namespace qASIC.Console
 {
-    /// <summary>Class responsible for displaying and reading information from a Console Application window for a <see cref="GameConsole"/> instance.</summary>
+    /// <summary>Class responsible for displaying and reading information from a Console Application window for a <see cref="qConsole"/> instance.</summary>
     public class SystemConsoleUI
     {
-        public SystemConsoleUI() : this(new GameConsole("MAIN")) { }
+        public SystemConsoleUI() : this(new qConsole("MAIN")) { }
 
-        public SystemConsoleUI(qInstance instance) : this(new GameConsole("MAIN")) { }
+        public SystemConsoleUI(qInstance instance) : this(new qConsole("MAIN")) { }
 
-        public SystemConsoleUI(GameConsole console)
+        public SystemConsoleUI(qConsole console)
         {
             Console = console;
             inputs = new List<string>(new string[1]);
         }
 
-        GameConsole _console;
+        qConsole _console;
         /// <summary>Console which will be used by the interface.</summary>
-        public GameConsole Console
+        public qConsole Console
         {
             get => _console;
             set

@@ -4,7 +4,7 @@ namespace qASIC.Console.Comms
 {
     public class CC_ConsoleDeregister : ConsoleCommsComponent
     {
-        public override void ReadForConsole(CommsComponentArgs args, GameConsole console)
+        public override void ReadForConsole(CommsComponentArgs args, qConsole console)
         {
             ConsoleManager?.DeregisterConsole(console);
         }

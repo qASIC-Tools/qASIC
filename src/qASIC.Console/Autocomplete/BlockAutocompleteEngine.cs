@@ -4,7 +4,7 @@ namespace qASIC.Console.Autocomplete
 {
     public class BlockAutocompleteEngine : AutocompleteEngine
     {
-        public BlockAutocompleteEngine(GameConsole console) : base(console) { }
+        public BlockAutocompleteEngine(qConsole console) : base(console) { }
 
         public override (string, int) Autocomplete(string cmd, int cursorPosition)
         {

@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace qASIC.Console.Commands
 {
-    public class GameCommandList : ICommandList
+    public class qCommandList : ICommandList
     {
         private List<RegisteredCommand> Commands { get; set; } = new List<RegisteredCommand>();
 
@@ -16,13 +16,13 @@ namespace qASIC.Console.Commands
         /// <summary>Adds command to the list.</summary>
         /// <param name="command">Command to add.</param>
         /// <returns>Returns itself.</returns>
-        public GameCommandList AddCommand(ICommand command) =>
+        public qCommandList AddCommand(ICommand command) =>
             AddCommandRange(new ICommand[] { command });
 
         /// <summary>Adds commands to the list.</summary>
         /// <param name="command">Collection of commands to add.</param>
         /// <returns>Returns itself.</returns>
-        public GameCommandList AddCommandRange(IEnumerable<ICommand> commands)
+        public qCommandList AddCommandRange(IEnumerable<ICommand> commands)
         {
             Commands.AddRange(commands.Select(x => new RegisteredCommand(x)));
             OnCommandsAdded?.Invoke(commands);
@@ -31,7 +31,7 @@ namespace qASIC.Console.Commands
 
         /// <summary>Adds all built-in commands to the list.</summary>
         /// <returns>Returns itself.</returns>
-        public GameCommandList AddBuiltInCommands() =>
+        public qCommandList AddBuiltInCommands() =>
             AddCommandRange(new ICommand[]
             {
                 new BuiltIn.Cmd_Clear(),
@@ -44,21 +44,21 @@ namespace qASIC.Console.Commands
                 new BuiltIn.Cmd_RemoteInfo(),
             });
 
-        /// <summary>Finds and adds commands to the list that use <see cref="ConsoleCommandAttribute"/>.</summary>
+        /// <summary>Finds and adds commands to the list that use <see cref="qCommandMarkAttribute"/>.</summary>
         /// <returns>Returns itself.</returns>
-        public GameCommandList FindCommands() =>
-            FindCommands<ConsoleCommandAttribute>();
+        public qCommandList FindCommands() =>
+            FindCommands<qCommandMarkAttribute>();
 
         /// <summary>Finds and adds commands to the list that use the specified attribute.</summary>
         /// <typeparam name="T">Type of attribute used by target commands.</typeparam>
         /// <returns>Returns itself.</returns>
-        public GameCommandList FindCommands<T>() where T : Attribute =>
+        public qCommandList FindCommands<T>() where T : Attribute =>
             FindCommands(typeof(T));
 
         /// <summary>Finds and adds commands to the list that use the specified attribute.</summary>
         /// <param name="type">Type of attribute used by target commands.</param>
         /// <returns>Returns itself.</returns>
-        public GameCommandList FindCommands(Type type)
+        public qCommandList FindCommands(Type type)
         {
             var commandTypes = TypeFinder.FindClassesWithAttribute(type, BindingFlags.Public | BindingFlags.NonPublic)
                 .Where(x => typeof(ICommand).IsAssignableFrom(x));
@@ -71,19 +71,19 @@ namespace qASIC.Console.Commands
             return this;
         }
 
-        /// <summary>Finds and adds methods, properties and fields marked with <see cref="CommandAttribute"/>.</summary>
+        /// <summary>Finds and adds methods, properties and fields marked with <see cref="qCommandAttribute"/>.</summary>
         /// <returns>Returns itself.</returns>
-        public GameCommandList FindAttributeCommands() =>
-            FindAttributeCommands<CommandAttribute>();
+        public qCommandList FindAttributeCommands() =>
+            FindAttributeCommands<qCommandAttribute>();
 
         /// <summary>Finds and adds methods, properties and fields marked with the specified attribute.</summary>
         /// <returns>Returns itself.</returns>
-        public GameCommandList FindAttributeCommands<T>() where T : CommandAttribute =>
+        public qCommandList FindAttributeCommands<T>() where T : qCommandAttribute =>
             FindAttributeCommands(typeof(T));
 
         /// <summary>Finds and adds methods, properties and fields marked with the specified attribute.</summary>
         /// <returns>Returns itself.</returns>
-        public GameCommandList FindAttributeCommands(Type type)
+        public qCommandList FindAttributeCommands(Type type)
         {
             const BindingFlags bindingFlags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
@@ -103,7 +103,7 @@ namespace qASIC.Console.Commands
             var addedCommands = new List<ICommand>();
             foreach (var member in targets)
             {
-                var attr = (CommandAttribute)member.GetCustomAttribute(type);
+                var attr = (qCommandAttribute)member.GetCustomAttribute(type);
                 if (attr == null) continue;
 
                 var commandName = attr.Name.ToLower();
@@ -112,15 +112,15 @@ namespace qASIC.Console.Commands
                     .Any(x => x.command.CommandName.ToLower() == commandName);
 
                 var command = commandExists ?
-                    (GameAttributeCommand)Commands.Where(x => x.command.CommandName == commandName).First().command :
+                    (qAttributeCommand)Commands.Where(x => x.command.CommandName == commandName).First().command :
                     null;
 
-                command ??= new GameAttributeCommand()
+                command ??= new qAttributeCommand()
                 {
                     CommandName = commandName,
                 };
 
-                var memberTarget = GameAttributeCommand.Target.CreateFromMember(member);
+                var memberTarget = qAttributeCommand.Target.CreateFromMember(member);
 
                 command.Targets.Add(memberTarget);
 
@@ -134,7 +134,7 @@ namespace qASIC.Console.Commands
             return this;
         }
 
-        public GameCommandList RemoveCommand(ICommand command)
+        public qCommandList RemoveCommand(ICommand command)
         {
             var target = Commands.Where(x => x.command == command)
                 .FirstOrDefault();

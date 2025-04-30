@@ -235,7 +235,7 @@ namespace qASIC.Communication
             public TcpClient Socket { get; private set; }
             public NetworkStream Stream { get; private set; }
 
-            public LogManager Logs { get; set; } = new LogManager();
+            public qLogManager Logs { get; set; } = new qLogManager();
             public event Action<OnServerReceiveDataArgs> OnDataReceive;
 
             public Queue<qPacket> packetsToSend = new Queue<qPacket>();

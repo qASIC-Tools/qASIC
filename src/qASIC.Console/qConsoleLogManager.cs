@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace qASIC.Console
 {
-    public class GameLogManager : LogManager, IEnumerable<qLog>
+    public class qConsoleLogManager : qLogManager, IEnumerable<qLog>
     {
-        public GameLogManager() : this(new List<qLog>()) { }
-        public GameLogManager(IEnumerable<qLog> logs) : base()
+        public qConsoleLogManager() : this(new List<qLog>()) { }
+        public qConsoleLogManager(IEnumerable<qLog> logs) : base()
         {
             Logs = new List<qLog>(logs);
         }
@@ -48,23 +48,23 @@ namespace qASIC.Console
         #endregion
 
         #region Registering
-        public override LogManager RegisterManager(LogManager other)
+        public override qLogManager RegisterManager(qLogManager other)
         {
             if (other != null)
                 other.OnLog += Log;
 
-            if (other is GameLogManager gameOther)
+            if (other is qConsoleLogManager gameOther)
                 gameOther.OnUpdateLog += Log;
 
             return this;
         }
 
-        public override LogManager UnregisterManager(LogManager other)
+        public override qLogManager UnregisterManager(qLogManager other)
         {
             if (other != null)
                 other.OnLog -= Log;
 
-            if (other is GameLogManager gameOther)
+            if (other is qConsoleLogManager gameOther)
                 gameOther.OnUpdateLog -= Log;
 
             return this;
@@ -81,7 +81,7 @@ namespace qASIC.Console
         /// <summary>Changes the value of <see cref="FilePath"/>.</summary>
         /// <param name="newPath">New file path.</param>
         /// <returns>Returns itself.</returns>
-        public GameLogManager FileChangePath(string newPath)
+        public qConsoleLogManager FileChangePath(string newPath)
         {
             FilePath = newPath;
             return this;
@@ -90,7 +90,7 @@ namespace qASIC.Console
         /// <summary>Moves a previous version of the log file to a new location.</summary>
         /// <param name="path">Path to move the old log file to.</param>
         /// <returns>Returns itself.</returns>
-        public GameLogManager FileMoveOld(string path)
+        public qConsoleLogManager FileMoveOld(string path)
         {
             if (File.Exists(path))
                 File.Delete(path);
@@ -104,12 +104,12 @@ namespace qASIC.Console
         /// <summary>Changes the name of a previous version of the log file.</summary>
         /// <param name="newName">New name for the old log file.</param>
         /// <returns>Returns itself.</returns>
-        public GameLogManager FileRenameOld(string newName) =>
+        public qConsoleLogManager FileRenameOld(string newName) =>
             FileMoveOld($"{Path.GetDirectoryName(FilePath)}/{newName}");
 
         /// <summary>Clears the log file.</summary>
         /// <returns>Returns itself.</returns>
-        public GameLogManager FileClear()
+        public qConsoleLogManager FileClear()
         {
             FileWrite(null);
             return this;
@@ -117,7 +117,7 @@ namespace qASIC.Console
 
         /// <summary>Writes all logs in <see cref="Logs"/> to the file.</summary>
         /// <returns>Return itself.</returns>
-        public GameLogManager FileWriteExisting()
+        public qConsoleLogManager FileWriteExisting()
         {
             foreach (var item in Logs)
                 _fileWriteQueue.Enqueue(item);

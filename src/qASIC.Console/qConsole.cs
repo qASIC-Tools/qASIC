@@ -1,4 +1,3 @@
-using GameLog = qASIC.qLog;
 using System.Diagnostics;
 using qASIC.Console.Commands;
 using System.Reflection;
@@ -9,21 +8,21 @@ using System.Threading.Tasks;
 
 namespace qASIC.Console
 {
-    public class GameConsole : IService
+    public class qConsole : IService
     {
         public const string SYSTEM_NAME = "qASIC.Console";
         public const string SYSTEM_VERSION = "1.0.0";
 
-        public GameConsole(ICommandList commandList = null, ArgumentsParser parser = null) :
+        public qConsole(ICommandList commandList = null, ArgumentsParser parser = null) :
             this(Guid.NewGuid().ToString(), commandList, parser)
         { }
 
-        public GameConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null)
+        public qConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null)
         {
-            Logs = new GameLogManager();
+            Logs = new qConsoleLogManager();
 
             Name = name;
-            CommandList = commandList ?? new GameCommandList()
+            CommandList = commandList ?? new qCommandList()
                 .AddBuiltInCommands()
                 .FindCommands()
                 .FindAttributeCommands();
@@ -33,17 +32,17 @@ namespace qASIC.Console
             qDebug.OnLog += QDebug_OnLog;
         }
 
-        private void QDebug_OnLog(GameLog log)
+        private void QDebug_OnLog(qLog log)
         {
             if (LogQDebug)
                 Log(log, 4, true);
         }
 
-        /// <summary>Main static instance of <see cref="GameConsole"/> that was set using <see cref="SetAsMain"/>.</summary>
-        public static GameConsole Main { get; private set; }
+        /// <summary>Main static instance of <see cref="qConsole"/> that was set using <see cref="SetAsMain"/>.</summary>
+        public static qConsole Main { get; private set; }
         /// <summary>Sets this instance as main to make it accessible from property <see cref="Main"/>.</summary>
         /// <returns>Returns itself.</returns>
-        public GameConsole SetAsMain()
+        public qConsole SetAsMain()
         {
             Main = this;
             return this;
@@ -68,7 +67,7 @@ namespace qASIC.Console
 
         public string Name { get; private set; }
 
-        public GameLogManager Logs { get; internal set; }
+        public qConsoleLogManager Logs { get; internal set; }
 
         public ICommandList CommandList { get; set; }
 
@@ -76,9 +75,9 @@ namespace qASIC.Console
 
         public ICommand CurrentCommand { get; private set; } = null;
         public object ReturnedValue { get; private set; } = null;
-        public LogManager CurrentCommandLogs { get; private set; } = null;
+        public qLogManager CurrentCommandLogs { get; private set; } = null;
 
-        public GameConsoleTheme Theme { get; set; } = GameConsoleTheme.Default;
+        public qConsoleTheme Theme { get; set; } = qConsoleTheme.Default;
 
         /// <summary>Should the console log messages from <see cref="qDebug"/>.</summary>
         public bool LogQDebug { get; set; } = true;
@@ -143,7 +142,7 @@ namespace qASIC.Console
                 throw new Exception("Cannot execute commands with no command list!");
 
             if (context.Logs == null)
-                context.Logs = new GameLogManager();
+                context.Logs = new qConsoleLogManager();
 
             bool registerLogs = context.LogOutput;
             if (registerLogs)
@@ -230,7 +229,7 @@ namespace qASIC.Console
         /// <param name="commandName">Name of the command.</param>
         /// <param name="command">Command code to execute.</param>
         /// <param name="logOutput">When true, it will log the output value to the console.</param>
-        public object Execute(string commandName, Func<object> command, LogManager logs = null, bool logOutput = true)
+        public object Execute(string commandName, Func<object> command, qLogManager logs = null, bool logOutput = true)
         {
             try
             {
@@ -254,14 +253,14 @@ namespace qASIC.Console
             return null;
         }
 
-        public async Task<object> ExecuteAsync(string commandName, Func<Task> command, LogManager logs = null, bool logOutput = true) =>
+        public async Task<object> ExecuteAsync(string commandName, Func<Task> command, qLogManager logs = null, bool logOutput = true) =>
             await ExecuteAsync(commandName, command.Invoke(), logs, logOutput);
 
         /// <summary>Executes a command asynchronously.</summary>
         /// <param name="commandName">Name of the command.</param>
         /// <param name="command">Command task to execute.</param>
         /// <param name="logOutput">When true, it will log the output value to the console.</param>
-        public async Task<object> ExecuteAsync(string commandName, Task task, LogManager logs = null, bool logOutput = true)
+        public async Task<object> ExecuteAsync(string commandName, Task task, qLogManager logs = null, bool logOutput = true)
         {
             try
             {
@@ -363,38 +362,38 @@ namespace qASIC.Console
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void Log(string message, int stackTraceIndex = 2) =>
-            Log(GameLog.CreateNow(message, qDebug.DEFAULT_COLOR_TAG), stackTraceIndex, true);
+            Log(qLog.CreateNow(message, qDebug.DEFAULT_COLOR_TAG), stackTraceIndex, true);
 
         /// <summary>Logs a warning message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void LogWarning(string message, int stackTraceIndex = 2) =>
-            Log(GameLog.CreateNow(message, qDebug.WARNING_COLOR_TAG), stackTraceIndex);
+            Log(qLog.CreateNow(message, qDebug.WARNING_COLOR_TAG), stackTraceIndex);
 
         /// <summary>Logs an error message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void LogError(string message, int stackTraceIndex = 2) =>
-            Log(GameLog.CreateNow(message, qDebug.ERROR_COLOR_TAG), stackTraceIndex);
+            Log(qLog.CreateNow(message, qDebug.ERROR_COLOR_TAG), stackTraceIndex);
 
         /// <summary>Logs a message to the console with a color.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="color">Message color.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void Log(string message, qColor color, int stackTraceIndex = 2) =>
-            Log(GameLog.CreateNow(message, color), stackTraceIndex);
+            Log(qLog.CreateNow(message, color), stackTraceIndex);
 
         /// <summary>Logs a message to the console with a color.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="colorTag">Message color.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         public void Log(string message, string colorTag, int stackTraceIndex = 2) =>
-            Log(GameLog.CreateNow(message, colorTag), stackTraceIndex);
+            Log(qLog.CreateNow(message, colorTag), stackTraceIndex);
 
         /// <summary>Logs a log to the console.</summary>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         /// <param name="useLogModifiers">If true, the console will check for color attributes.</param>
-        public void Log(GameLog log, int stackTraceIndex = 2, bool useLogModifiers = false)
+        public void Log(qLog log, int stackTraceIndex = 2, bool useLogModifiers = false)
         {
             if (UseLogModifierAttributes && useLogModifiers)
             {
@@ -421,9 +420,9 @@ namespace qASIC.Console
 
         /// <summary>Clears the console. Previous logs will still be there, but they won't show up in the output.</summary>
         public void Clear() =>
-            Log(GameLog.CreateNow(string.Empty, LogType.Clear, qDebug.DEFAULT_COLOR_TAG));
+            Log(qLog.CreateNow(string.Empty, LogType.Clear, qDebug.DEFAULT_COLOR_TAG));
 
-        public qColor GetLogColor(GameLog log) =>
+        public qColor GetLogColor(qLog log) =>
             Theme.GetLogColor(log);
 
         static bool TryGetPrefixAttributeOfTrace(MethodBase method, Type declaringType, out LogPrefixAttribute attribute)

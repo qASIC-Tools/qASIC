@@ -25,8 +25,8 @@ namespace qASIC
 
         public event Action<qLog> OnLog;
 
-        private LogManager _logs = null;
-        public LogManager Logs 
+        private qLogManager _logs = null;
+        public qLogManager Logs 
         {
             get => _logs; 
             set

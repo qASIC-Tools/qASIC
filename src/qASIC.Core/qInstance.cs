@@ -51,7 +51,7 @@ namespace qASIC
         public qServer RemoteInspectorServer { get; private set; }
         public DiscoveryServer RemoteInspectorDiscoveryServer { get; private set; }
 
-        public LogManager Logs { get; set; } = new LogManager();
+        public qLogManager Logs { get; set; } = new qLogManager();
 
         public bool forwardDebugLogs = true;
         public bool autoStartRemoteInspectorServer = true;

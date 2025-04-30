@@ -12,7 +12,7 @@
             }
         }
 
-        public GameConsole console;
+        public qConsole console;
 
         public bool LogOutput { get; set; } = true;
 

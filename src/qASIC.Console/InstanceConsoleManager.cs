@@ -47,9 +47,9 @@ namespace qASIC.Console
 
         public CC_ConsoleLog CC_Log { get; private set; }
 
-        public event Action<GameConsole> OnConsoleRegister;
+        public event Action<qConsole> OnConsoleRegister;
 
-        public void RegisterConsole(GameConsole console)
+        public void RegisterConsole(qConsole console)
         {
             RegisteredConsoles.Add(console.Name, new RegisteredConsole(console)
             {
@@ -65,7 +65,7 @@ namespace qASIC.Console
             OnConsoleRegister?.Invoke(console);
         }
 
-        public void DeregisterConsole(GameConsole console) =>
+        public void DeregisterConsole(qConsole console) =>
             DeregisterConsole(console.Name);
 
         public void DeregisterConsole(string name)
@@ -80,7 +80,7 @@ namespace qASIC.Console
         }
 
 
-        public bool ConsoleRegistered(GameConsole console) =>
+        public bool ConsoleRegistered(qConsole console) =>
             ConsoleRegistered(console.Name);
 
         public bool ConsoleRegistered(string name) =>
@@ -90,13 +90,13 @@ namespace qASIC.Console
         public RegisteredConsole Get(string name) =>
             RegisteredConsoles.TryGetValue(name, out var console) ? console : null;
 
-        private void Console_OnLog(GameConsole console, qLog log)
+        private void Console_OnLog(qConsole console, qLog log)
         {
             if (Peer is qServer server)
                 server.Send(new CC_ConsoleLog().BuildPacket(console, log, false));
         }
 
-        private void Console_OnUpdateLog(GameConsole console, qLog log)
+        private void Console_OnUpdateLog(qConsole console, qLog log)
         {
             if (Peer is qServer server)
                 server.Send(new CC_ConsoleLog().BuildPacket(console, log, true));
@@ -114,12 +114,12 @@ namespace qASIC.Console
 
         public class RegisteredConsole
         {
-            public RegisteredConsole(GameConsole console)
+            public RegisteredConsole(qConsole console)
             {
                 Console = console;
             }
 
-            public GameConsole Console { get; private set; }
+            public qConsole Console { get; private set; }
             internal InstanceConsoleManager manager;
 
             public void SendCommand(string cmd)

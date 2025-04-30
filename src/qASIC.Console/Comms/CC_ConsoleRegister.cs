@@ -16,19 +16,19 @@ namespace qASIC.Console.Comms
             for (int i = 0; i < logCount; i++)
                 logs.Add(args.packet.ReadNetworkSerializable<qLog>());
 
-            var console = new GameConsole(consoleName)
+            var console = new qConsole(consoleName)
             {
-                Logs = new GameLogManager(logs),
-                Theme = args.packet.ReadNetworkSerializable<GameConsoleTheme>(),
+                Logs = new qConsoleLogManager(logs),
+                Theme = args.packet.ReadNetworkSerializable<qConsoleTheme>(),
             };
 
             ConsoleManager?.RegisterConsole(console);
         }
 
-        public override void ReadForConsole(CommsComponentArgs args, GameConsole console) =>
+        public override void ReadForConsole(CommsComponentArgs args, qConsole console) =>
             throw new NotImplementedException();
 
-        public qPacket CreatePacket(GameConsole console)
+        public qPacket CreatePacket(qConsole console)
         {
             var packet = CreateEmptyPacketForConsole(console);
 

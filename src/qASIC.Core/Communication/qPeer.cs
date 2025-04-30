@@ -10,7 +10,7 @@ namespace qASIC.Communication
     {
         public CommsComponentCollection Components { get; protected set; }
 
-        public LogManager Logs { get; set; } = new LogManager();
+        public qLogManager Logs { get; set; } = new qLogManager();
 
         public virtual bool IsActive { get; protected set; } = false;
 

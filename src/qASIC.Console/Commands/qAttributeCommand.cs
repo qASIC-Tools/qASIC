@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 
 namespace qASIC.Console.Commands
 {
-    public class GameAttributeCommand : ICommand
+    public class qAttributeCommand : ICommand
     {
-        public GameAttributeCommand() : this(string.Empty) { }
-        public GameAttributeCommand(string commandName)
+        public qAttributeCommand() : this(string.Empty) { }
+        public qAttributeCommand(string commandName)
         {
             CommandName = commandName;
         }
@@ -154,8 +154,8 @@ namespace qASIC.Console.Commands
             public Target(MemberInfo memberInfo)
             {
                 this.memberInfo = memberInfo;
-                attr = memberInfo.GetCustomAttribute<CommandAttribute>()!;
-                targetAttr = memberInfo.GetCustomAttributes<CommandTargetAttribute>()
+                attr = memberInfo.GetCustomAttribute<qCommandAttribute>()!;
+                targetAttr = memberInfo.GetCustomAttributes<qCommandTargetsAttribute>()
                     .ToArray();
             }
 
@@ -245,8 +245,8 @@ namespace qASIC.Console.Commands
                 context.console.Log($"Executing command for target '{target ?? "NULL"}'");
 
             public MemberInfo memberInfo;
-            public CommandAttribute attr;
-            public CommandTargetAttribute[] targetAttr;
+            public qCommandAttribute attr;
+            public qCommandTargetsAttribute[] targetAttr;
             public Type[] argTypes;
             public int minArgsCount;
             public int maxArgsCount;

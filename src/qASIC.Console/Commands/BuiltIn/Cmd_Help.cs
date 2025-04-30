@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Help : GameCommand
+    public class Cmd_Help : qConsoleCommand
     {
         public override string CommandName => "help";
         public override string Description => "Displays a list of all avaliable commands.";

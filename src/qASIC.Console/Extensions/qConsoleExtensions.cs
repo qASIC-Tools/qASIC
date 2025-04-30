@@ -5,7 +5,7 @@ using SysConsole = System.Console;
 
 namespace qASIC.Console
 {
-    public static class GameConsoleExtensions
+    public static class qConsoleExtensions
     {
         /// <summary>Makes the console work with <see cref="System.Console"/>.</summary>
         /// <param name="console">Console to register.</param>
@@ -15,7 +15,7 @@ namespace qASIC.Console
         /// <item>{2} - <see cref="qLog.logType"/></item>
         /// </list></param>
         /// <param name="timeFormat">String used for formatting <see cref="qLog.time"/>.</param>
-        public static GameConsole ForConsoleApplication(this GameConsole console, string logFormat = "[{1}] [{2}] {0}", string timeFormat = "HH:mm:ss.fff")
+        public static qConsole ForConsoleApplication(this qConsole console, string logFormat = "[{1}] [{2}] {0}", string timeFormat = "HH:mm:ss.fff")
         {
             Dictionary<qLog, KeyValuePair<int, int>> consoleLines = new Dictionary<qLog, KeyValuePair<int, int>>();
 
@@ -77,7 +77,7 @@ namespace qASIC.Console
                 $"\u001b[38;2;{color.red};{color.green};{color.blue}m{txt}\u001b[0m";
         }
 
-        public static string ReadConsoleApplication(this GameConsole console)
+        public static string ReadConsoleApplication(this qConsole console)
         {
             string cmd;
             switch (console.ReturnedValue)
@@ -115,7 +115,7 @@ namespace qASIC.Console
             return cmd;
         }
 
-        public static void ExecuteConsoleApplicationLine(this GameConsole console)
+        public static void ExecuteConsoleApplicationLine(this qConsole console)
         {
             string cmd = console.ReadConsoleApplication();
             console.Execute(cmd);

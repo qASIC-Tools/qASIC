@@ -5,9 +5,9 @@ namespace qASIC.Console.Comms
 {
     public class CC_ConsoleLog : ConsoleCommsComponent
     {
-        public event Action<GameConsole, qLog> OnRead;
+        public event Action<qConsole, qLog> OnRead;
 
-        public override void ReadForConsole(CommsComponentArgs args, GameConsole console)
+        public override void ReadForConsole(CommsComponentArgs args, qConsole console)
         {
             if (args.packetType != PacketType.Client)
                 return;
@@ -29,7 +29,7 @@ namespace qASIC.Console.Comms
             OnRead?.Invoke(console, log);
         }
 
-        public qPacket BuildPacket(GameConsole console, qLog log, bool updatingLog)
+        public qPacket BuildPacket(qConsole console, qLog log, bool updatingLog)
         {
             var packet = CreateEmptyPacketForConsole(console)
                 .Write(log);

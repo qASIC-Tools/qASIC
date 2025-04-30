@@ -27,7 +27,7 @@ namespace qASIC.Options
             return this;
         }
 
-        public LogManager Logs { get; set; } = new LogManager();
+        public qLogManager Logs { get; set; } = new qLogManager();
 
         public OptionsSerializer Serializer { get; set; }
 
