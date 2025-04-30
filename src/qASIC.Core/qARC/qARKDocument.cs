@@ -87,7 +87,7 @@ namespace qASIC.qARK
             bool moreValues = values.Length > entries.Length;
 
             //If there are no existing values
-            if (values.Length == 0)
+            if (entries.Length == 0)
             {
                 var group = Elements.Where(x => x is qARKGroupBorder)
                     .Select(x => x as qARKGroupBorder)
@@ -95,7 +95,8 @@ namespace qASIC.qARK
                     .MaxBy(x => x.Path.Split('.').Length);
 
                 int index = NewElementInGroupIndex(group);
-                var relativePath = path.Substring(0, group?.Path.Length + 1 ?? 0);
+                var prefixLength = group?.Path.Length + 1 ?? 0;
+                var relativePath = path.Substring(prefixLength, path.Length - prefixLength);
                 Entries.Add(path, new List<qARKEntry>());
 
                 var start = new qARKEntry(path, relativePath, string.Empty)
@@ -117,6 +118,8 @@ namespace qASIC.qARK
                     Elements.Insert(index + i + 1, entry);
                     Entries[path].Add(entry);
                 }
+
+                Elements.Insert(index + values.Length + 1, new qARKSpace());
 
                 return this;
             }
