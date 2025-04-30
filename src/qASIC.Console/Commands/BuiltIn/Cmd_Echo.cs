@@ -1,6 +1,6 @@
 ﻿namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Echo : GameCommand
+    public class Cmd_Echo : GameCommand
     {
         public override string CommandName => "echo";
         public override string Description => "Echos a message.";

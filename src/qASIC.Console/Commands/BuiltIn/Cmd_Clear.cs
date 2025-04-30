@@ -1,6 +1,6 @@
 ﻿namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Clear : GameCommand
+    public class Cmd_Clear : GameCommand
     {
         public override string CommandName => "clear";
         public override string Description => "Clears the console.";

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Version : GameCommand
+    public class Cmd_Version : GameCommand
     {
         public override string CommandName => "version";
         public override string Description => "Displays current project version.";

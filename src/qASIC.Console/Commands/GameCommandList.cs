@@ -34,12 +34,13 @@ namespace qASIC.Console.Commands
         public GameCommandList AddBuiltInCommands() =>
             AddCommandRange(new ICommand[]
             {
-                new BuiltIn.Clear(),
-                new BuiltIn.Echo(),
-                new BuiltIn.Exit(),
-                new BuiltIn.Hello(),
-                new BuiltIn.Help(),
-                new BuiltIn.Version(),
+                new BuiltIn.Cmd_Clear(),
+                new BuiltIn.Cmd_Echo(),
+                new BuiltIn.Cmd_Exit(),
+                new BuiltIn.Cmd_Hello(),
+                new BuiltIn.Cmd_Help(),
+                new BuiltIn.Cmd_Version(),
+                new BuiltIn.Cmd_Unstick(),
             });
 
         /// <summary>Finds and adds commands to the list that use <see cref="ConsoleCommandAttribute"/>.</summary>
