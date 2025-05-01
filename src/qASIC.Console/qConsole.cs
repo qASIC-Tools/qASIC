@@ -510,6 +510,7 @@ namespace qASIC.Console
                 .AddSpace()
                 .StartGroup("commands")
                 .AddArrayEntry("list", original.GetValueArray<string>("commands.list"))
+                .AddSpace()
                 .AddEntry("useBuiltIn", original.GetValue("commands.useBuiltIn", true))
                 .AddEntry("findCommands", original.GetValue("commands.findCommands", true))
                 .AddEntry("findAttributeCommands", original.GetValue("commands.findAttributeCommands", true))

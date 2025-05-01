@@ -42,7 +42,6 @@ namespace qASIC.qARK
             foreach (var item in values)
                 AddArrayItem(item);
 
-            AddSpace();
             return this;
         }
 
