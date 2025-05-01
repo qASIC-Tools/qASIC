@@ -36,6 +36,16 @@ namespace qASIC.qARK
                 IsArrayStart = true
             });
 
+        public qARKDocument AddArrayEntry(string path, IEnumerable<object> values)
+        {
+            StartArrayEntry(path);
+            foreach (var item in values)
+                AddArrayItem(item);
+
+            AddSpace();
+            return this;
+        }
+
         public qARKDocument AddArrayItem(object value)
         {
             var prevEntry = GetLastElementOfType<qARKEntry>();
@@ -61,8 +71,42 @@ namespace qASIC.qARK
         public qARKDocument AddComment(string comment) =>
             AddElement(new qARKComment(comment));
 
-        public qARKDocument AddSpace() =>
-            AddElement(new qARKSpace());
+        public qARKDocument AddSpace(int count = 1) =>
+            AddElement(new qARKSpace(count));
+
+        public qARKDocument AddFromOther(qARKHolder other)
+        {
+            foreach (var item in other)
+            {
+                switch (item)
+                {
+                    case qARKEntry entry:
+                        if (entry.IsArrayStart)
+                            StartArrayEntry(entry.RelativePath);
+                        else if (entry.IsArrayItem)
+                            AddArrayItem(entry.Value);
+                        else
+                            AddEntry(entry.RelativePath, entry.Value);
+                        break;
+                    case qARKGroupBorder border:
+                        if (border.IsEnding)
+                            FinishGroup();
+                        else
+                            StartGroup(border.RelativePath);
+                        break;
+                    case qARKComment comment:
+                        AddComment(comment.Comment);
+                        break;
+                    case qARKSpace space:
+                        AddSpace(space.Count);
+                        break;
+                    default:
+                        AddElement(item);
+                        break;
+                }
+            }
+            return this;
+        }
         #endregion
 
         #region Setting Single Value

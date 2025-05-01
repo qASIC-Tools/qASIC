@@ -173,6 +173,11 @@ namespace qASIC.Console.Commands
         ICommandList ICommandList.RemoveCommand(ICommand command) =>
             RemoveCommand(command);
 
+        public void Clear()
+        {
+            Commands.Clear();
+        }
+
         public IEnumerable<string> GetSortedCommandNames() =>
             Commands.SelectMany(x => x.names)
                 .OrderBy(x => x)

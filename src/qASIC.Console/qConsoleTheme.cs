@@ -1,5 +1,8 @@
 ﻿using qASIC.Communication;
+using qASIC.qARK;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
 
 namespace qASIC.Console
 {
@@ -87,6 +90,51 @@ namespace qASIC.Console
                 .Write(errorColor);
 
             return packet;
+        }
+
+        public void LoadConfiguration(qARKHolder holder)
+        {
+            defaultColor = holder.GetValue(qDebug.DEFAULT_TAG, defaultColor);
+            warningColor = holder.GetValue(qDebug.WARNING_TAG, warningColor);
+            errorColor = holder.GetValue(qDebug.ERROR_TAG, errorColor);
+
+            customColors.Clear();
+            foreach (var item in holder)
+            {
+                if (item is qARKEntry entry)
+                {
+                    if (entry.Path == qDebug.DEFAULT_TAG ||
+                        entry.Path == qDebug.WARNING_TAG ||
+                        entry.Path == qDebug.ERROR_TAG)
+                        continue;
+
+                    if (entry.TryGetValue(out qColor color))
+                        customColors.SetOrAdd(entry.Path, color);
+                }
+            }
+        }
+
+        public static qARKDocument CreateConfiguration(qARKHolder original)
+        {
+            var doc = new qARKDocument()
+                .AddEntry(qDebug.DEFAULT_TAG, original.GetValue(qDebug.DEFAULT_TAG, qColor.White))
+                .AddEntry(qDebug.WARNING_TAG, original.GetValue(qDebug.WARNING_TAG, qColor.Yellow))
+                .AddEntry(qDebug.ERROR_TAG, original.GetValue(qDebug.ERROR_TAG, qColor.Red));
+
+            foreach (var item in original)
+            {
+                if (item is qARKEntry entry)
+                {
+                    if (entry.Path == qDebug.DEFAULT_TAG ||
+                        entry.Path == qDebug.WARNING_TAG ||
+                        entry.Path == qDebug.ERROR_TAG)
+                        continue;
+
+                    doc.AddEntry(entry.Path, entry.Value);
+                }
+            }
+
+            return doc;
         }
     }
 }
