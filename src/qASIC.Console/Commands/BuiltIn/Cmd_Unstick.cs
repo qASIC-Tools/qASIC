@@ -5,7 +5,7 @@
         public override string CommandName => "unstick";
         public override string Description => "Unsticks all logs marked as sticky.";
 
-        public override object Run(GameCommandContext context)
+        public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
 

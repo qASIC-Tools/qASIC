@@ -7,7 +7,7 @@
         public override string DetailedDescription => "Logs a test message to the console.";
         public override string[] Aliases => new string[] { "hello" };
 
-        public override object Run(GameCommandContext context)
+        public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
             context.Logs.Log("Hello world :)", qColor.Green);

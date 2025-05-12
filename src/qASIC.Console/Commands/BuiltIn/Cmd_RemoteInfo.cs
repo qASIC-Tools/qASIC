@@ -14,7 +14,7 @@ namespace qASIC.Console.Commands.BuiltIn
 
         public qInstance Instance { get; set; }
 
-        public override object Run(GameCommandContext context)
+        public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
 

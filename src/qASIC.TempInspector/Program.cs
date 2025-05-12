@@ -203,7 +203,7 @@ namespace qASICRemote
         }
 
         [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(GameCommandContext context, string val)
+        private void Cmd_SelectedConsoleIndex(ConsoleCommandContext context, string val)
         {
             var console = consoleManager.Where(x => x.Console.Name == val)
                 .FirstOrDefault()?.Console;
@@ -216,7 +216,7 @@ namespace qASICRemote
         }
 
         [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(GameCommandContext context, int index)
+        private void Cmd_SelectedConsoleIndex(ConsoleCommandContext context, int index)
         {
             var consoles = consoleManager.ToArray();
 
@@ -290,7 +290,7 @@ namespace qASICRemote
 
             KeyPrompt navigationPrompt = new KeyPrompt();
 
-            public override object Run(GameCommandContext context)
+            public override object Run(ConsoleCommandContext context)
             {
                 if (log == null || context.console.ReturnedValue == null)
                 {
@@ -366,7 +366,7 @@ namespace qASICRemote
 
             public override string Description => "Sends a command to the selected console";
 
-            public override object Run(GameCommandContext context)
+            public override object Run(ConsoleCommandContext context)
             {
                 if (inspector.client.CurrentState != qClient.State.Connected)
                 {

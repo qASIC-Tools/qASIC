@@ -119,7 +119,7 @@ namespace qASIC.Console
         public async Task<object> ExecuteAsync(string cmd) =>
             await ExecuteAsync(CreateContext(cmd));
 
-        private bool PreprocessContext(GameCommandContext context)
+        private bool PreprocessContext(ConsoleCommandContext context)
         {
             //Prompt
             if (CurrentCommand != null)
@@ -162,7 +162,7 @@ namespace qASIC.Console
             return true;
         }
 
-        private object PostprocessContext(GameCommandContext context)
+        private object PostprocessContext(ConsoleCommandContext context)
         {
             var closeLogs = true;
             if (context.RunTaskResult && ReturnedValue is Task task)
@@ -196,7 +196,7 @@ namespace qASIC.Console
 
         /// <summary>Executes a command.</summary>
         /// <param name="context">Command arguments.</param>
-        public object Execute(GameCommandContext context)
+        public object Execute(ConsoleCommandContext context)
         {
             //Before
             if (!PreprocessContext(context))
@@ -211,7 +211,7 @@ namespace qASIC.Console
 
         /// <summary>Executes a command asynchronously.</summary>
         /// <param name="context">Command arguments.</param>
-        public async Task<object> ExecuteAsync(GameCommandContext context)
+        public async Task<object> ExecuteAsync(ConsoleCommandContext context)
         {
             //Before
             if (!PreprocessContext(context))
@@ -292,9 +292,9 @@ namespace qASIC.Console
             return null;
         }
 
-        public virtual GameCommandContext CreateContext(string cmd)
+        public virtual ConsoleCommandContext CreateContext(string cmd)
         {
-            var context = new GameCommandContext()
+            var context = new ConsoleCommandContext()
             {
                 inputString = cmd,
                 commandName = GetCommandName(cmd),

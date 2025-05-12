@@ -28,7 +28,7 @@ namespace qASIC.Console.Commands.BuiltIn
             return txt.ToString().TrimStart(',').Trim();
         };
 
-        public override object Run(GameCommandContext context)
+        public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
 

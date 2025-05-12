@@ -6,7 +6,7 @@
         public override string Description => "Clears the console.";
         public override string[] Aliases => new string[] { "cls", "clr" };
 
-        public override object Run(GameCommandContext context)
+        public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
             context.Logs.Log(qLog.CreateNow(string.Empty, LogType.Clear, qColor.Clear));

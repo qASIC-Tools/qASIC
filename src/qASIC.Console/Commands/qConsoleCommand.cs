@@ -11,8 +11,8 @@
         public virtual string DetailedDescription => null;
 
         public object Run(CommandContext context) =>
-            Run(context as GameCommandContext);
+            Run(context as ConsoleCommandContext);
 
-        public abstract object Run(GameCommandContext context);
+        public abstract object Run(ConsoleCommandContext context);
     }
 }

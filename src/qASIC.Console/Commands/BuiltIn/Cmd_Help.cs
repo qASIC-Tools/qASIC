@@ -13,9 +13,9 @@ namespace qASIC.Console.Commands.BuiltIn
         public bool AllowDetailedDescription { get; set; } = true;
         public int PageCommandLimit { get; set; } = 16;
 
-        public Func<GameCommandContext, ICommand, bool> CanShowCommand;
+        public Func<ConsoleCommandContext, ICommand, bool> CanShowCommand;
 
-        public override object Run(GameCommandContext context)
+        public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0, 1);
 

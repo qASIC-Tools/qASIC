@@ -38,7 +38,7 @@ namespace qASIC.Console.Commands
 
         public object Run(CommandContext context)
         {
-            var gameContext = context as GameCommandContext;
+            var gameContext = context as ConsoleCommandContext;
 
             var maxArgLimit = Targets
                 .Select(x => x.maxArgsCount)
@@ -174,7 +174,7 @@ namespace qASIC.Console.Commands
                 }
             }
 
-            public object Invoke(object[] values, GameCommandContext context, bool isSingle = false)
+            public object Invoke(object[] values, ConsoleCommandContext context, bool isSingle = false)
             {
                 var targetType = memberInfo.DeclaringType!;
                 var targets = targetAttr
@@ -239,9 +239,9 @@ namespace qASIC.Console.Commands
 
             protected abstract bool IsStatic { get; }
 
-            protected abstract object InvokeForItem(object item, object[] values, GameCommandContext context);
+            protected abstract object InvokeForItem(object item, object[] values, ConsoleCommandContext context);
 
-            protected void LogExecuteBegin(GameCommandContext context, object target) =>
+            protected void LogExecuteBegin(ConsoleCommandContext context, object target) =>
                 context.console.Log($"Executing command for target '{target ?? "NULL"}'");
 
             public MemberInfo memberInfo;
@@ -250,7 +250,7 @@ namespace qASIC.Console.Commands
             public Type[] argTypes;
             public int minArgsCount;
             public int maxArgsCount;
-            /// <summary>Whenever target has <see cref="GameCommandContext"/> as the first parameter</summary>
+            /// <summary>Whenever target has <see cref="ConsoleCommandContext"/> as the first parameter</summary>
             public Type contextType;
         }
 
@@ -286,7 +286,7 @@ namespace qASIC.Console.Commands
 
             protected override bool IsStatic => methodInfo.IsStatic;
 
-            protected override object InvokeForItem(object item, object[] values, GameCommandContext context)
+            protected override object InvokeForItem(object item, object[] values, ConsoleCommandContext context)
             {
                 return methodInfo.Invoke(item, values);
             }
@@ -307,7 +307,7 @@ namespace qASIC.Console.Commands
 
             protected override bool IsStatic => fieldInfo.IsStatic;
 
-            protected override object InvokeForItem(object item, object[] values, GameCommandContext context)
+            protected override object InvokeForItem(object item, object[] values, ConsoleCommandContext context)
             {
                 if (values[0] == Type.Missing)
                     return fieldInfo.GetValue(item);
@@ -332,7 +332,7 @@ namespace qASIC.Console.Commands
 
             protected override bool IsStatic => propertyInfo.GetAccessors(true)[0].IsStatic;
 
-            protected override object InvokeForItem(object item, object[] values, GameCommandContext context)
+            protected override object InvokeForItem(object item, object[] values, ConsoleCommandContext context)
             {
                 if (values[0] == Type.Missing)
                     return propertyInfo.GetValue(item);
