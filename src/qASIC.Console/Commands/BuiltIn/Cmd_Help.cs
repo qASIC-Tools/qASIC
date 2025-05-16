@@ -1,13 +1,14 @@
 ﻿using System.Text;
 using System;
 using System.Linq;
+using qASIC.qARK;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Help : qConsoleCommand
+    public class Cmd_Help : qBuiltinCommand
     {
-        public override string CommandName => "help";
-        public override string Description => "Displays a list of all avaliable commands.";
+        protected override string DefaultCommandName => "help";
+        protected override string DefaultDescription => "Displays a list of all avaliable commands.";
 
         public bool MultiplePages { get; set; } = true;
         public bool AllowDetailedDescription { get; set; } = true;
@@ -72,5 +73,21 @@ namespace qASIC.Console.Commands.BuiltIn
 
             return null;
         }
+
+        public override void LoadConfig(qARKHolder data)
+        {
+            base.LoadConfig(data);
+
+            MultiplePages = data.GetValue("multiplePages", true);
+            AllowDetailedDescription = data.GetValue("allowDetailedDescription", true);
+            PageCommandLimit = data.GetValue("pageCommandLimit", 16);
+        }
+
+        public override qARKDocument CreateConfig() =>
+            base.CreateConfig()
+                .AddSpace()
+                .AddEntry("multiplePages", MultiplePages)
+                .AddEntry("allowDetailedDescription", AllowDetailedDescription)
+                .AddEntry("pageCommandLimit", PageCommandLimit);
     }
 }

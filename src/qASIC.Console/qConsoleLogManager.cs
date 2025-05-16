@@ -1,3 +1,4 @@
+using qASIC.Text;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -73,30 +74,35 @@ namespace qASIC.Console
 
         #region Writing To Disk
         /// <summary>Path of the log file.</summary>
-        public string FilePath { get; set; }
+        public string RawFilePath { get; set; }
+
+        public string FinalFilePath =>
+            (PathConverter ?? ConfigPathConverter.CreateStandardConverter()).ConvertToFinal(RawFilePath);
+
+        public ConfigPathConverter PathConverter { get; set; }
 
         private Task _fileWriteTask = null;
         private Queue<qLog> _fileWriteQueue = new Queue<qLog>();
 
-        /// <summary>Changes the value of <see cref="FilePath"/>.</summary>
+        /// <summary>Changes the value of <see cref="RawFilePath"/>.</summary>
         /// <param name="newPath">New file path.</param>
         /// <returns>Returns itself.</returns>
         public qConsoleLogManager FileChangePath(string newPath)
         {
-            FilePath = newPath;
+            RawFilePath = newPath;
             return this;
         }
 
         /// <summary>Moves a previous version of the log file to a new location.</summary>
-        /// <param name="path">Path to move the old log file to.</param>
+        /// <param name="newOldPath">Path to move the old log file to.</param>
         /// <returns>Returns itself.</returns>
-        public qConsoleLogManager FileMoveOld(string path)
+        public qConsoleLogManager FileMoveOld(string newOldPath)
         {
-            if (File.Exists(path))
-                File.Delete(path);
+            if (File.Exists(newOldPath))
+                File.Delete(newOldPath);
 
-            if (File.Exists(FilePath))
-                File.Move(FilePath, path);
+            if (File.Exists(FinalFilePath))
+                File.Move(FinalFilePath, newOldPath);
 
             return this;
         }
@@ -105,7 +111,7 @@ namespace qASIC.Console
         /// <param name="newName">New name for the old log file.</param>
         /// <returns>Returns itself.</returns>
         public qConsoleLogManager FileRenameOld(string newName) =>
-            FileMoveOld($"{Path.GetDirectoryName(FilePath)}/{newName}");
+            FileMoveOld($"{Path.GetDirectoryName(FinalFilePath)}/{newName}");
 
         /// <summary>Clears the log file.</summary>
         /// <returns>Returns itself.</returns>
@@ -146,17 +152,17 @@ namespace qASIC.Console
 
         private async Task FileWriteTask()
         {
-            if (FilePath == null)
+            if (RawFilePath == null)
             {
                 _fileWriteQueue.Clear();
                 return;
             }
 
-            var dir = Path.GetDirectoryName(FilePath);
+            var dir = Path.GetDirectoryName(FinalFilePath);
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
-            using (var writer = new StreamWriter(FilePath, true))
+            using (var writer = new StreamWriter(FinalFilePath, true))
             {
                 while (_fileWriteQueue.Count > 0)
                 {

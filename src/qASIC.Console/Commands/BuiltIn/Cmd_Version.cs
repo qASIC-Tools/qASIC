@@ -3,13 +3,13 @@ using System.Text;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Version : qConsoleCommand
+    public class Cmd_Version : qBuiltinCommand
     {
-        public override string CommandName => "version";
-        public override string Description => "Displays current project version.";
-        public override string[] Aliases => new string[] { "info", "about" };
+        protected override string DefaultCommandName => "version";
+        protected override string DefaultDescription => "Displays current project version.";
+        protected override string[] DefaultAliases => new string[] { "info", "about" };
 
-        public event Func<RemoteAppInfo, string> GetInfoString =  (a) =>
+        public event Func<RemoteAppInfo, string> GetInfoString = (a) =>
         {
             var txt = new StringBuilder();
 

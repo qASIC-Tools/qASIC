@@ -1,9 +1,9 @@
 ﻿namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Unstick : qConsoleCommand
+    public class Cmd_Unstick : qBuiltinCommand
     {
-        public override string CommandName => "unstick";
-        public override string Description => "Unsticks all logs marked as sticky.";
+        protected override string DefaultCommandName => "unstick";
+        protected override string DefaultDescription => "Unsticks all logs marked as sticky.";
 
         public override object Run(ConsoleCommandContext context)
         {

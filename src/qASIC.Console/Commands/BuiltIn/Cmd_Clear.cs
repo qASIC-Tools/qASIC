@@ -1,10 +1,10 @@
 ﻿namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Clear : qConsoleCommand
+    public class Cmd_Clear : qBuiltinCommand
     {
-        public override string CommandName => "clear";
-        public override string Description => "Clears the console.";
-        public override string[] Aliases => new string[] { "cls", "clr" };
+        protected override string DefaultCommandName => "clear";
+        protected override string DefaultDescription => "Clears the console.";
+        protected override string[] DefaultAliases => new string[] { "cls", "clr" };
 
         public override object Run(ConsoleCommandContext context)
         {

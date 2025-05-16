@@ -1,17 +1,35 @@
-﻿namespace qASIC.Console.Commands.BuiltIn
+﻿using qASIC.qARK;
+
+namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Hello : qConsoleCommand
+    public class Cmd_Hello : qBuiltinCommand
     {
-        public override string CommandName => "helloworld";
-        public override string Description => "Hello World!";
-        public override string DetailedDescription => "Logs a test message to the console.";
-        public override string[] Aliases => new string[] { "hello" };
+        protected override string DefaultCommandName => "helloworld";
+        protected override string DefaultDescription => "Hello World!";
+        protected override string DefaultDetailedDescription => "Logs a test message to the console.";
+        protected override string[] DefaultAliases => new string[] { "hello" };
+
+        public string HelloMessage { get; set; } = "Hello World :)";
+        public string Tag { get; set; } = null;
+        public qColor Color { get; set; } = qColor.Green;
 
         public override object Run(ConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
-            context.Logs.Log("Hello world :)", qColor.Green);
+            
+            var log = qLog.CreateNow(HelloMessage, LogType.Application, Color);
+            log.tag = Tag;
+
+            context.Logs.Log(log);
             return null;
+        }
+
+        public override void LoadConfig(qARKHolder data)
+        {
+            base.LoadConfig(data);
+            HelloMessage = data.GetValue("helloMessage", "Hello World :)");
+            Tag = data.GetValue<string>("tag", null);
+            Color = data.GetValue("color", qColor.Green);
         }
     }
 }

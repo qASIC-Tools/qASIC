@@ -1,16 +1,14 @@
 ﻿using qASIC.Text;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_RemoteInfo : qConsoleCommand
+    public class Cmd_RemoteInfo : qBuiltinCommand
     {
-        public override string CommandName => "remote";
-        public override string Description => "Shows information about the remote inspector server.";
+        protected override string DefaultCommandName => "remote";
+        protected override string DefaultDescription => "Shows information about the remote inspector server.";
 
         public qInstance Instance { get; set; }
 

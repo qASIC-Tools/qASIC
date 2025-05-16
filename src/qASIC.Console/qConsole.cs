@@ -49,6 +49,16 @@ namespace qASIC.Console
             return this;
         }
 
+        /// <summary>Changes <see cref="Main"/> to null if it's set to this instance.</summary>
+        /// <returns>Returns itself.</returns>
+        public qConsole UnsetAsMain()
+        {
+            if (Main == this)
+                Main = null;
+
+            return this;
+        }
+
         private qInstance _instance;
         public qInstance Instance
         {
@@ -66,7 +76,7 @@ namespace qASIC.Console
             }
         }
 
-        public string Name { get; private set; }
+        public string Name { get; set; }
 
         public qConsoleLogManager Logs { get; internal set; }
 

@@ -1,10 +1,10 @@
 ﻿namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Echo : qConsoleCommand
+    public class Cmd_Echo : qBuiltinCommand
     {
-        public override string CommandName => "echo";
-        public override string Description => "Echos a message.";
-        public override string[] Aliases => new string[] { "print" };
+        protected override string DefaultCommandName => "echo";
+        protected override string DefaultDescription => "Echos a message.";
+        protected override string[] DefaultAliases => new string[] { "print" };
 
         public override object Run(ConsoleCommandContext context)
         {
