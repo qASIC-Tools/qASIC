@@ -478,56 +478,5 @@ namespace qASIC.Console
             return false;
         }
         #endregion
-
-        public void LoadConfiguration(string txt) =>
-            LoadConfiguration(new qARKSerializer().Deserialize(txt));
-
-        public void LoadConfiguration(qARKHolder doc)
-        {
-            Name = doc.GetValue("name", Name);
-
-            CommandList.Clear();
-            var cmds = CommandList as qCommandList;
-            if (cmds == null)
-                CommandList = cmds = new qCommandList();
-
-            foreach (var item in doc.GetValueArray<string>("commands.list"))
-            {
-                var type = Type.GetType(item);
-                if (!type.IsAssignableTo(typeof(ICommand))) continue;
-                CommandList.AddCommand((ICommand)TypeFinder.CreateConstructorFromType(type));
-            }
-
-            if (doc.GetValue("commands.useBuiltIn", true))
-                cmds.AddBuiltInCommands();
-
-            if (doc.GetValue("commands.findCommands", true))
-                cmds.FindCommands();
-
-            if (doc.GetValue("commands.findAttributeCommands", true))
-                cmds.FindAttributeCommands();
-
-            Theme.LoadConfiguration(doc.GetObject("theme"));
-        }
-
-        public static qARKDocument CreateConfiguration() =>
-            CreateConfiguration(new qARKDocument());
-
-        public static qARKDocument CreateConfiguration(qARKHolder original) =>
-            new qARKDocument()
-                .AddComment("Name of the console that will be used in the remote inspector.")
-                .AddEntry("name", original.GetValue("name", "MAIN"))
-                .AddSpace()
-                .StartGroup("commands")
-                .AddArrayEntry("list", original.GetValueArray<string>("commands.list"))
-                .AddSpace()
-                .AddEntry("useBuiltIn", original.GetValue("commands.useBuiltIn", true))
-                .AddEntry("findCommands", original.GetValue("commands.findCommands", true))
-                .AddEntry("findAttributeCommands", original.GetValue("commands.findAttributeCommands", true))
-                .FinishGroup()
-                .AddSpace()
-                .StartGroup("theme")
-                .AddFromOther(qConsoleTheme.CreateConfiguration(original.GetObject("theme")))
-                .FinishGroup();
     }
 }

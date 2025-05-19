@@ -29,10 +29,8 @@ namespace qASIC.Console.Commands
             return this;
         }
 
-        /// <summary>Adds all built-in commands to the list.</summary>
-        /// <returns>Returns itself.</returns>
-        public qCommandList AddBuiltInCommands() =>
-            AddCommandRange(new ICommand[]
+        public static ICommand[] GetBuiltInCommands() =>
+            new ICommand[]
             {
                 new BuiltIn.Cmd_Clear(),
                 new BuiltIn.Cmd_Echo(),
@@ -42,7 +40,12 @@ namespace qASIC.Console.Commands
                 new BuiltIn.Cmd_Version(),
                 new BuiltIn.Cmd_Unstick(),
                 new BuiltIn.Cmd_RemoteInfo(),
-            });
+            };
+
+        /// <summary>Adds all built-in commands to the list.</summary>
+        /// <returns>Returns itself.</returns>
+        public qCommandList AddBuiltInCommands() =>
+            AddCommandRange(GetBuiltInCommands());
 
         /// <summary>Finds and adds commands to the list that use <see cref="qCommandMarkAttribute"/>.</summary>
         /// <returns>Returns itself.</returns>

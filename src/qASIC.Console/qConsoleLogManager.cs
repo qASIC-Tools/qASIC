@@ -81,6 +81,8 @@ namespace qASIC.Console
 
         public ConfigPathConverter PathConverter { get; set; }
 
+        public string FileLogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE%] %MESSAGE%";
+
         private Task _fileWriteTask = null;
         private Queue<qLog> _fileWriteQueue = new Queue<qLog>();
 
@@ -174,9 +176,7 @@ namespace qASIC.Console
                         continue;
                     }
 
-                    //TODO: make this customizable
-                    var txt = $"[{log.time:yyyy.MM.dd HH:mm:ss.fff}] [{log.logType}] {log.message}";
-
+                    var txt = log.ToString(FileLogFormat);
                     await writer.WriteLineAsync(txt);
                 }
             }
