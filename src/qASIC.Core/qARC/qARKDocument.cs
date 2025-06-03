@@ -75,6 +75,9 @@ namespace qASIC.qARK
 
         public qARKDocument AddFromOther(qARKHolder other)
         {
+            if (other == null)
+                return this;
+
             foreach (var item in other)
             {
                 switch (item)

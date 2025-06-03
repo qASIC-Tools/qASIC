@@ -1,12 +1,12 @@
 ﻿using qASIC.Communication;
 using qASIC.qARK;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
+using System.Linq;
 
 namespace qASIC.Console
 {
-    public class qConsoleTheme : INetworkSerializable
+    public class qConsoleTheme : INetworkSerializable, IConfigurable
     {
         public static qConsoleTheme Default =>
             new qConsoleTheme();
@@ -135,6 +135,41 @@ namespace qASIC.Console
             }
 
             return doc;
+        }
+
+        public qARKDocument CreateConfig()
+        {
+            var doc = new qARKDocument()
+                .AddEntry("default", defaultColor)
+                .AddEntry("warning", warningColor)
+                .AddEntry("error", errorColor);
+
+            foreach (var item in customColors)
+                doc.AddEntry(item.Key, item.Value);
+
+            return doc;
+        }
+
+        public void LoadConfig(qARKHolder data)
+        {
+            var nonCustom = new string[]
+            {
+                "default",
+                "warning",
+                "error"
+            };
+
+            defaultColor = data.GetValue("default", defaultColor);
+            warningColor = data.GetValue("warning", warningColor);
+            errorColor = data.GetValue("error", errorColor);
+
+            customColors.Clear();
+            foreach (var item in data)
+                if (item is qARKEntry entry &&
+                    !nonCustom.Contains(entry.Path) &&
+                    !customColors.ContainsKey(entry.Path) &&
+                    entry.TryGetValue(out qColor col))
+                    customColors.Add(entry.Path, col);
         }
     }
 }
