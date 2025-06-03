@@ -34,7 +34,7 @@ namespace qASIC.Communication
             Task.Run(async () =>
             {
                 var cancel = updateCancel;
-                while (!cancel.IsCancellationRequested && MilisecondsPerUpdate > 0)
+                while (cancel != null && !cancel.IsCancellationRequested && MilisecondsPerUpdate > 0)
                 {
                     Update();
                     await Task.Delay(MilisecondsPerUpdate);
