@@ -23,6 +23,7 @@ namespace qASIC
     public struct qColor : INetworkSerializable
     {
         public qColor(byte red, byte green, byte blue) : this(red, green, blue, 255) { }
+        public qColor(SysColor systemColor) : this(systemColor.R, systemColor.G, systemColor.B, systemColor.A) { }
 
         public qColor(byte red, byte green, byte blue, byte alpha)
         {
@@ -95,7 +96,9 @@ namespace qASIC
         }
 
         public override string ToString() =>
-            $"Color({red}, {green}, {blue}, {alpha})";
+            alpha == 255 ?
+                $"rgb({red}, {green}, {blue})" :
+                $"rgba({red}, {green}, {blue}, {alpha})";
 
         public override int GetHashCode() =>
             ToString().GetHashCode();
@@ -103,14 +106,9 @@ namespace qASIC
         public SysColor ToSystem() =>
             SysColor.FromArgb(alpha, red, green, blue);
 
-        public static bool TryParse(string s, out qColor color)
+        #region Parsing
+        public static bool TryParseFromName(string s, out qColor color)
         {
-            if (s == null)
-            {
-                color = new qColor();
-                return false;
-            }
-
             var colorNames = new Dictionary<string, qColor>()
             {
                 ["clear"] = Clear,
@@ -124,9 +122,12 @@ namespace qASIC
                 ["purple"] = Purple,
             };
 
-            if (colorNames.TryGetValue(s.ToLower(), out color))
-                return true;
+            return colorNames.TryGetValue(s ?? string.Empty, out color);
+        }
 
+        public static bool TryParseFromRgba(string s, out qColor color)
+        {
+            s ??= string.Empty;
             if (s.StartsWith("rgba(") && s.EndsWith(")"))
             {
                 var parts = s.Substring(5, s.Length - 5 - 1)
@@ -146,6 +147,13 @@ namespace qASIC
                 }
             }
 
+            color = new qColor();
+            return false;
+        }
+
+        public static bool TryParseFromRgb(string s, out qColor color)
+        {
+            s ??= string.Empty;
             if (s.StartsWith("rgb(") && s.EndsWith(")"))
             {
                 var parts = s.Substring(4, s.Length - 4 - 1)
@@ -161,7 +169,62 @@ namespace qASIC
                 }
             }
 
-            //Hash color
+            color = new qColor();
+            return false;
+        }
+
+        public static bool TryParseRgbaFromHex(string s, out qColor color)
+        {
+            s ??= string.Empty;
+            s = s.ToLower();
+            color = Clear;
+
+            if (s.Length != 9 || !s.StartsWith('#'))
+                return false;
+
+            var hashes = new Dictionary<char, byte>()
+            {
+                ['0'] = 0,
+                ['1'] = 1,
+                ['2'] = 2,
+                ['3'] = 3,
+                ['4'] = 4,
+                ['5'] = 5,
+                ['6'] = 6,
+                ['7'] = 7,
+                ['8'] = 8,
+                ['9'] = 9,
+                ['a'] = 10,
+                ['b'] = 11,
+                ['c'] = 12,
+                ['d'] = 13,
+                ['e'] = 14,
+                ['f'] = 15,
+            };
+
+            if (!hashes.TryGetValue(s[1], out var r1) ||
+                !hashes.TryGetValue(s[2], out var r2) ||
+                !hashes.TryGetValue(s[3], out var g1) ||
+                !hashes.TryGetValue(s[4], out var g2) ||
+                !hashes.TryGetValue(s[5], out var b1) ||
+                !hashes.TryGetValue(s[6], out var b2) ||
+                !hashes.TryGetValue(s[7], out var a1) ||
+                !hashes.TryGetValue(s[8], out var a2))
+                return false;
+
+            color.red = (byte)(r1 * 16 + r2);
+            color.green = (byte)(g1 * 16 + g2);
+            color.blue = (byte)(b1 * 16 + b2);
+            color.alpha = (byte)(a1 * 16 + a2);
+            return true;
+        }
+
+        public static bool TryParseRgbFromHex(string s, out qColor color)
+        {
+            s ??= string.Empty;
+            s = s.ToLower();
+            color = Black;
+
             if (s.Length != 7 || !s.StartsWith('#'))
                 return false;
 
@@ -177,12 +240,12 @@ namespace qASIC
                 ['7'] = 7,
                 ['8'] = 8,
                 ['9'] = 9,
-                ['A'] = 10,
-                ['B'] = 11,
-                ['C'] = 12,
-                ['D'] = 13,
-                ['E'] = 14,
-                ['F'] = 15,
+                ['a'] = 10,
+                ['b'] = 11,
+                ['c'] = 12,
+                ['d'] = 13,
+                ['e'] = 14,
+                ['f'] = 15,
             };
 
             if (!hashes.TryGetValue(s[1], out var r1) ||
@@ -199,6 +262,13 @@ namespace qASIC
             return true;
         }
 
+        public static bool TryParse(string s, out qColor color) =>
+            TryParseFromName(s, out color) ||
+            TryParseFromRgba(s, out color) ||
+            TryParseFromRgb(s, out color) ||
+            TryParseRgbaFromHex(s, out color) ||
+            TryParseRgbFromHex(s, out color);
+
         public static qColor Parse(string s)
         {
             if (TryParse(s, out qColor color))
@@ -206,5 +276,6 @@ namespace qASIC
 
             throw new FormatException($"Couldn't parse '{s}' to 'qColor'.");
         }
+        #endregion
     }
 }
