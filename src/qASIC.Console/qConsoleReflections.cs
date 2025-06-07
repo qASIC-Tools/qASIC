@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace qASIC.Console
 {
-    internal static class ConsoleReflections
+    internal static class qConsoleReflections
     {
         private static Dictionary<string, LogColorAttribute> _colorAttributeMethods = null;
         public static Dictionary<string, LogColorAttribute> ColorAttributeMethods

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace qASIC
 {
-    public class CommandException : Exception
+    public class qCommandException : Exception
     {
-        public CommandException() : base() { }
-        public CommandException(string message) : base(message) { }
+        public qCommandException() : base() { }
+        public qCommandException(string message) : base(message) { }
 
         public override string ToString()
         {
@@ -19,9 +19,9 @@ namespace qASIC
             Message;
     }
 
-    public class CommandParseException : CommandException
+    public class qCommandParseException : qCommandException
     {
-        public CommandParseException(Type type, string arg)
+        public qCommandParseException(Type type, string arg)
         {
             this.type = type;
             this.arg = arg;
@@ -34,10 +34,10 @@ namespace qASIC
             $"Unable to parse '{arg}' to {type}";
     }
 
-    public class CommandArgsCountException : CommandException
+    public class qCommandArgsCountException : qCommandException
     {
-        public CommandArgsCountException() { }
-        public CommandArgsCountException(int inputArgsCount, int minArgsCount, int maxArgsCount)
+        public qCommandArgsCountException() { }
+        public qCommandArgsCountException(int inputArgsCount, int minArgsCount, int maxArgsCount)
         {
             this.inputArgsCount = inputArgsCount;
             this.minArgsCount = minArgsCount;
@@ -63,10 +63,10 @@ namespace qASIC
         }
     }
 
-    public class CommandOptionException : CommandException
+    public class qCommandOptionException : qCommandException
     {
-        public CommandOptionException() { }
-        public CommandOptionException(string arg, IEnumerable<string> options)
+        public qCommandOptionException() { }
+        public qCommandOptionException(string arg, IEnumerable<string> options)
         {
             this.arg = arg;
             this.options = options;

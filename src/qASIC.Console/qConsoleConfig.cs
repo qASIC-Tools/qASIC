@@ -124,10 +124,10 @@ namespace qASIC.Console
 
             //Add manually defined commands
             console.CommandList.AddCommandRange(commands.Except(console.CommandList.Select(x => x.GetType()))
-                .Where(x => x.IsAssignableTo(typeof(ICommand)))
+                .Where(x => x.IsAssignableTo(typeof(ICommandLogic)))
                 .Select(x => x.GetConstructor(new Type[0])?.Invoke(null))
                 .Where(x => x != null)
-                .Select(x => (ICommand)x));
+                .Select(x => (ICommandLogic)x));
         }
 
         public static qConsoleConfig CreateDefault() =>

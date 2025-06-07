@@ -4,12 +4,12 @@
     {
         public string Text { get; private set; }
 
-        public override CommandArgument[] Prepare(CommandContext context)
+        public override qCommandArgument[] Prepare(qCommandContext context)
         {
             Text = context.inputString;
-            return new CommandArgument[]
+            return new qCommandArgument[]
             {
-                new CommandArgument(context.inputString, new object[] { context.inputString }),
+                new qCommandArgument(context.inputString, new object[] { context.inputString }),
             };
         }
     }

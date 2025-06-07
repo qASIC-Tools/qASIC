@@ -3,17 +3,17 @@ using System.Collections.Generic;
 
 namespace qASIC
 {
-    public interface ICommandList : IEnumerable<ICommand>
+    public interface ICommandList : IEnumerable<ICommandLogic>
     {
-        ICommandList AddCommand(ICommand command);
-        ICommandList AddCommandRange(IEnumerable<ICommand> commands);
-        ICommandList RemoveCommand(ICommand command);
+        ICommandList AddCommand(ICommandLogic command);
+        ICommandList AddCommandRange(IEnumerable<ICommandLogic> commands);
+        ICommandList RemoveCommand(ICommandLogic command);
         void Clear();
 
-        event Action<IEnumerable<ICommand>> OnCommandsAdded;
-        event Action<IEnumerable<ICommand>> OnCommandsRemoved;
+        event Action<IEnumerable<ICommandLogic>> OnCommandsAdded;
+        event Action<IEnumerable<ICommandLogic>> OnCommandsRemoved;
 
-        public bool TryGetCommand(string commandName, out ICommand command);
+        public bool TryGetCommand(string commandName, out ICommandLogic command);
 
         public IEnumerable<string> GetSortedCommandNames();
     }

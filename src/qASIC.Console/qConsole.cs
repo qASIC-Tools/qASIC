@@ -5,7 +5,6 @@ using qASIC.Console.Parsing;
 using System;
 using qASIC.CommandPrompts;
 using System.Threading.Tasks;
-using qASIC.qARK;
 
 namespace qASIC.Console
 {
@@ -84,7 +83,7 @@ namespace qASIC.Console
 
         public ArgumentsParser CommandParser { get; set; }
 
-        public ICommand CurrentCommand { get; private set; } = null;
+        public ICommandLogic CurrentCommand { get; private set; } = null;
         public object ReturnedValue { get; private set; } = null;
         public qLogManager CurrentCommandLogs { get; private set; } = null;
 
@@ -104,7 +103,7 @@ namespace qASIC.Console
 
         /// <summary>Initializes reflections. This will happen automatically when reflections are needed, but it can cause lag, so it's better to do it once when the application launches.</summary>
         public void InitializeReflections() =>
-            ConsoleReflections.Initialize();
+            qConsoleReflections.Initialize();
 
         #region Registering targets
         public qRegisteredObjects Targets { get; private set; } = new qRegisteredObjects();
@@ -115,7 +114,7 @@ namespace qASIC.Console
         public bool CanParseAndExecute =>
             CommandList != null && CommandParser != null;
 
-        /// <summary>Can the console execute commands using <see cref="Execute(CommandArgument[])"/>.</summary>
+        /// <summary>Can the console execute commands using <see cref="Execute(qCommandArgument[])"/>.</summary>
         public bool CanExecute =>
             CommandList != null;
 
@@ -129,7 +128,7 @@ namespace qASIC.Console
         public async Task<object> ExecuteAsync(string cmd) =>
             await ExecuteAsync(CreateContext(cmd));
 
-        private bool PreprocessContext(ConsoleCommandContext context)
+        private bool PreprocessContext(qConsoleCommandContext context)
         {
             //Prompt
             if (CurrentCommand != null)
@@ -172,7 +171,7 @@ namespace qASIC.Console
             return true;
         }
 
-        private object PostprocessContext(ConsoleCommandContext context)
+        private object PostprocessContext(qConsoleCommandContext context)
         {
             var closeLogs = true;
             if (context.RunTaskResult && ReturnedValue is Task task)
@@ -206,7 +205,7 @@ namespace qASIC.Console
 
         /// <summary>Executes a command.</summary>
         /// <param name="context">Command arguments.</param>
-        public object Execute(ConsoleCommandContext context)
+        public object Execute(qConsoleCommandContext context)
         {
             //Before
             if (!PreprocessContext(context))
@@ -221,7 +220,7 @@ namespace qASIC.Console
 
         /// <summary>Executes a command asynchronously.</summary>
         /// <param name="context">Command arguments.</param>
-        public async Task<object> ExecuteAsync(ConsoleCommandContext context)
+        public async Task<object> ExecuteAsync(qConsoleCommandContext context)
         {
             //Before
             if (!PreprocessContext(context))
@@ -250,7 +249,7 @@ namespace qASIC.Console
 
                 return output;
             }
-            catch (CommandException e)
+            catch (qCommandException e)
             {
                 logs?.LogError(e.ToString(IncludeStackTraceInCommandExceptions));
             }
@@ -288,7 +287,7 @@ namespace qASIC.Console
 
                 return output;
             }
-            catch (CommandException e)
+            catch (qCommandException e)
             {
                 logs?.LogError(e.ToString(IncludeStackTraceInCommandExceptions));
             }
@@ -302,9 +301,9 @@ namespace qASIC.Console
             return null;
         }
 
-        public virtual ConsoleCommandContext CreateContext(string cmd)
+        public virtual qConsoleCommandContext CreateContext(string cmd)
         {
-            var context = new ConsoleCommandContext()
+            var context = new qConsoleCommandContext()
             {
                 inputString = cmd,
                 commandName = GetCommandName(cmd),
@@ -315,9 +314,9 @@ namespace qASIC.Console
             return context;
         }
 
-        protected CommandArgument[] CreateConsoleArguments(string cmd)
+        protected qCommandArgument[] CreateConsoleArguments(string cmd)
         {
-            var args = new CommandArgument[0];
+            var args = new qCommandArgument[0];
 
             if (!(ReturnedValue is CommandPrompt prompt) || prompt.ParseArguments)
             {
@@ -441,14 +440,14 @@ namespace qASIC.Console
             attribute = null;
 
             if (method != null &&
-                ConsoleReflections.PrefixAttributeMethods.TryGetValue(ConsoleReflections.CreateMethodId(method), out var methodAttr))
+                qConsoleReflections.PrefixAttributeMethods.TryGetValue(qConsoleReflections.CreateMethodId(method), out var methodAttr))
             {
                 attribute = methodAttr!;
                 return true;
             }
 
             if (declaringType != null &&
-                ConsoleReflections.PrefixAttributeDeclaringTypes.TryGetValue(ConsoleReflections.CreateTypeId(declaringType), out var declaringTypeAttr))
+                qConsoleReflections.PrefixAttributeDeclaringTypes.TryGetValue(qConsoleReflections.CreateTypeId(declaringType), out var declaringTypeAttr))
             {
                 attribute = declaringTypeAttr!;
                 return true;
@@ -462,14 +461,14 @@ namespace qASIC.Console
             attribute = null;
 
             if (method != null &&
-                ConsoleReflections.ColorAttributeMethods.TryGetValue(ConsoleReflections.CreateMethodId(method), out var methodAttr))
+                qConsoleReflections.ColorAttributeMethods.TryGetValue(qConsoleReflections.CreateMethodId(method), out var methodAttr))
             {
                 attribute = methodAttr!;
                 return true;
             }
 
             if (declaringType != null &&
-                ConsoleReflections.ColorAttributeDeclaringTypes.TryGetValue(ConsoleReflections.CreateTypeId(declaringType), out var declaringTypeAttr))
+                qConsoleReflections.ColorAttributeDeclaringTypes.TryGetValue(qConsoleReflections.CreateTypeId(declaringType), out var declaringTypeAttr))
             {
                 attribute = declaringTypeAttr!;
                 return true;

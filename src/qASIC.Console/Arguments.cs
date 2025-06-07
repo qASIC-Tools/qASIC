@@ -1,11 +1,11 @@
 ﻿namespace qASIC.Console
 {
-    public class ConsoleCommandContext : CommandContext
+    public class qConsoleCommandContext : qCommandContext
     {
-        public ConsoleCommandContext() { }
-        public ConsoleCommandContext(CommandContext other) : base(other)
+        public qConsoleCommandContext() { }
+        public qConsoleCommandContext(qCommandContext other) : base(other)
         { 
-            if (other is ConsoleCommandContext gameContext)
+            if (other is qConsoleCommandContext gameContext)
             {
                 console = gameContext.console;
                 LogOutput = gameContext.LogOutput;

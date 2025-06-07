@@ -5,20 +5,20 @@ using System.Net;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_RemoteInfo : qBuiltinCommand
+    public class Cmd_RemoteInfo : qBuiltinCommandLogic
     {
         protected override string DefaultCommandName => "remote";
         protected override string DefaultDescription => "Shows information about the remote inspector server.";
 
         public qInstance Instance { get; set; }
 
-        public override object Run(ConsoleCommandContext context)
+        public override object Run(qConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
 
             var instance = Instance ?? context.console.Instance;
             if (instance == null)
-                throw new CommandException("Unable to get remote inspector server info: no qInstance found. Neither this command nor this console has an instance of qASIC assigned.");
+                throw new qCommandException("Unable to get remote inspector server info: no qInstance found. Neither this command nor this console has an instance of qASIC assigned.");
 
             var tree = TextTree.Fancy;
             var root = new TextTreeItem($"Remote inspector status: {(instance.RemoteInspectorServer.IsActive ? "active" : "offline")}");

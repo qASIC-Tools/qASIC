@@ -3,7 +3,7 @@ using System.Text;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Version : qBuiltinCommand
+    public class Cmd_Version : qBuiltinCommandLogic
     {
         protected override string DefaultCommandName => "version";
         protected override string DefaultDescription => "Displays current project version.";
@@ -28,7 +28,7 @@ namespace qASIC.Console.Commands.BuiltIn
             return txt.ToString().TrimStart(',').Trim();
         };
 
-        public override object Run(ConsoleCommandContext context)
+        public override object Run(qConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
 

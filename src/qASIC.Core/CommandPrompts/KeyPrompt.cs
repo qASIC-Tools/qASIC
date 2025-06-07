@@ -34,10 +34,10 @@ namespace qASIC.CommandPrompts
         public NavigationKey Key { get; private set; } = NavigationKey.None;
         public char Character { get; private set; }
 
-        public override bool CanExecute(CommandContext context) =>
+        public override bool CanExecute(qCommandContext context) =>
             context.inputString.Length > 0;
 
-        public override CommandArgument[] Prepare(CommandContext context)
+        public override qCommandArgument[] Prepare(qCommandContext context)
         {
             string s = context.inputString.FirstOrDefault().ToString();
 
@@ -54,9 +54,9 @@ namespace qASIC.CommandPrompts
                 new object[] { s[0], s } :
                 new object[] { s };
 
-            return new CommandArgument[]
+            return new qCommandArgument[]
             {
-                new CommandArgument(s, values),
+                new qCommandArgument(s, values),
             };
         }
 

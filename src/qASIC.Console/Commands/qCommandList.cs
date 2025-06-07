@@ -10,27 +10,27 @@ namespace qASIC.Console.Commands
     {
         private List<RegisteredCommand> Commands { get; set; } = new List<RegisteredCommand>();
 
-        public event Action<IEnumerable<ICommand>> OnCommandsAdded;
-        public event Action<IEnumerable<ICommand>> OnCommandsRemoved;
+        public event Action<IEnumerable<ICommandLogic>> OnCommandsAdded;
+        public event Action<IEnumerable<ICommandLogic>> OnCommandsRemoved;
 
         /// <summary>Adds command to the list.</summary>
         /// <param name="command">Command to add.</param>
         /// <returns>Returns itself.</returns>
-        public qCommandList AddCommand(ICommand command) =>
-            AddCommandRange(new ICommand[] { command });
+        public qCommandList AddCommand(ICommandLogic command) =>
+            AddCommandRange(new ICommandLogic[] { command });
 
         /// <summary>Adds commands to the list.</summary>
         /// <param name="command">Collection of commands to add.</param>
         /// <returns>Returns itself.</returns>
-        public qCommandList AddCommandRange(IEnumerable<ICommand> commands)
+        public qCommandList AddCommandRange(IEnumerable<ICommandLogic> commands)
         {
             Commands.AddRange(commands.Select(x => new RegisteredCommand(x)));
             OnCommandsAdded?.Invoke(commands);
             return this;
         }
 
-        public static ICommand[] GetBuiltInCommands() =>
-            new ICommand[]
+        public static ICommandLogic[] GetBuiltInCommands() =>
+            new ICommandLogic[]
             {
                 new BuiltIn.Cmd_Clear(),
                 new BuiltIn.Cmd_Echo(),
@@ -64,9 +64,9 @@ namespace qASIC.Console.Commands
         public qCommandList FindCommands(Type type)
         {
             var commandTypes = TypeFinder.FindClassesWithAttribute(type, BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(x => typeof(ICommand).IsAssignableFrom(x));
+                .Where(x => typeof(ICommandLogic).IsAssignableFrom(x));
 
-            var commands = TypeFinder.CreateConstructorsFromTypes<ICommand>(commandTypes)
+            var commands = TypeFinder.CreateConstructorsFromTypes<ICommandLogic>(commandTypes)
                 .Where(x => x != null);
 
             AddCommandRange(commands);
@@ -103,7 +103,7 @@ namespace qASIC.Console.Commands
                 .Concat(fields)
                 .Concat(properties);
 
-            var addedCommands = new List<ICommand>();
+            var addedCommands = new List<ICommandLogic>();
             foreach (var member in targets)
             {
                 var attr = (qCommandAttribute)member.GetCustomAttribute(type);
@@ -115,15 +115,15 @@ namespace qASIC.Console.Commands
                     .Any(x => x.command.CommandName.ToLower() == commandName);
 
                 var command = commandExists ?
-                    (qAttributeCommand)Commands.Where(x => x.command.CommandName == commandName).First().command :
+                    (qAttributeCommandLogic)Commands.Where(x => x.command.CommandName == commandName).First().command :
                     null;
 
-                command ??= new qAttributeCommand()
+                command ??= new qAttributeCommandLogic()
                 {
                     CommandName = commandName,
                 };
 
-                var memberTarget = qAttributeCommand.Target.CreateFromMember(member);
+                var memberTarget = qAttributeCommandLogic.Target.CreateFromMember(member);
 
                 command.Targets.Add(memberTarget);
 
@@ -137,7 +137,7 @@ namespace qASIC.Console.Commands
             return this;
         }
 
-        public qCommandList RemoveCommand(ICommand command)
+        public qCommandList RemoveCommand(ICommandLogic command)
         {
             var target = Commands.Where(x => x.command == command)
                 .FirstOrDefault();
@@ -145,7 +145,7 @@ namespace qASIC.Console.Commands
             if (target != null)
             {
                 Commands.Remove(target);
-                OnCommandsRemoved?.Invoke(new ICommand[] { command });
+                OnCommandsRemoved?.Invoke(new ICommandLogic[] { command });
             }
 
             return this;
@@ -155,7 +155,7 @@ namespace qASIC.Console.Commands
         /// <param name="commandName">Name of the command, doesn't need to be lowercase.</param>
         /// <param name="command">Found command.</param>
         /// <returns>Returns if it found a command.</returns>
-        public bool TryGetCommand(string commandName, out ICommand command)
+        public bool TryGetCommand(string commandName, out ICommandLogic command)
         {
             commandName = commandName?.ToLower();
 
@@ -167,13 +167,13 @@ namespace qASIC.Console.Commands
             return command != null;
         }
 
-        ICommandList ICommandList.AddCommand(ICommand command) =>
+        ICommandList ICommandList.AddCommand(ICommandLogic command) =>
             AddCommand(command);
 
-        ICommandList ICommandList.AddCommandRange(IEnumerable<ICommand> commands) =>
+        ICommandList ICommandList.AddCommandRange(IEnumerable<ICommandLogic> commands) =>
             AddCommandRange(commands);
 
-        ICommandList ICommandList.RemoveCommand(ICommand command) =>
+        ICommandList ICommandList.RemoveCommand(ICommandLogic command) =>
             RemoveCommand(command);
 
         public void Clear()
@@ -186,7 +186,7 @@ namespace qASIC.Console.Commands
                 .OrderBy(x => x)
                 .Distinct();
 
-        public IEnumerator<ICommand> GetEnumerator() =>
+        public IEnumerator<ICommandLogic> GetEnumerator() =>
             Commands
             .Select(x => x.command)
             .GetEnumerator();
@@ -194,7 +194,7 @@ namespace qASIC.Console.Commands
         IEnumerator IEnumerable.GetEnumerator() =>
             GetEnumerator();
 
-        public ICommand this[int index]
+        public ICommandLogic this[int index]
         {
             get => Commands[index].command;
         }
@@ -204,7 +204,7 @@ namespace qASIC.Console.Commands
 
         class RegisteredCommand
         {
-            public RegisteredCommand(ICommand command)
+            public RegisteredCommand(ICommandLogic command)
             {
                 this.command = command;
 
@@ -215,7 +215,7 @@ namespace qASIC.Console.Commands
             }
 
             public string[] names;
-            public ICommand command;
+            public ICommandLogic command;
         }
     }
 }

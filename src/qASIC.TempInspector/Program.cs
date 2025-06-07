@@ -50,7 +50,7 @@ namespace qASICRemote
             GConsole = new qConsole("MAIN", commands);
             GConsole.Targets.Register(this);
 
-            Interface = new SystemConsoleUI(GConsole);
+            Interface = new qSystemConsoleUI(GConsole);
 
             AppDomain.CurrentDomain.ProcessExit += OnApplicationClose;
 
@@ -78,7 +78,7 @@ namespace qASICRemote
                 args.Identity.ResetPosition();
             };
 
-            consoleManager = new InstanceConsoleManager(client);
+            consoleManager = new qConsoleInstanceManager(client);
             consoleManager.CC_Log.OnRead += CC_Log_OnRead;
             consoleManager.OnConsoleRegister += ConsoleManager_OnConsoleRegister;
 
@@ -91,10 +91,10 @@ namespace qASICRemote
 
         public qInstance QasicInstance { get; private set; } = null;
         public qConsole GConsole { get; private set; } = null;
-        public SystemConsoleUI Interface { get; private set; } = null;
+        public qSystemConsoleUI Interface { get; private set; } = null;
         public DiscoveryClient DiscoveryClient { get; private set; } = null;
 
-        public InstanceConsoleManager consoleManager;
+        public qConsoleInstanceManager consoleManager;
 
         bool AutoConnect { get; set; } = false;
 
@@ -173,10 +173,10 @@ namespace qASICRemote
             if (addressParts.Length > 2 ||
                 !IPAddress.TryParse(addressParts[0], out IPAddress finalAddress) ||
                 (addressParts.Length == 2 && !int.TryParse(addressParts[1], out port)))
-                throw new CommandException($"Could not parse address '{address}'");
+                throw new qCommandException($"Could not parse address '{address}'");
 
             if (client!.IsActive)
-                throw new CommandException("Client is already active, this application doesn't support multiple client instances!");
+                throw new qCommandException("Client is already active, this application doesn't support multiple client instances!");
 
             client.Connect(finalAddress, port);
         }
@@ -197,31 +197,31 @@ namespace qASICRemote
         private string Cmd_SelectedConsoleIndex()
         {
             if (SelectedConsole == null)
-                throw new CommandException("No console is selected");
+                throw new qCommandException("No console is selected");
 
             return SelectedConsole.Name;
         }
 
         [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(ConsoleCommandContext context, string val)
+        private void Cmd_SelectedConsoleIndex(qConsoleCommandContext context, string val)
         {
             var console = consoleManager.Where(x => x.Console.Name == val)
                 .FirstOrDefault()?.Console;
 
             if (console == null)
-                throw new CommandException("Console does not exist!");
+                throw new qCommandException("Console does not exist!");
 
             SelectedConsole = console;
             context.console.Log($"Selected console '{SelectedConsole.Name}'.");
         }
 
         [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(ConsoleCommandContext context, int index)
+        private void Cmd_SelectedConsoleIndex(qConsoleCommandContext context, int index)
         {
             var consoles = consoleManager.ToArray();
 
             if (!consoles.IndexInRange(index))
-                throw new CommandException("Console index is out of range!");
+                throw new qCommandException("Console index is out of range!");
 
             Cmd_SelectedConsoleIndex(context, consoles[index].Console.Name);
         }
@@ -271,7 +271,7 @@ namespace qASICRemote
             DiscoveryClient?.Stop();
         }
 
-        class ConnectionsListCommand : qConsoleCommand
+        class ConnectionsListCommand : qCommandLogic
         {
             public ConnectionsListCommand(Inspector inspector)
             {
@@ -290,7 +290,7 @@ namespace qASICRemote
 
             KeyPrompt navigationPrompt = new KeyPrompt();
 
-            public override object Run(ConsoleCommandContext context)
+            public override object Run(qConsoleCommandContext context)
             {
                 if (log == null || context.console.ReturnedValue == null)
                 {
@@ -348,7 +348,7 @@ namespace qASICRemote
             }
         }
 
-        class SendCmdCommand : qConsoleCommand
+        class SendCmdCommand : qCommandLogic
         {
             public SendCmdCommand(Inspector inspector)
             {
@@ -366,7 +366,7 @@ namespace qASICRemote
 
             public override string Description => "Sends a command to the selected console";
 
-            public override object Run(ConsoleCommandContext context)
+            public override object Run(qConsoleCommandContext context)
             {
                 if (inspector.client.CurrentState != qClient.State.Connected)
                 {

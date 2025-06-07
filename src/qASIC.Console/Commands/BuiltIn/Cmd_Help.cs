@@ -1,22 +1,29 @@
-﻿using System.Text;
+﻿using qASIC.Console.Autocomplete;
+using qASIC.qARK;
 using System;
 using System.Linq;
-using qASIC.qARK;
+using System.Text;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Help : qBuiltinCommand
+    public class Cmd_Help : qBuiltinCommandLogic
     {
         protected override string DefaultCommandName => "help";
         protected override string DefaultDescription => "Displays a list of all avaliable commands.";
+
+        public override ACData CommandAutocomplete { get; protected set; } = new ACData()
+            .AddVariant().Finish()
+            .AddVariant().AddType<int>("pageIndex").Finish()
+            .AddVariant().AddArgument(new ACCommandArgument("command")).Finish();
+
 
         public bool MultiplePages { get; set; } = true;
         public bool AllowDetailedDescription { get; set; } = true;
         public int PageCommandLimit { get; set; } = 16;
 
-        public Func<ConsoleCommandContext, ICommand, bool> CanShowCommand;
+        public Func<qConsoleCommandContext, ICommandLogic, bool> CanShowCommand;
 
-        public override object Run(ConsoleCommandContext context)
+        public override object Run(qConsoleCommandContext context)
         {
             context.CheckArgumentCount(0, 1);
 
@@ -44,8 +51,8 @@ namespace qASIC.Console.Commands.BuiltIn
 
             if (targetCommand != null)
             {
-                if (!commandList.TryGetCommand(targetCommand, out ICommand command) || command == null)
-                    throw new CommandException($"Command '{targetCommand}' does not exist!");
+                if (!commandList.TryGetCommand(targetCommand, out ICommandLogic command) || command == null)
+                    throw new qCommandException($"Command '{targetCommand}' does not exist!");
 
                 if (command.DetailedDescription == null && command.Description == null)
                 {
@@ -60,7 +67,7 @@ namespace qASIC.Console.Commands.BuiltIn
             var startIndex = PageCommandLimit * index;
 
             if (startIndex >= commands.Count)
-                throw new CommandException("Page index out of range");
+                throw new qCommandException("Page index out of range");
 
             StringBuilder stringBuilder = new StringBuilder(MultiplePages ? 
                 $"List of avaliable commands, page: {index} \n" :

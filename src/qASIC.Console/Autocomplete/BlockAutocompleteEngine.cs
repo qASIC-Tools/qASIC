@@ -1,3 +1,4 @@
+using System.Data;
 using System.Linq;
 
 namespace qASIC.Console.Autocomplete
@@ -30,6 +31,50 @@ namespace qASIC.Console.Autocomplete
                 }
 
                 return (cmd, cursorPosition);
+            }
+
+            if (data.scope == Parsing.CmdCharacterInfo.Scope.Argument &&
+                data.argumentIndex >= data.arguments.Length - 1 &&
+                Console.CommandList.TryGetCommand(data.commandName, out var command) &&
+                command is ISupportsAutocomplete ac)
+            {
+                if (data.argumentIndex == data.arguments.Length)
+                    data.arguments = data.arguments
+                        .Append(new qCommandArgument(Console.CommandParser.ValueParser, ""))
+                        .ToArray();
+
+                var acData = ac.CommandAutocomplete;
+                if (acData != null)
+                {
+                    var variants = acData.GetValidVariants(data.arguments);
+                    var values = variants.SelectMany(x => x.Arguments[data.argumentIndex].GetAvaliableValues(this))
+                        .OrderBy(x => x)
+                        .ToArray();
+
+                    if (values.Length != 0)
+                    {
+                        int i = 0;
+                        
+                        if (!string.IsNullOrWhiteSpace(data.arguments[data.argumentIndex].arg))
+                        {
+                            while (i < values.Length && 
+                                !values[i].StartsWith(data.arguments[data.argumentIndex].arg))
+                                i++;
+
+                            if (i == values.Length)
+                                return (cmd, cursorPosition);
+                        }
+
+
+                        if (values[i] == data.arguments[data.argumentIndex].arg)
+                            i = (i + 1) % values.Length;
+
+                        data.arguments[data.argumentIndex].arg = values[i];
+                        cmd = Console.CommandParser.ConvertToString(data.commandName, data.arguments);
+                        cursorPosition = cmd.Length;
+                    }
+                }
+
             }
 
             return (cmd, cursorPosition);

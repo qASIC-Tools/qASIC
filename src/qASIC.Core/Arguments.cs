@@ -7,10 +7,10 @@ using qASIC.Parsing;
 
 namespace qASIC
 {
-    public class CommandContext : IEnumerable<CommandArgument>
+    public class qCommandContext : IEnumerable<qCommandArgument>
     {
-        public CommandContext() { }
-        public CommandContext(CommandContext other) : this()
+        public qCommandContext() { }
+        public qCommandContext(qCommandContext other) : this()
         {
             inputString = other.inputString;
             commandName = other.commandName;
@@ -20,7 +20,7 @@ namespace qASIC
 
         public string inputString;
         public string commandName;
-        public CommandArgument[] args;
+        public qCommandArgument[] args;
         public CommandPrompt prompt;
 
         public event Action<qLog> OnLog;
@@ -41,7 +41,7 @@ namespace qASIC
             }
         }
 
-        public CommandArgument this[int index]
+        public qCommandArgument this[int index]
         {
             get => args[index];
             set => args[index] = value;
@@ -57,22 +57,22 @@ namespace qASIC
             bool valid = min <= args.Length && args.Length <= max;
 
             if (!valid)
-                throw new CommandArgsCountException(args.Length, min, max);
+                throw new qCommandArgsCountException(args.Length, min, max);
         }
 
         public void CheckArgumentCountMin(int min)
         {
             if (args.Length < min)
-                throw new CommandArgsCountException(args.Length, min, int.MaxValue);
+                throw new qCommandArgsCountException(args.Length, min, int.MaxValue);
         }
 
         public void CheckArgumentCountMax(int max)
         {
             if (args.Length > max)
-                throw new CommandArgsCountException(args.Length, 0, max);
+                throw new qCommandArgsCountException(args.Length, 0, max);
         }
 
-        public IEnumerator<CommandArgument> GetEnumerator() =>
+        public IEnumerator<qCommandArgument> GetEnumerator() =>
             args
             .AsEnumerable()
             .GetEnumerator();
@@ -81,10 +81,10 @@ namespace qASIC
             args.GetEnumerator();
     }
 
-    public class CommandArgument
+    public class qCommandArgument
     {
-        public CommandArgument(string arg, params object[] values) : this(null, arg, values) { }
-        public CommandArgument(ModularParser parser, string arg, params object[] values)
+        public qCommandArgument(string arg, params object[] values) : this(null, arg, values) { }
+        public qCommandArgument(ModularParser parser, string arg, params object[] values)
         {
             Parser = parser;
             this.arg = arg;
@@ -95,7 +95,7 @@ namespace qASIC
         public object[] values;
         public ModularParser Parser { get; set; }
 
-        public static explicit operator string(CommandArgument arg) =>
+        public static explicit operator string(qCommandArgument arg) =>
             arg.arg.ToString();
 
         public T GetValue<T>() =>
@@ -104,7 +104,7 @@ namespace qASIC
         public object GetValue(Type type)
         {
             var result = TryGetValue(type, out var obj);
-            if (!result) throw new CommandParseException(type, arg);
+            if (!result) throw new qCommandParseException(type, arg);
             return obj;
         }
 
@@ -205,7 +205,7 @@ namespace qASIC
             if (TryGetEnum<T>(out T result))
                 return result;
 
-            throw new CommandOptionException(arg, Enum.GetValues<T>().Select(x => x.ToString()));
+            throw new qCommandOptionException(arg, Enum.GetValues<T>().Select(x => x.ToString()));
         }
 
         public T GetOption<T>(IDictionary<string, T> dict)
@@ -213,7 +213,7 @@ namespace qASIC
             if (TryGetOption(dict, out T result))
                 return result;
 
-            throw new CommandOptionException(arg, dict.Select(x => x.Key));
+            throw new qCommandOptionException(arg, dict.Select(x => x.Key));
         }
 
         public int GetOptionIndex(string[] options)
@@ -221,7 +221,7 @@ namespace qASIC
             if (TryGetOptionIndex(options, out int index))
                 return index;
 
-            throw new CommandOptionException(arg, options);
+            throw new qCommandOptionException(arg, options);
         }
 
         public override string ToString() =>

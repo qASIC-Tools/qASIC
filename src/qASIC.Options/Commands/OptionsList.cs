@@ -10,7 +10,7 @@ namespace qASIC.Options.Commands
         public override string[] Aliases => new string[] { "settingslist", "listoptions", "listsettings" };
         public override string Description => "Shows a list of options.";
 
-        public override object Run(CommandContext context)
+        public override object Run(qCommandContext context)
         {
             context.CheckArgumentCount(0);
 

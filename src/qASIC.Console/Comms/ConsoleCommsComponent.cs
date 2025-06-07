@@ -5,7 +5,7 @@ namespace qASIC.Console.Comms
 {
     public abstract class ConsoleCommsComponent : CommsComponent
     {
-        public InstanceConsoleManager ConsoleManager { get; set; }
+        public qConsoleInstanceManager ConsoleManager { get; set; }
 
         public override void Read(CommsComponentArgs args)
         {

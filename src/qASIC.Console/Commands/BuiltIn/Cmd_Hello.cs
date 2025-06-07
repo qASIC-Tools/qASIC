@@ -2,7 +2,7 @@
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Hello : qBuiltinCommand
+    public class Cmd_Hello : qBuiltinCommandLogic
     {
         protected override string DefaultCommandName => "helloworld";
         protected override string DefaultDescription => "Hello World!";
@@ -13,7 +13,7 @@ namespace qASIC.Console.Commands.BuiltIn
         public string Tag { get; set; } = null;
         public qColor Color { get; set; } = qColor.Green;
 
-        public override object Run(ConsoleCommandContext context)
+        public override object Run(qConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
             

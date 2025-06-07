@@ -1,8 +1,9 @@
-﻿using System;
+﻿using qASIC.Console.Autocomplete;
+using System;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public class Cmd_Exit : qBuiltinCommand
+    public class Cmd_Exit : qBuiltinCommandLogic
     {
         protected override string DefaultCommandName => "exit";
         protected override string DefaultDescription => "Closes the application.";
@@ -10,7 +11,7 @@ namespace qASIC.Console.Commands.BuiltIn
 
         public event Action ExitMethod;
 
-        public override object Run(ConsoleCommandContext context)
+        public override object Run(qConsoleCommandContext context)
         {
             context.CheckArgumentCount(0);
             context.Logs.Log("Goodbye");

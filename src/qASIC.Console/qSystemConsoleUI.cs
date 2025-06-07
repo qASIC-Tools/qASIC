@@ -9,13 +9,13 @@ using SysConsole = System.Console;
 namespace qASIC.Console
 {
     /// <summary>Class responsible for displaying and reading information from a Console Application window for a <see cref="qConsole"/> instance.</summary>
-    public class SystemConsoleUI
+    public class qSystemConsoleUI
     {
-        public SystemConsoleUI() : this(new qConsole("MAIN")) { }
+        public qSystemConsoleUI() : this(new qConsole("MAIN")) { }
 
-        public SystemConsoleUI(qInstance instance) : this(new qConsole("MAIN")) { }
+        public qSystemConsoleUI(qInstance instance) : this(new qConsole("MAIN")) { }
 
-        public SystemConsoleUI(qConsole console)
+        public qSystemConsoleUI(qConsole console)
         {
             Console = console;
             inputs = new List<string>(new string[1]);

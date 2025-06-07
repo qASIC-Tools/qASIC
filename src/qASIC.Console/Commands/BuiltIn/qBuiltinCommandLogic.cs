@@ -1,13 +1,12 @@
-﻿using qASIC.Parsing;
+﻿using qASIC.Console.Autocomplete;
 using qASIC.qARK;
 using System;
-using System.Data.Common;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
-    public abstract class qBuiltinCommand : ICommand, IConfigurable
+    public abstract class qBuiltinCommandLogic : ICommandLogic, ISupportsAutocomplete, IConfigurable
     {
-        public qBuiltinCommand()
+        public qBuiltinCommandLogic()
         {
             CommandName = DefaultCommandName;
             Aliases = DefaultAliases;
@@ -27,10 +26,12 @@ namespace qASIC.Console.Commands.BuiltIn
         protected virtual string DefaultDetailedDescription { get; }
         public string DetailedDescription { get; set; }
 
-        public object Run(CommandContext context) =>
-            Run(context as ConsoleCommandContext);
+        public virtual ACData CommandAutocomplete { get; protected set; }
 
-        public abstract object Run(ConsoleCommandContext context);
+        public object Run(qCommandContext context) =>
+            Run(context as qConsoleCommandContext);
+
+        public abstract object Run(qConsoleCommandContext context);
 
         public virtual void LoadConfig(qARKHolder data)
         {

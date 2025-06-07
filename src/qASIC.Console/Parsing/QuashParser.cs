@@ -21,7 +21,7 @@ namespace qASIC.Console.Parsing
             return commandName.ToString();
         }
 
-        public override CommandArgument[] ParseArguments(string cmd)
+        public override qCommandArgument[] ParseArguments(string cmd)
         {
             var args = new List<QuashArgument>();
 
@@ -128,14 +128,14 @@ namespace qASIC.Console.Parsing
                 .ToArray();
 
             //If it's between command name and first argument
-            if (characterIndex < commandName.Length || quashArgs.Length == 0)
+            if (characterIndex < commandName.Length)
                 return info.WithScope(CmdCharacterInfo.Scope.CommandName, characterIndex);
 
             //Looking for the target argument
             var argIndex = 0;
             while (argIndex < quashArgs.Length)
             {
-                var argLength = quashArgs[argIndex].arg.Length + quashArgs[argIndex].StartEmptySpace.Length;
+                var argLength = quashArgs[argIndex].arg.Length + (quashArgs[argIndex].StartEmptySpace ?? string.Empty).Length;
                 if (characterIndex > argLength) break;
                 characterIndex -= argLength;
                 argIndex++;
@@ -144,7 +144,7 @@ namespace qASIC.Console.Parsing
             return info.WithScope(CmdCharacterInfo.Scope.Argument, characterIndex, argIndex);
         }
 
-        public override string ConvertToString(string commandName, CommandArgument[] arguments)
+        public override string ConvertToString(string commandName, qCommandArgument[] arguments)
         {
             var txt = new StringBuilder(commandName);
 
@@ -168,7 +168,7 @@ namespace qASIC.Console.Parsing
             return txt.ToString().Trim();
         }
 
-        public class QuashArgument : CommandArgument
+        public class QuashArgument : qCommandArgument
         {
             public QuashArgument(ModularParser parser, string arg, params object[] values) : base(parser, arg, values) { }
 

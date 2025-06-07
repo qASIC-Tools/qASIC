@@ -2,7 +2,7 @@ namespace qASIC.Console.Parsing
 {
     public struct CmdCharacterInfo
     {
-        public CmdCharacterInfo(string prefix, string postfix, string commandName, CommandArgument[] arguments)
+        public CmdCharacterInfo(string prefix, string postfix, string commandName, qCommandArgument[] arguments)
         {
             this.prefix = prefix;
             this.postfix = postfix;
@@ -36,7 +36,7 @@ namespace qASIC.Console.Parsing
         public int argumentIndex;
 
         public string commandName;
-        public CommandArgument[] arguments;
+        public qCommandArgument[] arguments;
 
         public string prefix;
         public string postfix;

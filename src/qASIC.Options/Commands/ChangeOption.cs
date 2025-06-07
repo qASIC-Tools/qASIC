@@ -23,7 +23,7 @@ namespace qASIC.Options.Commands
 
         List<Options.OptionsList.ListItem> items;
 
-        public override object Run(CommandContext context)
+        public override object Run(qCommandContext context)
         {
             if (context.prompt == navigationPrompt)
             {
@@ -61,7 +61,7 @@ namespace qASIC.Options.Commands
                     }
                     catch
                     {
-                        throw new CommandParseException(targetOption.value?.GetType(), valuePrompt.Text);
+                        throw new qCommandParseException(targetOption.value?.GetType(), valuePrompt.Text);
                     }
                 }
 
@@ -100,13 +100,13 @@ namespace qASIC.Options.Commands
             return null;
         }
 
-        object AskForValue(CommandContext context)
+        object AskForValue(qCommandContext context)
         {
             context.Logs.Log("Enter value...");
             return valuePrompt;
         }
 
-        void UpdateLog(CommandContext context, bool final = false, bool cancelled = false)
+        void UpdateLog(qCommandContext context, bool final = false, bool cancelled = false)
         {
             if (listLog == null)
                 listLog = qLog.CreateNow("");
@@ -126,7 +126,7 @@ namespace qASIC.Options.Commands
         Options.OptionsList.ListItem GetOption(string settingName)
         {
             if (!Manager.OptionsList.ContainsKey(settingName))
-                throw new CommandException($"Setting '{settingName}' does not exist!");
+                throw new qCommandException($"Setting '{settingName}' does not exist!");
 
             return Manager.OptionsList[settingName];
         }

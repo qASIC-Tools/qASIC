@@ -4,13 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using qASIC.Console.Autocomplete;
 
 namespace qASIC.Console.Commands
 {
-    public class qAttributeCommand : ICommand
+    public class qAttributeCommandLogic : ICommandLogic, ISupportsAutocomplete
     {
-        public qAttributeCommand() : this(string.Empty) { }
-        public qAttributeCommand(string commandName)
+        public qAttributeCommandLogic() : this(string.Empty) { }
+        public qAttributeCommandLogic(string commandName)
         {
             CommandName = commandName;
         }
@@ -36,9 +37,25 @@ namespace qASIC.Console.Commands
 
         public List<Target> Targets { get; set; } = new List<Target>();
 
-        public object Run(CommandContext context)
+        public ACData CommandAutocomplete
         {
-            var gameContext = context as ConsoleCommandContext;
+            get
+            {
+                var data = new ACData();
+                foreach (var item in Targets)
+                {
+                    var variant = data.AddVariant();
+                    for (int i = 0; i < item.argTypes.Length; i++)
+                        variant.AddType(item.argTypes[i], item.argNames[i]);
+                }
+
+                return data;
+            }
+        }
+
+        public object Run(qCommandContext context)
+        {
+            var gameContext = context as qConsoleCommandContext;
 
             var maxArgLimit = Targets
                 .Select(x => x.maxArgsCount)
@@ -50,7 +67,7 @@ namespace qASIC.Console.Commands
 
             gameContext.CheckArgumentCount(minArgLimit, maxArgLimit);
 
-            CommandArgument[] cmdArgs = gameContext.args
+            qCommandArgument[] cmdArgs = gameContext.args
                 .ToArray();
 
             var targets = Targets
@@ -78,7 +95,7 @@ namespace qASIC.Console.Commands
             if (FindCommandAndTryRun(new List<object>()))
                 return returnValue;
 
-            throw new CommandParseException(closestMatch?.argTypes[closestMatchCorrectArgsCount], gameContext[closestMatchCorrectArgsCount + 1].arg);
+            throw new qCommandParseException(closestMatch?.argTypes[closestMatchCorrectArgsCount], gameContext[closestMatchCorrectArgsCount + 1].arg);
 
             bool FindCommandAndTryRun(List<object> values, bool first = true)
             {
@@ -174,7 +191,7 @@ namespace qASIC.Console.Commands
                 }
             }
 
-            public object Invoke(object[] values, ConsoleCommandContext context, bool isSingle = false)
+            public object Invoke(object[] values, qConsoleCommandContext context, bool isSingle = false)
             {
                 var targetType = memberInfo.DeclaringType!;
                 var targets = targetAttr
@@ -239,18 +256,19 @@ namespace qASIC.Console.Commands
 
             protected abstract bool IsStatic { get; }
 
-            protected abstract object InvokeForItem(object item, object[] values, ConsoleCommandContext context);
+            protected abstract object InvokeForItem(object item, object[] values, qConsoleCommandContext context);
 
-            protected void LogExecuteBegin(ConsoleCommandContext context, object target) =>
+            protected void LogExecuteBegin(qConsoleCommandContext context, object target) =>
                 context.console.Log($"Executing command for target '{target ?? "NULL"}'");
 
             public MemberInfo memberInfo;
             public qCommandAttribute attr;
             public qCommandTargetsAttribute[] targetAttr;
             public Type[] argTypes;
+            public string[] argNames;
             public int minArgsCount;
             public int maxArgsCount;
-            /// <summary>Whenever target has <see cref="ConsoleCommandContext"/> as the first parameter</summary>
+            /// <summary>Whenever target has <see cref="qConsoleCommandContext"/> as the first parameter</summary>
             public Type contextType;
         }
 
@@ -263,7 +281,7 @@ namespace qASIC.Console.Commands
                 var parameters = methodInfo.GetParameters();
 
                 contextType = null;
-                if (parameters.Length > 0 && parameters[0].ParameterType.IsAssignableTo(typeof(CommandContext)))
+                if (parameters.Length > 0 && parameters[0].ParameterType.IsAssignableTo(typeof(qCommandContext)))
                     contextType = parameters[0].ParameterType;
 
                 if (contextType != null)
@@ -280,13 +298,17 @@ namespace qASIC.Console.Commands
                 argTypes = parameters
                     .Select(x => x.ParameterType)
                     .ToArray();
+
+                argNames = parameters
+                    .Select(x => x.Name)
+                    .ToArray();
             }
 
             MethodInfo methodInfo;
 
             protected override bool IsStatic => methodInfo.IsStatic;
 
-            protected override object InvokeForItem(object item, object[] values, ConsoleCommandContext context)
+            protected override object InvokeForItem(object item, object[] values, qConsoleCommandContext context)
             {
                 return methodInfo.Invoke(item, values);
             }
@@ -301,13 +323,14 @@ namespace qASIC.Console.Commands
                 minArgsCount = 0;
                 maxArgsCount = 1;
                 argTypes = new Type[] { fieldInfo.FieldType! };
+                argNames = new string[] { "value" };
             }
 
             FieldInfo fieldInfo;
 
             protected override bool IsStatic => fieldInfo.IsStatic;
 
-            protected override object InvokeForItem(object item, object[] values, ConsoleCommandContext context)
+            protected override object InvokeForItem(object item, object[] values, qConsoleCommandContext context)
             {
                 if (values[0] == Type.Missing)
                     return fieldInfo.GetValue(item);
@@ -326,13 +349,14 @@ namespace qASIC.Console.Commands
                 minArgsCount = 0;
                 maxArgsCount = 1;
                 argTypes = new Type[] { propertyInfo.PropertyType! };
+                argNames = new string[] { "value" };
             }
 
             PropertyInfo propertyInfo;
 
             protected override bool IsStatic => propertyInfo.GetAccessors(true)[0].IsStatic;
 
-            protected override object InvokeForItem(object item, object[] values, ConsoleCommandContext context)
+            protected override object InvokeForItem(object item, object[] values, qConsoleCommandContext context)
             {
                 if (values[0] == Type.Missing)
                     return propertyInfo.GetValue(item);

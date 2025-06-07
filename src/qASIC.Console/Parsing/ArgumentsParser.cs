@@ -16,13 +16,13 @@ namespace qASIC.Console.Parsing
         /// <summary>Gets command arguments from a console input string.</summary>
         /// <param name="cmd">The console input string.</param>
         /// <returns>Returns a list of command arguments.</returns>
-        public abstract CommandArgument[] ParseArguments(string cmd);
+        public abstract qCommandArgument[] ParseArguments(string cmd);
 
         /// <summary>Converts output back into a string</summary>
         /// <param name="commandName">The name of the command.</param>
         /// <param name="arguments">Array of command arguments.</param>
         /// <returns>Returns a console input string.</returns>
-        public abstract string ConvertToString(string commandName, CommandArgument[] arguments);
+        public abstract string ConvertToString(string commandName, qCommandArgument[] arguments);
 
         public abstract CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex);
     }

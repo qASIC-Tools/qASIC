@@ -8,7 +8,7 @@
         public override string[] Aliases => new string[] { "applysettings", "optionsapply", "settingsapply" };
         public override string Description => "Saves options to disk.";
 
-        public override object Run(CommandContext context)
+        public override object Run(qCommandContext context)
         {
             context.CheckArgumentCount(0);
             Manager.Apply();

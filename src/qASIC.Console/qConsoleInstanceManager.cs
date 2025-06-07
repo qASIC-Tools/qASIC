@@ -5,15 +5,15 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 
-using static qASIC.Console.InstanceConsoleManager;
+using static qASIC.Console.qConsoleInstanceManager;
 
 namespace qASIC.Console
 {
-    public class InstanceConsoleManager : IEnumerable<RegisteredConsole>, IEnumerable
+    public class qConsoleInstanceManager : IEnumerable<RegisteredConsole>, IEnumerable
     {
-        public InstanceConsoleManager(qClient client) : this(client as IPeer) { }
-        public InstanceConsoleManager(qServer server) : this(server as IPeer) { }
-        public InstanceConsoleManager(IPeer peer)
+        public qConsoleInstanceManager(qClient client) : this(client as IPeer) { }
+        public qConsoleInstanceManager(qServer server) : this(server as IPeer) { }
+        public qConsoleInstanceManager(IPeer peer)
         {
             Peer = peer;
             Peer.Components
@@ -120,7 +120,7 @@ namespace qASIC.Console
             }
 
             public qConsole Console { get; private set; }
-            internal InstanceConsoleManager manager;
+            internal qConsoleInstanceManager manager;
 
             public void SendCommand(string cmd)
             {

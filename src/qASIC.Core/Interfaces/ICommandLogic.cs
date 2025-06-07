@@ -1,6 +1,8 @@
-﻿namespace qASIC
+﻿using System.Collections.Generic;
+
+namespace qASIC
 {
-    public interface ICommand
+    public interface ICommandLogic
     {
         /// <summary>Main name used for identifying which command to execute.</summary>
         string CommandName { get; }
@@ -13,6 +15,6 @@
 
         /// <summary>Method for executing command logic.</summary>
         /// <param name="context">Arguments for the command.</param>
-        object Run(CommandContext context);
+        object Run(qCommandContext context);
     }
 }

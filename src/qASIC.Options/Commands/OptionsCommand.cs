@@ -1,6 +1,6 @@
 ﻿namespace qASIC.Options.Commands
 {
-    public abstract class OptionsCommand : ICommand
+    public abstract class OptionsCommand : ICommandLogic
     {
         public OptionsCommand(OptionsManager manager)
         {
@@ -17,6 +17,6 @@
 
         public virtual string DetailedDescription { get; }
 
-        public abstract object Run(CommandContext context);
+        public abstract object Run(qCommandContext context);
     }
 }
