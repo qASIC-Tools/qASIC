@@ -155,18 +155,94 @@ namespace qASIC.Console.Commands
         /// <summary>Tries to find command.</summary>
         /// <param name="commandName">Name of the command, doesn't need to be lowercase.</param>
         /// <param name="command">Found command.</param>
-        /// <returns>Returns if it found a command.</returns>
-        public bool TryGetCommand(string commandName, out ICommandLogic command)
+        /// <returns>Returns true if it found a command.</returns>
+        public bool TryGetCommand(string commandName, out ICommandLogic logic) =>
+            TryGetCommand<ICommandLogic>(commandName, out logic);
+
+        /// <summary>Tries to find command.</summary>
+        /// <param name="commandName">Name of the command, doesn't need to be lowercase.</param>
+        /// <param name="command">Found command.</param>
+        /// <returns>Returns true if it found a command.</returns>
+        public bool TryGetCommand<T>(string commandName, out T command) where T : ICommandLogic
         {
             commandName = commandName?.ToLower();
 
             var targets = Commands
                 .Where(x => x.names.Contains(commandName))
-                .Select(x => x.command);
+                .Select(x => x.command)
+                .Where(x => x is T)
+                .Select(x => (T)x);
 
             command = targets.FirstOrDefault();
             return command != null;
         }
+
+        /// <summary>Tries to find command.</summary>
+        /// <param name="commandName">Name of the command, doesn't need to be lowercase.</param>
+        /// <returns>Returns the command.</returns>
+        public T GetCommand<T>(string commandName) where T : ICommandLogic
+        {
+            if (!TryGetCommand(commandName, out T command))
+                throw new Exception($"Cannot get command, name '{commandName}' has not been registered as a command name nor alias.");
+
+            return command;
+        }
+
+        /// <summary>Tries to find command.</summary>
+        /// <param name="command">Found command.</param>
+        /// <returns>Returns true if it was found a command..</returns>
+        public bool TryGetCommand<T>(out T command) where T : ICommandLogic
+        {
+            if (TryGetCommand(typeof(T), out var cmd))
+            {
+                command = (T)cmd;
+                return true;
+            }
+
+            command = default;
+            return false;
+        }
+
+        /// <summary>Tries to find command.</summary>
+        /// <param name="commandType">Type of the command.</param>
+        /// <param name="command">Found command.</param>
+        /// <returns>Returns true if it was found a command..</returns>
+        public bool TryGetCommand(Type commandType, out ICommandLogic command)
+        {
+            var res = Commands
+                .Where(x => x.GetType() == commandType)
+                .FirstOrDefault();
+
+            if (res == null)
+                res = Commands
+                    .Where(x => x.GetType().IsAssignableTo(commandType))
+                    .FirstOrDefault();
+
+            if (res == null)
+            {
+                command = null;
+                return false;
+            }
+
+            command = res.command;
+            return true;
+        }
+
+        /// <summary>Tries to find command.</summary>
+        /// <param name="commandType">Type of the command.</param>
+        /// <returns>Returns the found command..</returns>
+        public ICommandLogic GetCommand(Type commandType)
+        {
+            if (!TryGetCommand(commandType, out var command))
+                throw new Exception($"Command of type '{commandType}' has not been registered!");
+
+            return command;
+        }
+
+        /// <summary>Tries to find command.</summary>
+        /// <returns>Returns the found command.</returns>
+        public T GetCommand<T>() =>
+            (T)GetCommand(typeof(T));
 
         ICommandList ICommandList.AddCommand(ICommandLogic command) =>
             AddCommand(command);
