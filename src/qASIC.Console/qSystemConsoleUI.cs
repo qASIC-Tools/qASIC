@@ -64,6 +64,7 @@ namespace qASIC.Console
 
         /// <summary>Format string used for converting logs to text. See <see cref="qLog.ToString(string)"/>.</summary>
         public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE:App,Usr,Int,Clr%] %MESSAGE%";
+        public string UserLogFormat { get; set; } = "%MESSAGE%";
 
         /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
         public bool CanRead { get; set; } = true;
@@ -446,7 +447,11 @@ namespace qASIC.Console
 
             //Finish writing input
             if (inputVisible)
-                SysConsole.WriteLine(InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition));
+            {
+                SysConsole.Write(new string('\b', InputCursorPosition));
+                SysConsole.Write(new string(' ', InputCursorPosition));
+                SysConsole.Write(new string('\b', InputCursorPosition));
+            }
 
             //Clear
             InputString = "";
@@ -485,7 +490,7 @@ namespace qASIC.Console
         #endregion
 
         protected string CreateLogText(qLog log) =>
-            log.ToString(LogFormat);
+            log.ToString(log.logType == LogType.User ? UserLogFormat : LogFormat);
 
         protected string ColorText(string txt, qColor color) =>
             $"\u001b[38;2;{color.red};{color.green};{color.blue}m{txt}\u001b[0m";

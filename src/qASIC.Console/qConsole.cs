@@ -5,6 +5,7 @@ using qASIC.Console.Parsing;
 using System;
 using qASIC.CommandPrompts;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace qASIC.Console
 {
@@ -147,6 +148,8 @@ namespace qASIC.Console
                 return true;
             }
 
+            LogUserInput(context);
+
             //Normal
             if (CommandList == null)
                 throw new Exception("Cannot execute commands with no command list!");
@@ -169,6 +172,17 @@ namespace qASIC.Console
             CurrentCommandLogs = context.Logs;
 
             return true;
+        }
+
+        private void LogUserInput(qConsoleCommandContext context)
+        {
+            var message = context.inputString;
+            if (message == null)
+                message = CommandParser == null ?
+                    $"{context.commandName} {string.Join(" ", context.args.Select(x => x.arg))}" :
+                    CommandParser.ConvertToString(context.commandName, context.args);
+
+            Log(qLog.CreateNow(message, LogType.User, "user_input"));
         }
 
         private object PostprocessContext(qConsoleCommandContext context)
