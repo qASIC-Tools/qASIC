@@ -40,6 +40,7 @@ namespace qASIC.Console.Commands
                 new BuiltIn.Cmd_Version(),
                 new BuiltIn.Cmd_Unstick(),
                 new BuiltIn.Cmd_RemoteInfo(),
+                new BuiltIn.Cmd_Sleep(),
             };
 
         /// <summary>Adds all built-in commands to the list.</summary>
