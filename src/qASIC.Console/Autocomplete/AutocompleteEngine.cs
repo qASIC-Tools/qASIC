@@ -1,6 +1,8 @@
+using qASIC.CmdAutocomplete;
+
 namespace qASIC.Console.Autocomplete
 {
-    public abstract class AutocompleteEngine
+    public abstract class AutocompleteEngine : IAutocompleteEngine
     {
         public AutocompleteEngine(qConsole console)
         {

@@ -1,4 +1,5 @@
-﻿using qASIC.Console.Autocomplete;
+﻿using qASIC.CmdAutocomplete;
+using qASIC.Console.Autocomplete;
 
 namespace qASIC.Console.Commands
 {
@@ -12,7 +13,8 @@ namespace qASIC.Console.Commands
 
         public virtual string DetailedDescription => null;
 
-        public virtual ACData CommandAutocomplete { get; protected set; }
+        public virtual ACData CommandAutocomplete => new ACData()
+            .AddVariant().Finish();
 
         public object Run(qCommandContext context) =>
             Run(context as qConsoleCommandContext);

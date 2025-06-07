@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace qASIC.Console.Autocomplete
+namespace qASIC.CmdAutocomplete
 {
     public class ACVariant
     {

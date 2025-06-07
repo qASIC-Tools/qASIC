@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.Console.Autocomplete
+namespace qASIC.CmdAutocomplete
 {
     public class ACData : IEnumerable<ACVariant>
     {

@@ -1,4 +1,4 @@
-﻿using qASIC.Console.Autocomplete;
+﻿using qASIC.CmdAutocomplete;
 using System;
 
 namespace qASIC.Console.Commands.BuiltIn

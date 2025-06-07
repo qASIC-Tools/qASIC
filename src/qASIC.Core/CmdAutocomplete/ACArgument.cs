@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace qASIC.Console.Autocomplete
+namespace qASIC.CmdAutocomplete
 {
     /// <summary>Holds data for a command's argument</summary>
     public class ACArgument
@@ -15,10 +15,10 @@ namespace qASIC.Console.Autocomplete
         public Type type;
         public string name;
 
-        public virtual bool ValidateArg(AutocompleteEngine engine, string arg) =>
+        public virtual bool ValidateArg(IAutocompleteEngine engine, string arg) =>
             true;
 
-        public virtual IEnumerable<string> GetAvaliableValues(AutocompleteEngine engine) =>
+        public virtual IEnumerable<string> GetAvaliableValues(IAutocompleteEngine engine) =>
             Array.Empty<string>();
     }
 
@@ -31,18 +31,10 @@ namespace qASIC.Console.Autocomplete
 
         public List<string> options;
 
-        public override bool ValidateArg(AutocompleteEngine engine, string arg) =>
+        public override bool ValidateArg(IAutocompleteEngine engine, string arg) =>
             options.Contains(arg);
 
-        public override IEnumerable<string> GetAvaliableValues(AutocompleteEngine engine) =>
+        public override IEnumerable<string> GetAvaliableValues(IAutocompleteEngine engine) =>
             options;
-    }
-
-    public class ACCommandArgument : ACArgument
-    {
-        public ACCommandArgument(string name) : base(typeof(string), name) { }
-
-        public override IEnumerable<string> GetAvaliableValues(AutocompleteEngine engine) => engine.Console.CommandList
-            .GetSortedCommandNames();
     }
 }

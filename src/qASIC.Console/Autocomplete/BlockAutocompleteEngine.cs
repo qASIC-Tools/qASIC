@@ -1,5 +1,6 @@
 using System.Data;
 using System.Linq;
+using qASIC.CmdAutocomplete;
 
 namespace qASIC.Console.Autocomplete
 {

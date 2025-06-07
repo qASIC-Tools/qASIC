@@ -1,3 +1,4 @@
+using qASIC.CmdAutocomplete;
 using qASIC.CommandPrompts;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,11 @@ namespace qASIC.Options.Commands
         public override string CommandName => "changeoption";
         public override string[] Aliases => new string[] { "setoption", "changesetting", "setsetting" };
         public override string Description => "Changed the value of an option.";
+
+        public override ACData CommandAutocomplete => new ACData()
+            .AddVariant().Finish()
+            .AddVariant().AddType<string>("option name").Finish()
+            .AddVariant().AddType<string>("option name").AddType<object>("value").Finish();
 
         KeyPrompt navigationPrompt = new KeyPrompt();
         TextPrompt valuePrompt = new TextPrompt();
@@ -72,8 +78,8 @@ namespace qASIC.Options.Commands
 
             context.CheckArgumentCount(0, 2);
 
-            //No args
-            if (context.Length == 1)
+            //changeoption
+            if (context.Length == 0)
             {
                 listLog = null;
                 items = Manager.OptionsList.Select(x => x.Value)
@@ -82,19 +88,19 @@ namespace qASIC.Options.Commands
                 return navigationPrompt;
             }
 
-            //Option name
-            if (context.Length == 2)
+            //changeoption [option name]
+            if (context.Length == 1)
             {
-                targetOption = GetOption(context[1].arg);
+                targetOption = GetOption(context[0].arg);
                 return AskForValue(context);
             }
 
-            //All args
-            targetOption = GetOption(context[1].arg);
+            //changeoption [option name] [value]
+            targetOption = GetOption(context[0].arg);
             var settType = targetOption.value?.GetType();
             var val = settType == null ?
-                context[2].values.First() :
-                context[2].GetValue(settType);
+                context[1].values.FirstOrDefault() ?? context[1].GetValue(context[1].Parser.Parsers.Select(x => x.ValueType).FirstOrDefault(x => context[1].CanGetValue(x))):
+                context[1].GetValue(settType);
 
             Manager.SetOption(targetOption.name, val);
             return null;

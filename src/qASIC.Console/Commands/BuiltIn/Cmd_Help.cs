@@ -1,4 +1,5 @@
-﻿using qASIC.Console.Autocomplete;
+﻿using qASIC.CmdAutocomplete;
+using qASIC.Console.Autocomplete;
 using qASIC.qARK;
 using System;
 using System.ComponentModel.DataAnnotations;

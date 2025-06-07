@@ -1,4 +1,4 @@
-﻿using qASIC.Console.Autocomplete;
+﻿using qASIC.CmdAutocomplete;
 using qASIC.Text;
 using System.Collections.Generic;
 using System.Linq;
