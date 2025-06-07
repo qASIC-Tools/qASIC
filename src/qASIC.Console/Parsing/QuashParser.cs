@@ -128,7 +128,7 @@ namespace qASIC.Console.Parsing
                 .ToArray();
 
             //If it's between command name and first argument
-            if (characterIndex < commandName.Length)
+            if (characterIndex < commandName.Length + 1)
                 return info.WithScope(CmdCharacterInfo.Scope.CommandName, characterIndex);
 
             //Looking for the target argument
