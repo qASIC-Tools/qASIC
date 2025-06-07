@@ -1,4 +1,5 @@
-﻿using System;
+﻿using qASIC.Console.Autocomplete;
+using System;
 using System.Text;
 
 namespace qASIC.Console.Commands.BuiltIn
@@ -8,6 +9,9 @@ namespace qASIC.Console.Commands.BuiltIn
         protected override string DefaultCommandName => "version";
         protected override string DefaultDescription => "Displays current project version.";
         protected override string[] DefaultAliases => new string[] { "info", "about" };
+
+        public override ACData CommandAutocomplete => new ACData()
+            .AddVariant().Finish();
 
         public event Func<RemoteAppInfo, string> GetInfoString = (a) =>
         {

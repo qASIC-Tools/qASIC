@@ -1,6 +1,7 @@
 ﻿using qASIC.Console.Autocomplete;
 using qASIC.qARK;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 
@@ -11,9 +12,9 @@ namespace qASIC.Console.Commands.BuiltIn
         protected override string DefaultCommandName => "help";
         protected override string DefaultDescription => "Displays a list of all avaliable commands.";
 
-        public override ACData CommandAutocomplete { get; protected set; } = new ACData()
+        public override ACData CommandAutocomplete => new ACData()
             .AddVariant().Finish()
-            .AddVariant().AddType<int>("pageIndex").Finish()
+            .AddVariantIf(MultiplePages).AddType<int>("pageIndex").Finish()
             .AddVariant().AddArgument(new ACCommandArgument("command")).Finish();
 
 
@@ -49,21 +50,17 @@ namespace qASIC.Console.Commands.BuiltIn
                 .Where(x => CanShowCommand?.Invoke(context, x) ?? true)
                 .ToList();
 
+            //help <command>
             if (targetCommand != null)
             {
                 if (!commandList.TryGetCommand(targetCommand, out ICommandLogic command) || command == null)
                     throw new qCommandException($"Command '{targetCommand}' does not exist!");
 
-                if (command.DetailedDescription == null && command.Description == null)
-                {
-                    context.Logs.Log($"No detailed help avaliable for command '{targetCommand}'");
-                    return null;
-                }
-
-                context.Logs.Log($"Help for command '{command.CommandName}': {command.DetailedDescription ?? command.Description}", "info");
+                context.Logs.Log(CreateDetailedInfoForCommand(context, command), "info");
                 return null;
             }
 
+            //help<index>
             var startIndex = PageCommandLimit * index;
 
             if (startIndex >= commands.Count)
@@ -79,6 +76,45 @@ namespace qASIC.Console.Commands.BuiltIn
             context.Logs.Log(stringBuilder.ToString(), "info");
 
             return null;
+        }
+
+        protected virtual string CreateDetailedInfoForCommand(qConsoleCommandContext context, ICommandLogic cmd)
+        {
+            var txt = new StringBuilder($"Help for command '{cmd.CommandName}':")
+                .Append($"\n\nCOMMAND NAME\n  {cmd.CommandName}");
+
+            if (cmd.Aliases.Length > 0)
+                txt.Append($"\n\nALIASES\n  {string.Join(", ", cmd.Aliases)}");
+
+            var description = cmd.DetailedDescription;
+
+            if (string.IsNullOrWhiteSpace(description))
+                description = cmd.Description;
+
+            if (!string.IsNullOrWhiteSpace(description))
+                txt.Append($"\n\nDESCRIPTION\n  {description}");
+
+            if (cmd is ISupportsAutocomplete ac)
+            {
+                var acData = ac.CommandAutocomplete;
+                if (acData != null && acData.Variants.Count > 0)
+                {
+                    txt.Append("\n\nUSAGE");
+                    foreach (var item in acData.Variants)
+                    {
+                        var args = item.Arguments
+                            .Select(x => new qCommandArgument($"[{x.name}]"))
+                            .ToArray();
+
+                        txt.Append("\n  ");
+                        txt.Append(context.console.CommandParser.ConvertToString(cmd.CommandName, args));
+                    }
+                }
+            }
+
+            txt.Append('\n');
+
+            return txt.ToString();
         }
 
         public override void LoadConfig(qARKHolder data)

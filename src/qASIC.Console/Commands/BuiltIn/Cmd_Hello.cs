@@ -1,4 +1,5 @@
-﻿using qASIC.qARK;
+﻿using qASIC.Console.Autocomplete;
+using qASIC.qARK;
 
 namespace qASIC.Console.Commands.BuiltIn
 {
@@ -8,6 +9,9 @@ namespace qASIC.Console.Commands.BuiltIn
         protected override string DefaultDescription => "Hello World!";
         protected override string DefaultDetailedDescription => "Logs a test message to the console.";
         protected override string[] DefaultAliases => new string[] { "hello" };
+
+        public override ACData CommandAutocomplete => new ACData()
+            .AddVariant().Finish();
 
         public string HelloMessage { get; set; } = "Hello World :)";
         public string Tag { get; set; } = null;

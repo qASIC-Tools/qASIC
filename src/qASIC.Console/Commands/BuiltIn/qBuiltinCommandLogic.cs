@@ -26,7 +26,7 @@ namespace qASIC.Console.Commands.BuiltIn
         protected virtual string DefaultDetailedDescription { get; }
         public string DetailedDescription { get; set; }
 
-        public virtual ACData CommandAutocomplete { get; protected set; }
+        public virtual ACData CommandAutocomplete { get; }
 
         public object Run(qCommandContext context) =>
             Run(context as qConsoleCommandContext);

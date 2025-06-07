@@ -1,8 +1,5 @@
-﻿using Microsoft.VisualBasic;
-using qASIC.Parsing;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 
 namespace qASIC.Console.Autocomplete
@@ -21,6 +18,15 @@ namespace qASIC.Console.Autocomplete
         {
             var variant = new ACVariant(this);
             Variants.Add(variant);
+            return variant;
+        }
+
+        public ACVariant AddVariantIf(bool condition)
+        {
+            var variant = new ACVariant(this);
+            if (condition)
+                Variants.Add(variant);
+
             return variant;
         }
 

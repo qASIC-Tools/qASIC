@@ -9,6 +9,9 @@ namespace qASIC.Console.Commands.BuiltIn
         protected override string DefaultDescription => "Closes the application.";
         protected override string[] DefaultAliases => new string[] { "quit" };
 
+        public override ACData CommandAutocomplete => new ACData()
+            .AddVariant().Finish();
+
         public event Action ExitMethod;
 
         public override object Run(qConsoleCommandContext context)

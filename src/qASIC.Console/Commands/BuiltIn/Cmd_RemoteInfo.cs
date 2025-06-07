@@ -1,4 +1,5 @@
-﻿using qASIC.Text;
+﻿using qASIC.Console.Autocomplete;
+using qASIC.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -9,6 +10,9 @@ namespace qASIC.Console.Commands.BuiltIn
     {
         protected override string DefaultCommandName => "remote";
         protected override string DefaultDescription => "Shows information about the remote inspector server.";
+
+        public override ACData CommandAutocomplete => new ACData()
+            .AddVariant().Finish();
 
         public qInstance Instance { get; set; }
 

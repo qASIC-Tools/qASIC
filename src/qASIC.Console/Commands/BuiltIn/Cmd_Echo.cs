@@ -8,7 +8,7 @@ namespace qASIC.Console.Commands.BuiltIn
         protected override string DefaultDescription => "Echos a message.";
         protected override string[] DefaultAliases => new string[] { "print" };
 
-        public override ACData CommandAutocomplete { get; protected set; } = new ACData()
+        public override ACData CommandAutocomplete => new ACData()
             .AddVariant().AddType<string>("message").Finish();
 
         public override object Run(qConsoleCommandContext context)
