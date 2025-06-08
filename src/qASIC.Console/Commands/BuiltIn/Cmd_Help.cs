@@ -2,7 +2,6 @@
 using qASIC.Console.Autocomplete;
 using qASIC.qARK;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 
@@ -11,12 +10,12 @@ namespace qASIC.Console.Commands.BuiltIn
     public class Cmd_Help : qBuiltinCommandLogic
     {
         protected override string DefaultCommandName => "help";
-        protected override string DefaultDescription => "Displays a list of all avaliable commands.";
+        protected override string DefaultDescription => "Displays a list of all available commands.";
 
         public override ACData CommandAutocomplete => new ACData()
             .AddVariant().Finish()
             .AddVariantIf(MultiplePages).AddType<int>("pageIndex").Finish()
-            .AddVariant().AddArgument(new ACCommandArgument("command")).Finish();
+            .AddVariantIf(AllowDetailedDescription).AddArgument(new ACCommandArgument("command")).Finish();
 
 
         public bool MultiplePages { get; set; } = true;
@@ -123,15 +122,15 @@ namespace qASIC.Console.Commands.BuiltIn
             base.LoadConfig(data);
 
             MultiplePages = data.GetValue("multiplePages", true);
-            AllowDetailedDescription = data.GetValue("allowDetailedDescription", true);
             PageCommandLimit = data.GetValue("pageCommandLimit", 16);
+            AllowDetailedDescription = data.GetValue("allowDetailedDescription", true);
         }
 
         public override qARKDocument CreateConfig() =>
             base.CreateConfig()
                 .AddSpace()
                 .AddEntry("multiplePages", MultiplePages)
-                .AddEntry("allowDetailedDescription", AllowDetailedDescription)
-                .AddEntry("pageCommandLimit", PageCommandLimit);
+                .AddEntry("pageCommandLimit", PageCommandLimit)
+                .AddEntry("allowDetailedDescription", AllowDetailedDescription);
     }
 }

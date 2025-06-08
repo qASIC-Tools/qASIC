@@ -29,7 +29,7 @@ namespace qASIC.Console
         public bool addBuiltInCommands;
         public bool findCommands;
         public bool findAttributeCommands;
-        public List<Type> commands { get; set; }
+        public List<Type> commands = new List<Type>();
         #endregion
 
         public qARKDocument CreateConfig() =>
@@ -115,7 +115,11 @@ namespace qASIC.Console
             console.LogQDebug = logQDebug;
             console.UseLogModifierAttributes = useLogModifiers;
 
+            console.IncludeStackTraceInCommandExceptions = traceInCommandExceptions;
+            console.IncludeStackTraceInUnknownCommandExceptions = traceInUnknownExceptions;
+
             console.Logs.RawFilePath = saveLogs ? logFilePath : string.Empty;
+            console.Logs.FileLogFormat = logFileFormat;
 
             //COMMANDS
             console.CommandList.Clear();

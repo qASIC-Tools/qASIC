@@ -140,6 +140,7 @@ namespace qASIC.Console
                 context.prompt = prompt;
                 context.commandName = CurrentCommand.CommandName;
                 context.Logs = CurrentCommandLogs;
+                context.parser = CommandParser.ValueParser;
 
                 if (!prompt.CanExecute(context))
                     return false;

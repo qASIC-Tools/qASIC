@@ -307,12 +307,6 @@ namespace qASIC.Options
             public bool HasDefaultValue { get; set; }
             public object DefaultValue { get; set; }
 
-            public void SetValue(qRegisteredObjects registeredObjects, ChangeOptionArgs args)
-            {
-                foreach (var item in registeredObjects.Where(x => x.GetType() == DeclaringType))
-                    SetValue(item, args);
-            }
-
             public abstract void SetValue(object obj, ChangeOptionArgs args);
 
             public virtual bool CanGetValue => true;

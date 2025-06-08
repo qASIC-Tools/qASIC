@@ -1,9 +1,8 @@
 using qASIC.CmdAutocomplete;
 using qASIC.CommandPrompts;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using qASIC.Text;
 
 namespace qASIC.Options.Commands
 {
@@ -13,120 +12,109 @@ namespace qASIC.Options.Commands
 
         public override string CommandName => "changeoption";
         public override string[] Aliases => new string[] { "setoption", "changesetting", "setsetting" };
-        public override string Description => "Changed the value of an option.";
+        public override string Description => "Changes the value of an option.";
 
         public override ACData CommandAutocomplete => new ACData()
             .AddVariant().Finish()
             .AddVariant().AddType<string>("option name").Finish()
             .AddVariant().AddType<string>("option name").AddType<object>("value").Finish();
 
-        KeyPrompt navigationPrompt = new KeyPrompt();
-        TextPrompt valuePrompt = new TextPrompt();
-
         qLog listLog;
-        int index = 0;
         Options.OptionsList.ListItem targetOption;
-
-        List<Options.OptionsList.ListItem> items;
+        TextMenu<Options.OptionsList.ListItem> menu;
 
         public override object Run(qCommandContext context)
         {
-            if (context.prompt == navigationPrompt)
+            //Prompts
+            if (context.prompt is KeyPrompt key)
             {
-                switch (navigationPrompt.Key)
-                {
-                    case KeyPrompt.NavigationKey.Cancel:
-                        UpdateLog(context, true, true);
-                        return null;
-                    case KeyPrompt.NavigationKey.Up:
-                        index = Math.Max(index - 1, 0);
-                        break;
-                    case KeyPrompt.NavigationKey.Down:
-                        index = Math.Min(index + 1, items.Count - 1);
-                        break;
-                    case KeyPrompt.NavigationKey.Confirm:
-                        UpdateLog(context, true);
-                        targetOption = items[index];
-                        return AskForValue(context);
-                }
-
-                UpdateLog(context);
-                return navigationPrompt;
+                var obj = key.UseTextMenu(menu);
+                UpdateLog();
+                return obj;
             }
 
-            if (context.prompt == valuePrompt)
+            if (context.prompt is TextPrompt text)
             {
                 //Set
-
                 var value = targetOption.value;
-                if (!(value is string))
-                {
-                    try
-                    {
-                        value = Convert.ChangeType(valuePrompt.Text, targetOption.value?.GetType());
-                    }
-                    catch
-                    {
-                        throw new qCommandParseException(targetOption.value?.GetType(), valuePrompt.Text);
-                    }
-                }
+                if (!context.parser.TryParse(targetOption.value?.GetType(), text.Text, out value))
+                    throw new qCommandParseException(targetOption.value?.GetType(), text.Text);
 
                 Manager.SetOption(targetOption.name, value);
-
                 return null;
             }
 
+            //Standard
             context.CheckArgumentCount(0, 2);
 
             //changeoption
             if (context.Length == 0)
             {
                 listLog = null;
-                items = Manager.OptionsList.Select(x => x.Value)
-                    .ToList();
-                UpdateLog(context);
-                return navigationPrompt;
+                CreateMenu(context.Logs);
+                UpdateLog();
+                return new KeyPrompt();
             }
 
             //changeoption [option name]
             if (context.Length == 1)
             {
                 targetOption = GetOption(context[0].arg);
-                return AskForValue(context);
+                return AskForValue(context.Logs);
             }
 
             //changeoption [option name] [value]
             targetOption = GetOption(context[0].arg);
-            var settType = targetOption.value?.GetType();
-            var val = settType == null ?
-                context[1].values.FirstOrDefault() ?? context[1].GetValue(context[1].Parser.Parsers.Select(x => x.ValueType).FirstOrDefault(x => context[1].CanGetValue(x))):
-                context[1].GetValue(settType);
+            var val = GetValueFromArg(context[1], targetOption.value?.GetType());
 
             Manager.SetOption(targetOption.name, val);
             return null;
-        }
 
-        object AskForValue(qCommandContext context)
-        {
-            context.Logs.Log("Enter value...");
-            return valuePrompt;
-        }
 
-        void UpdateLog(qCommandContext context, bool final = false, bool cancelled = false)
-        {
-            if (listLog == null)
-                listLog = qLog.CreateNow("");
-
-            StringBuilder txt = new StringBuilder(final ? (cancelled ? "Cancelled" : "Setting Selected") : "Select Setting");
-            for (int i = 0; i < items.Count; i++)
+            void UpdateLog()
             {
-                txt.Append("\n");
-                txt.Append(i == index ? (final ? "]" : ">") : " ");
-                txt.Append($" {items[i].name}: {items[i].value} (default value:{items[i].defaultValue})");
+                listLog ??= qLog.CreateNow("");
+                listLog.message = menu.GenerateMenu();
+                context.Logs.Log(listLog);
             }
+        }
 
-            listLog.message = txt.ToString();
-            context.Logs.Log(listLog);
+        void CreateMenu(qLogManager logs)
+        {
+            menu = new TextMenu<Options.OptionsList.ListItem>("Select Setting", Manager.OptionsList
+                .Select(x => new TextMenuItem<Options.OptionsList.ListItem>($"{x.Value.name}: {x.Value.value} (default: {x.Value.defaultValue})", x.Value, _ =>
+                {
+                    targetOption = x.Value;
+                    menu.Header = "Setting Selected";
+                    return AskForValue(logs);
+                })));
+
+            menu.CanCancel += () =>
+            {
+                menu.Header = "Cancelled";
+                return true;
+            };
+        }
+
+        object GetValueFromArg(qCommandArgument arg, Type type)
+        {
+            if (type != null)
+                return arg.GetValue(type);
+
+            if (arg.values.Length > 0)
+                return arg.values[0];
+
+            type = arg.Parser.Parsers
+                .Select(x => x.ValueType)
+                .FirstOrDefault(arg.CanGetValue);
+
+            return arg.GetValue(type);
+        }
+
+        object AskForValue(qLogManager logs)
+        {
+            logs.Log("Enter value...");
+            return new TextPrompt();
         }
 
         Options.OptionsList.ListItem GetOption(string settingName)

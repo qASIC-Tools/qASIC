@@ -36,6 +36,9 @@ namespace qASIC.CmdAutocomplete
             return this;
         }
 
+        public ACVariant AddOptions(string name, params string[] options) =>
+            AddOptions<string>(name, options);
+
         public ACVariant AddOptions<T>(string name, params string[] options) =>
             AddOptions(typeof(T), name, options);
 

@@ -43,7 +43,7 @@ namespace qASIC.Options.Serialization
                     continue;
                 }
 
-                doc.SetValue(item.Key, item.Value.value.ToString());
+                doc.SetValue(item.Key, item.Value.value?.ToString() ?? string.Empty);
             }
 
             var txt = Serializer.Serialize(doc);
@@ -67,9 +67,9 @@ namespace qASIC.Options.Serialization
 
             foreach (var item in list)
             {
-                if (item.Value == null) continue;
+                if (item.Value?.value == null) continue;
                 var type = item.Value.value.GetType();
-                
+
                 if (type.IsArray)
                 {
                     var itemType = type.GetElementType();

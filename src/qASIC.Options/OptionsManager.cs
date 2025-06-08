@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using qASIC.Options.Serialization;
+using qASIC.Parsing;
 
 namespace qASIC.Options
 {
@@ -168,6 +169,11 @@ namespace qASIC.Options
             try
             {
                 var result = Serializer.Load(OptionsList);
+
+                foreach (var item in OptionsList)
+                    if (!result.ContainsKey(item.Key))
+                        result.Set(item.Key, item.Value.defaultValue);
+
                 SetOptions(result, log);
             }
             catch (Exception e)
