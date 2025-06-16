@@ -195,13 +195,11 @@ namespace qASIC.Console
                 closeLogs = false;
                 Task.Run(async () =>
                 {
-                    await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs, false);
-                    if (context.CleanupLogger)
-                    {
-                        Logs.UnregisterManager(context.Logs);
-                        context.Logs?.Close();
-                    }
+                    ReturnedValue = await ExecuteAsync(CurrentCommand.CommandName, task, context.Logs, false);
+                    PostprocessContext(context);
                 });
+
+                return null;
             }
 
             if (ReturnedValue is CommandPrompt)

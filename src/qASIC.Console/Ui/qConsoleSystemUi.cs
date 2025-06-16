@@ -6,16 +6,14 @@ using qASIC.CommandPrompts;
 using qASIC.Console.Autocomplete;
 using SysConsole = System.Console;
 
-namespace qASIC.Console
+namespace qASIC.Console.Ui
 {
     /// <summary>Class responsible for displaying and reading information from a Console Application window for a <see cref="qConsole"/> instance.</summary>
-    public class qSystemConsoleUI
+    public class qConsoleSystemUi
     {
-        public qSystemConsoleUI() : this(new qConsole("MAIN")) { }
+        public qConsoleSystemUi() : this(new qConsole("MAIN")) { }
 
-        public qSystemConsoleUI(qInstance instance) : this(new qConsole("MAIN")) { }
-
-        public qSystemConsoleUI(qConsole console)
+        public qConsoleSystemUi(qConsole console)
         {
             Console = console;
             inputs = new List<string>(new string[1]);

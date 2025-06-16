@@ -7,6 +7,7 @@ using System.Net;
 using qASIC.Console.Commands;
 using qASIC.CommandPrompts;
 using qASIC.Text;
+using qASIC.Console.Ui;
 
 namespace qASICRemote
 {
@@ -50,7 +51,7 @@ namespace qASICRemote
             GConsole = new qConsole("MAIN", commands);
             GConsole.Targets.Register(this);
 
-            Interface = new qSystemConsoleUI(GConsole);
+            Interface = new qConsoleSystemUi(GConsole);
 
             AppDomain.CurrentDomain.ProcessExit += OnApplicationClose;
 
@@ -91,7 +92,7 @@ namespace qASICRemote
 
         public qInstance QasicInstance { get; private set; } = null;
         public qConsole GConsole { get; private set; } = null;
-        public qSystemConsoleUI Interface { get; private set; } = null;
+        public qConsoleSystemUi Interface { get; private set; } = null;
         public DiscoveryClient DiscoveryClient { get; private set; } = null;
 
         public qConsoleInstanceManager consoleManager;

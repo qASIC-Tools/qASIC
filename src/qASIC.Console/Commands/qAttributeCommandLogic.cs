@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using qASIC.Console.Autocomplete;
 using qASIC.CmdAutocomplete;
 
 namespace qASIC.Console.Commands
@@ -208,6 +207,8 @@ namespace qASIC.Console.Commands
                     targets = targets
                         .Concat(regTargets);
                 }
+
+                targets = targets.ToArray();
 
                 var singleTarget = targets.Count() == 1;
 
