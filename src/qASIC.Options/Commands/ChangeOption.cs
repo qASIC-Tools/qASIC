@@ -50,7 +50,7 @@ namespace qASIC.Options.Commands
                 data.listLog = null;
                 CreateMenu(context.Logs, data);
                 UpdateLog(data);
-                return new KeyPrompt();
+                return new KeyPrompt<Data>(data);
             }
 
             //changeoption [option name]
@@ -58,7 +58,7 @@ namespace qASIC.Options.Commands
             {
                 var data = new Data();
                 data.targetOption = GetOption(context[0].arg);
-                return AskForValue(context.Logs);
+                return AskForValue(context.Logs, data);
             }
 
             //changeoption [option name] [value]
@@ -87,7 +87,7 @@ namespace qASIC.Options.Commands
                 {
                     data.targetOption = x.Value;
                     data.menu.Header = "Setting Selected";
-                    return AskForValue(logs);
+                    return AskForValue(logs, data);
                 })));
 
             data.menu.CanCancel += () =>
@@ -112,10 +112,10 @@ namespace qASIC.Options.Commands
             return arg.GetValue(type);
         }
 
-        object AskForValue(qLogManager logs)
+        object AskForValue(qLogManager logs, Data data)
         {
             logs.Log("Enter value...");
-            return new TextPrompt();
+            return new TextPrompt<Data>(data);
         }
 
         Options.OptionsList.ListItem GetOption(string settingName)

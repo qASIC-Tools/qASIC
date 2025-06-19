@@ -37,7 +37,7 @@ namespace qASIC
         public virtual void Log(qLog log)
         {
             if (Closed)
-                throw new Exception("Can't log, log manager closed!");
+                return;
 
             InvokeOnLog(log);
         }

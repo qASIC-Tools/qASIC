@@ -84,8 +84,6 @@ namespace qASIC.Console
 
         public ArgumentsParser CommandParser { get; set; }
 
-        public qLogManager CurrentCommandLogs { get; private set; } = null;
-
         public qConsoleTheme Theme { get; set; } = qConsoleTheme.Default;
 
         /// <summary>Should the console log messages from <see cref="qDebug"/>.</summary>
@@ -132,7 +130,6 @@ namespace qASIC.Console
             //Prompt
             if (context.prompt != null)
             {
-                context.Logs = CurrentCommandLogs;
                 context.parser = CommandParser.ValueParser;
 
                 if (!context.prompt.CanExecute(context))
@@ -162,7 +159,6 @@ namespace qASIC.Console
                 return false;
             }
 
-            CurrentCommandLogs = context.Logs;
             context.command = command;
 
             return true;
@@ -191,8 +187,6 @@ namespace qASIC.Console
                     var val = await ExecuteAsync(cmdName, task, context.Logs, false);
                     PostprocessContext(context, val);
                 });
-
-                return null;
             }
 
             if (returnedValue is CommandPrompt prompt)
@@ -203,11 +197,11 @@ namespace qASIC.Console
 
             if (closeLogs && context.CleanupLogger)
             {
-                Logs.UnregisterManager(CurrentCommandLogs);
-                CurrentCommandLogs.Close();
+                Logs.UnregisterManager(context.Logs);
+                context.Logs.Close();
             }
 
-            CurrentCommandLogs = null;
+            context.Logs = null;
             return returnedValue;
         }
 
