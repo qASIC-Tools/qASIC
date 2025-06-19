@@ -23,6 +23,7 @@ namespace qASIC
         public qCommandArgument[] args;
         public CommandPrompt prompt;
         public ModularParser parser;
+        public ICommandLogic command;
 
         public event Action<qLog> OnLog;
 

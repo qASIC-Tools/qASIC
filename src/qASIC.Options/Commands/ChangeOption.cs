@@ -19,28 +19,24 @@ namespace qASIC.Options.Commands
             .AddVariant().AddType<string>("option name").Finish()
             .AddVariant().AddType<string>("option name").AddType<object>("value").Finish();
 
-        qLog listLog;
-        Options.OptionsList.ListItem targetOption;
-        TextMenu<Options.OptionsList.ListItem> menu;
-
         public override object Run(qCommandContext context)
         {
             //Prompts
-            if (context.prompt is KeyPrompt key)
+            if (context.prompt is KeyPrompt<Data> key)
             {
-                var obj = key.UseTextMenu(menu);
-                UpdateLog();
+                var obj = key.UseTextMenu(key.Data.menu);
+                UpdateLog(key.Data);
                 return obj;
             }
 
-            if (context.prompt is TextPrompt text)
+            if (context.prompt is TextPrompt<Data> text)
             {
                 //Set
-                var value = targetOption.value;
-                if (!context.parser.TryParse(targetOption.value?.GetType(), text.Text, out value))
-                    throw new qCommandParseException(targetOption.value?.GetType(), text.Text);
+                var value = text.Data.targetOption.value;
+                if (!context.parser.TryParse(text.Data.targetOption.value?.GetType(), text.Text, out value))
+                    throw new qCommandParseException(text.Data.targetOption.value?.GetType(), text.Text);
 
-                Manager.SetOption(targetOption.name, value);
+                Manager.SetOption(text.Data.targetOption.name, value);
                 return null;
             }
 
@@ -50,48 +46,53 @@ namespace qASIC.Options.Commands
             //changeoption
             if (context.Length == 0)
             {
-                listLog = null;
-                CreateMenu(context.Logs);
-                UpdateLog();
+                var data = new Data();
+                data.listLog = null;
+                CreateMenu(context.Logs, data);
+                UpdateLog(data);
                 return new KeyPrompt();
             }
 
             //changeoption [option name]
             if (context.Length == 1)
             {
-                targetOption = GetOption(context[0].arg);
+                var data = new Data();
+                data.targetOption = GetOption(context[0].arg);
                 return AskForValue(context.Logs);
             }
 
             //changeoption [option name] [value]
-            targetOption = GetOption(context[0].arg);
-            var val = GetValueFromArg(context[1], targetOption.value?.GetType());
-
-            Manager.SetOption(targetOption.name, val);
-            return null;
-
-
-            void UpdateLog()
             {
-                listLog ??= qLog.CreateNow("");
-                listLog.message = menu.GenerateMenu();
-                context.Logs.Log(listLog);
+                var data = new Data();
+                data.targetOption = GetOption(context[0].arg);
+                var val = GetValueFromArg(context[1], data.targetOption.value?.GetType());
+
+                Manager.SetOption(data.targetOption.name, val);
+                return null;
+            }
+
+
+            void UpdateLog(Data data)
+            {
+                data.listLog ??= qLog.CreateNow("");
+                data.listLog.message = data.menu.GenerateMenu();
+                context.Logs.Log(data.listLog);
             }
         }
 
-        void CreateMenu(qLogManager logs)
+        void CreateMenu(qLogManager logs, Data data)
         {
-            menu = new TextMenu<Options.OptionsList.ListItem>("Select Setting", Manager.OptionsList
+            data.menu = new TextMenu<Options.OptionsList.ListItem>("Select Setting", Manager.OptionsList
                 .Select(x => new TextMenuItem<Options.OptionsList.ListItem>($"{x.Value.name}: {x.Value.value} (default: {x.Value.defaultValue})", x.Value, _ =>
                 {
-                    targetOption = x.Value;
-                    menu.Header = "Setting Selected";
+                    data.targetOption = x.Value;
+                    data.menu.Header = "Setting Selected";
                     return AskForValue(logs);
                 })));
 
-            menu.CanCancel += () =>
+            data.menu.CanCancel += () =>
             {
-                menu.Header = "Cancelled";
+                data.menu.Header = "Cancelled";
                 return true;
             };
         }
@@ -123,6 +124,13 @@ namespace qASIC.Options.Commands
                 throw new qCommandException($"Setting '{settingName}' does not exist!");
 
             return Manager.OptionsList[settingName];
+        }
+
+        private class Data
+        {
+            public qLog listLog;
+            public Options.OptionsList.ListItem targetOption;
+            public TextMenu<Options.OptionsList.ListItem> menu;
         }
     }
 }

@@ -5,6 +5,8 @@ namespace qASIC.CommandPrompts
 {
     public class KeyPrompt : CommandPrompt
     {
+        public KeyPrompt(object data = null) : base(data) { }
+
         public enum NavigationKey
         {
             None,
@@ -79,13 +81,24 @@ namespace qASIC.CommandPrompts
                 case NavigationKey.Confirm:
                     return menu.Confirm();
                 case NavigationKey.Cancel:
-                    return menu.Cancel() ? null : new KeyPrompt();
+                    return menu.Cancel() ? null : this;
             }
 
             if (menu.TryInvokeItemAction(Character, out var itemActionResult))
                 return itemActionResult;
 
-            return new KeyPrompt();
+            return this;
+        }
+    }
+
+    public class KeyPrompt<T> : KeyPrompt
+    {
+        public KeyPrompt(T data) : base(data) { }
+
+        public T Data
+        {
+            get => (T)DataObject;
+            set => DataObject = value;
         }
     }
 }

@@ -76,6 +76,8 @@ namespace qASIC.Console.Ui
         /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
         public event Func<string, string> ProcessCommandString;
 
+        public object ReturnedValue { get; protected set; }
+
         bool previousLogSticky;
         qColor previousLogColor;
         string previousLogMessage = string.Empty;
@@ -199,7 +201,7 @@ namespace qASIC.Console.Ui
                     continue;
 
                 cmd = ProcessCommandString?.Invoke(cmd) ?? cmd;
-                await Console.ExecuteAsync(cmd);
+                ReturnedValue = await Console.ExecuteAsync(cmd, ReturnedValue);
             }
             while (CanRead && !readOnce);
         }
@@ -224,7 +226,7 @@ namespace qASIC.Console.Ui
 
         bool HandleKey(ConsoleKeyInfo key)
         {
-            if (Console.ReturnedValue is KeyPrompt prompt)
+            if (ReturnedValue is KeyPrompt prompt)
             {
                 if (key.Modifiers != 0)
                     return false;
@@ -304,7 +306,7 @@ namespace qASIC.Console.Ui
             if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
                 return true;
 
-            if (!(Console.ReturnedValue is TextPrompt))
+            if (!(ReturnedValue is TextPrompt))
             {
                 //Swapping current input to previous
                 if (key.Key == ConsoleKey.UpArrow && key.Modifiers == 0)
@@ -441,7 +443,7 @@ namespace qASIC.Console.Ui
         string FinalizeInput()
         {
             var cmd = InputString;
-            var inputVisible = !(Console.ReturnedValue is CommandPrompt);
+            var inputVisible = !(ReturnedValue is CommandPrompt);
 
             //Finish writing input
             if (inputVisible)

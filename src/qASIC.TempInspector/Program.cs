@@ -286,39 +286,31 @@ namespace qASICRemote
 
             Inspector inspector;
 
-            qLog log;
-            int index;
-
-            KeyPrompt navigationPrompt = new KeyPrompt();
 
             public override object Run(qConsoleCommandContext context)
             {
-                if (log == null || context.console.ReturnedValue == null)
-                {
-                    log = qLog.CreateNow("");
-                    index = 0;
-                }
+                var data = context.prompt?.DataObject as Data ?? new Data();
 
                 StringBuilder logTxt = new StringBuilder("Navigate with arrows, left arrow to exit");
                 bool final = false;
 
-                if (context.console.ReturnedValue == navigationPrompt)
+                if (context.prompt is KeyPrompt<Data> prompt)
                 {
-                    switch (navigationPrompt.Key)
+                    switch (prompt.Key)
                     {
                         case KeyPrompt.NavigationKey.Cancel:
                         case KeyPrompt.NavigationKey.Left:
                             final = true;
                             break;
                         case KeyPrompt.NavigationKey.Up:
-                            index = Math.Clamp(index - 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
+                            data.index = Math.Clamp(data.index - 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
                             break;
                         case KeyPrompt.NavigationKey.Down:
-                            index = Math.Clamp(index + 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
+                            data.index = Math.Clamp(data.index + 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
                             break;
                         case KeyPrompt.NavigationKey.Right:
                         case KeyPrompt.NavigationKey.Confirm:
-                            var targetConn = inspector.DiscoveryClient.Discovered[index];
+                            var targetConn = inspector.DiscoveryClient.Discovered[data.index];
                             inspector.client.Connect(targetConn.Address, targetConn.Port);
                             final = true;
                             break;
@@ -328,7 +320,7 @@ namespace qASICRemote
                 for (int i = 0; i < inspector.DiscoveryClient.Discovered.Count; i++)
                 {
                     logTxt.Append("\n");
-                    logTxt.Append(index == i ? (final ? "]" : ">") : " ");
+                    logTxt.Append(data.index == i ? (final ? "]" : ">") : " ");
                     logTxt.Append(" ");
                     var conn = inspector.DiscoveryClient.Discovered[i];
                     var info = conn.Identity.ReadNetworkSerializable<RemoteAppInfo>();
@@ -340,12 +332,18 @@ namespace qASICRemote
                         logTxt.Append($" v{info.version}");
                 }
 
-                log.message = logTxt.ToString();
+                data.log.message = logTxt.ToString();
 
-                context.console.Log(log);
+                context.console.Log(data.log);
                 return final ?
                     null :
-                    navigationPrompt;
+                    new KeyPrompt<Data>(data);
+            }
+
+            public class Data
+            {
+                public qLog log = qLog.CreateNow("");
+                public int index = 0;
             }
         }
 
