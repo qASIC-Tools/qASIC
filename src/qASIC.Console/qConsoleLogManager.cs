@@ -4,8 +4,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using qASIC.Logging;
 
-namespace qASIC.Console
+namespace qASIC.Console.Logging
 {
     public class qConsoleLogManager : qLogManager, IEnumerable<qLog>
     {

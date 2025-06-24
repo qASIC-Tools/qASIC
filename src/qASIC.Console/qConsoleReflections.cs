@@ -7,53 +7,53 @@ namespace qASIC.Console
 {
     internal static class qConsoleReflections
     {
-        private static Dictionary<string, LogColorAttribute> _colorAttributeMethods = null;
-        public static Dictionary<string, LogColorAttribute> ColorAttributeMethods
+        private static Dictionary<string, qLogColorAttribute> _colorAttributeMethods = null;
+        public static Dictionary<string, qLogColorAttribute> ColorAttributeMethods
         {
             get
             {
                 if (_colorAttributeMethods == null)
-                    _colorAttributeMethods = TypeFinder.FindMethodsWithAttribute<LogColorAttribute>(FLAGS)
-                        .ToDictionary(x => CreateMethodId(x), x => x.GetCustomAttribute<LogColorAttribute>()); ;
+                    _colorAttributeMethods = TypeFinder.FindMethodsWithAttribute<qLogColorAttribute>(FLAGS)
+                        .ToDictionary(x => CreateMethodId(x), x => x.GetCustomAttribute<qLogColorAttribute>()); ;
 
                 return _colorAttributeMethods;
             }
         }
 
-        private static Dictionary<string, LogColorAttribute> _colorAttributeDeclaringTypes = null;
-        public static Dictionary<string, LogColorAttribute> ColorAttributeDeclaringTypes
+        private static Dictionary<string, qLogColorAttribute> _colorAttributeDeclaringTypes = null;
+        public static Dictionary<string, qLogColorAttribute> ColorAttributeDeclaringTypes
         { 
             get
             {
                 if (_colorAttributeDeclaringTypes == null)
-                    _colorAttributeDeclaringTypes = TypeFinder.FindClassesWithAttribute<LogColorAttribute>(FLAGS)
-                        .ToDictionary(x => CreateTypeId(x), x => x.GetCustomAttribute<LogColorAttribute>());
+                    _colorAttributeDeclaringTypes = TypeFinder.FindClassesWithAttribute<qLogColorAttribute>(FLAGS)
+                        .ToDictionary(x => CreateTypeId(x), x => x.GetCustomAttribute<qLogColorAttribute>());
 
                 return _colorAttributeDeclaringTypes;
             }
         }
 
-        private static Dictionary<string, LogPrefixAttribute> _prefixAttributeMethods = null;
-        public static Dictionary<string, LogPrefixAttribute> PrefixAttributeMethods 
+        private static Dictionary<string, qLogPrefixAttribute> _prefixAttributeMethods = null;
+        public static Dictionary<string, qLogPrefixAttribute> PrefixAttributeMethods 
         { 
             get
             {
                 if (_prefixAttributeMethods == null)
-                    _prefixAttributeMethods = TypeFinder.FindMethodsWithAttribute<LogPrefixAttribute>(FLAGS)
-                        .ToDictionary(x => CreateMethodId(x), x => x.GetCustomAttribute<LogPrefixAttribute>());
+                    _prefixAttributeMethods = TypeFinder.FindMethodsWithAttribute<qLogPrefixAttribute>(FLAGS)
+                        .ToDictionary(x => CreateMethodId(x), x => x.GetCustomAttribute<qLogPrefixAttribute>());
 
                 return _prefixAttributeMethods;
             }
         }
 
-        private static Dictionary<string, LogPrefixAttribute> _prefixAttributeDeclaringTypes = null;
-        public static Dictionary<string, LogPrefixAttribute> PrefixAttributeDeclaringTypes 
+        private static Dictionary<string, qLogPrefixAttribute> _prefixAttributeDeclaringTypes = null;
+        public static Dictionary<string, qLogPrefixAttribute> PrefixAttributeDeclaringTypes 
         { 
             get
             {
                 if (_prefixAttributeDeclaringTypes == null)
-                    _prefixAttributeDeclaringTypes = TypeFinder.FindClassesWithAttribute<LogPrefixAttribute>(FLAGS)
-                        .ToDictionary(x => CreateTypeId(x), x => x.GetCustomAttribute<LogPrefixAttribute>());
+                    _prefixAttributeDeclaringTypes = TypeFinder.FindClassesWithAttribute<qLogPrefixAttribute>(FLAGS)
+                        .ToDictionary(x => CreateTypeId(x), x => x.GetCustomAttribute<qLogPrefixAttribute>());
 
                 return _prefixAttributeDeclaringTypes;
             }

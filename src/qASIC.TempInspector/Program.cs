@@ -26,7 +26,7 @@ namespace qASICRemote
         }
     }
 
-    [LogColor(255, 192, 179)]
+    [qLogColor(255, 192, 179)]
     public class Inspector
     {
         public Inspector()
@@ -101,7 +101,7 @@ namespace qASICRemote
 
         public qConsole SelectedConsole { get; private set; }
 
-        [LogColor(GenericColor.White)]
+        [qLogColor(GenericColor.White)]
         public void Run(string[] args)
         {
             QasicInstance.Start();
@@ -233,7 +233,7 @@ namespace qASICRemote
             GConsole?.Log(log);
         }
 
-        [LogColor(GenericColor.White)]
+        [qLogColor(GenericColor.White)]
         private void Client_OnConnect()
         {
             var appInfo = (RemoteAppInfo)client!.AppInfo;

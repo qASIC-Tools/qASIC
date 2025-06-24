@@ -2,13 +2,14 @@
 
 namespace qASIC
 {
+    [qSkipLogModifiers]
     public static partial class qDebug
     {
         public const string DEFAULT_TAG = qLog.DEFAULT_TAG;
         public const string WARNING_TAG = "warning";
         public const string ERROR_TAG = "error";
         public const string DEBUG_TAG = "debug";
-        
+
         public static event Action<qLog> OnLog;
 
         public static void Log(object message) =>

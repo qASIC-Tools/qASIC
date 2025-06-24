@@ -1,14 +1,17 @@
 using System.Diagnostics;
-using qASIC.Console.Commands;
 using System.Reflection;
-using qASIC.Console.Parsing;
 using System;
-using qASIC.CommandPrompts;
 using System.Threading.Tasks;
 using System.Linq;
+using qASIC.CommandPrompts;
+using qASIC.Console.Commands;
+using qASIC.Console.Parsing;
+using qASIC.Console.Logging;
+using qASIC.Logging;
 
 namespace qASIC.Console
 {
+    [qSkipLogModifiers]
     public class qConsole : IService
     {
         public const string SYSTEM_NAME = "qASIC.Console";
@@ -444,7 +447,7 @@ namespace qASIC.Console
         public qColor GetLogColor(qLog log) =>
             Theme.GetLogColor(log);
 
-        static bool TryGetPrefixAttributeOfTrace(MethodBase method, Type declaringType, out LogPrefixAttribute attribute)
+        static bool TryGetPrefixAttributeOfTrace(MethodBase method, Type declaringType, out qLogPrefixAttribute attribute)
         {
             attribute = null;
 
@@ -465,7 +468,7 @@ namespace qASIC.Console
             return false;
         }
 
-        static bool TryGetColorAttributeOfTrace(MethodBase method, Type declaringType, out LogColorAttribute attribute)
+        static bool TryGetColorAttributeOfTrace(MethodBase method, Type declaringType, out qLogColorAttribute attribute)
         {
             attribute = null;
 

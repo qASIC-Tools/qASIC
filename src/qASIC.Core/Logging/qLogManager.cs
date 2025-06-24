@@ -1,7 +1,8 @@
 using System;
 
-namespace qASIC
+namespace qASIC.Logging
 {
+    [qSkipLogModifiers]
     public class qLogManager
     {
         public qLogManager() : this(qDebug.DEFAULT_TAG, qDebug.WARNING_TAG, qDebug.ERROR_TAG) { }
