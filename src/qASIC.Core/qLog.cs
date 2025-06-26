@@ -18,7 +18,7 @@ namespace qASIC
 
         public qLog() { }
 
-        public qLog(DateTime time, string message) : this(time, message, qDebug.DEFAULT_TAG) { }
+        public qLog(DateTime time, string message) : this(time, message, null) { }
 
         public qLog(DateTime time, string message, qColor color) : this(time, message, LogType.Application, color) { }
         public qLog(DateTime time, string message, string colorTag) : this(time, message, LogType.Application, colorTag) { }
@@ -32,18 +32,18 @@ namespace qASIC
             tag = null;
         }
 
-        public qLog(DateTime time, string message, LogType logType, string colorTag)
+        public qLog(DateTime time, string message, LogType logType, string tag)
         {
             this.time = time;
             this.message = message;
             this.logType = logType;
-            this.tag = colorTag;
+            this.tag = tag;
         }
 
         public DateTime time;
         public string message = string.Empty;
         public LogType logType = LogType.Application;
-        public string tag = DEFAULT_TAG;
+        public string tag = null;
         public qColor color = qColor.White;
         public bool sticky = false;
 

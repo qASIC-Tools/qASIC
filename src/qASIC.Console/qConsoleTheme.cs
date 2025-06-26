@@ -56,7 +56,7 @@ namespace qASIC.Console
 
         public qColor GetLogColor(qLog log)
         {
-            if (log.tag == null)
+            if (string.IsNullOrWhiteSpace(log.tag))
                 return log.color;
 
             return this[log.tag];

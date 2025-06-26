@@ -4,6 +4,7 @@ using System.Collections;
 using System.Linq;
 using qASIC.CommandPrompts;
 using qASIC.Parsing;
+using qASIC.Logging;
 
 namespace qASIC
 {

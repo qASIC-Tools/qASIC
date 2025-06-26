@@ -8,10 +8,10 @@ using qASIC.Logging;
 
 namespace qASIC.Console.Logging
 {
-    public class qConsoleLogManager : qLogManager, IEnumerable<qLog>
+    public class qSavableLogManager : qLogManager, IEnumerable<qLog>
     {
-        public qConsoleLogManager() : this(new List<qLog>()) { }
-        public qConsoleLogManager(IEnumerable<qLog> logs) : base()
+        public qSavableLogManager() : this(new List<qLog>()) { }
+        public qSavableLogManager(IEnumerable<qLog> logs) : base()
         {
             Logs = new List<qLog>(logs);
         }
@@ -43,6 +43,7 @@ namespace qASIC.Console.Logging
                 return;
             }
 
+            ApplyLogModifiers(log);
             Logs.Add(log);
             InvokeOnLog(log);
             FileWrite(log);
@@ -55,7 +56,7 @@ namespace qASIC.Console.Logging
             if (other != null)
                 other.OnLog += Log;
 
-            if (other is qConsoleLogManager gameOther)
+            if (other is qSavableLogManager gameOther)
                 gameOther.OnUpdateLog += Log;
 
             return this;
@@ -66,7 +67,7 @@ namespace qASIC.Console.Logging
             if (other != null)
                 other.OnLog -= Log;
 
-            if (other is qConsoleLogManager gameOther)
+            if (other is qSavableLogManager gameOther)
                 gameOther.OnUpdateLog -= Log;
 
             return this;
@@ -90,7 +91,7 @@ namespace qASIC.Console.Logging
         /// <summary>Changes the value of <see cref="RawFilePath"/>.</summary>
         /// <param name="newPath">New file path.</param>
         /// <returns>Returns itself.</returns>
-        public qConsoleLogManager FileChangePath(string newPath)
+        public qSavableLogManager FileChangePath(string newPath)
         {
             RawFilePath = newPath;
             return this;
@@ -99,7 +100,7 @@ namespace qASIC.Console.Logging
         /// <summary>Moves a previous version of the log file to a new location.</summary>
         /// <param name="newOldPath">Path to move the old log file to.</param>
         /// <returns>Returns itself.</returns>
-        public qConsoleLogManager FileMoveOld(string newOldPath)
+        public qSavableLogManager FileMoveOld(string newOldPath)
         {
             if (File.Exists(newOldPath))
                 File.Delete(newOldPath);
@@ -113,12 +114,12 @@ namespace qASIC.Console.Logging
         /// <summary>Changes the name of a previous version of the log file.</summary>
         /// <param name="newName">New name for the old log file.</param>
         /// <returns>Returns itself.</returns>
-        public qConsoleLogManager FileRenameOld(string newName) =>
+        public qSavableLogManager FileRenameOld(string newName) =>
             FileMoveOld($"{Path.GetDirectoryName(FinalFilePath)}/{newName}");
 
         /// <summary>Clears the log file.</summary>
         /// <returns>Returns itself.</returns>
-        public qConsoleLogManager FileClear()
+        public qSavableLogManager FileClear()
         {
             FileWrite(null);
             return this;
@@ -126,7 +127,7 @@ namespace qASIC.Console.Logging
 
         /// <summary>Writes all logs in <see cref="Logs"/> to the file.</summary>
         /// <returns>Return itself.</returns>
-        public qConsoleLogManager FileWriteExisting()
+        public qSavableLogManager FileWriteExisting()
         {
             foreach (var item in Logs)
                 _fileWriteQueue.Enqueue(item);

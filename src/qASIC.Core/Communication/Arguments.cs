@@ -1,3 +1,5 @@
+using qASIC.Logging;
+
 namespace qASIC.Communication
 {
     public class OnServerReceiveDataArgs

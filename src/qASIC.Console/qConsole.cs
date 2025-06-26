@@ -23,7 +23,15 @@ namespace qASIC.Console
 
         public qConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null)
         {
-            Logs = new qConsoleLogManager();
+            Logs = new qSavableLogManager()
+            {
+                LogModifiers = new System.Collections.Generic.List<qLogModifier>()
+                {
+                    new LOGMOD_Color(),
+                    new LOGMOD_Prefix(),
+                    new LOGMOD_Tag(),
+                },
+            };
 
             Name = name;
             CommandList = commandList ?? new qCommandList()
@@ -39,7 +47,7 @@ namespace qASIC.Console
         private void QDebug_OnLog(qLog log)
         {
             if (LogQDebug)
-                Log(log, 4, true);
+                Log(log);
         }
 
         /// <summary>Main static instance of <see cref="qConsole"/> that was set using <see cref="SetAsMain"/>.</summary>
@@ -81,7 +89,7 @@ namespace qASIC.Console
 
         public string Name { get; set; }
 
-        public qConsoleLogManager Logs { get; internal set; }
+        public qSavableLogManager Logs { get; set; }
 
         public ICommandList CommandList { get; set; }
 
@@ -100,10 +108,6 @@ namespace qASIC.Console
 
         /// <summary>Determines if it should include exceptions when logging unknown errors with executing commands.</summary>
         public bool IncludeStackTraceInUnknownCommandExceptions { get; set; } = true;
-
-        /// <summary>Initializes reflections. This will happen automatically when reflections are needed, but it can cause lag, so it's better to do it once when the application launches.</summary>
-        public void InitializeReflections() =>
-            qConsoleReflections.Initialize();
 
         #region Registering targets
         public qRegisteredObjects Targets { get; private set; } = new qRegisteredObjects();
@@ -149,7 +153,7 @@ namespace qASIC.Console
                 throw new Exception("Cannot execute commands with no command list!");
 
             if (context.Logs == null)
-                context.Logs = new qConsoleLogManager();
+                context.Logs = new qLogManager();
 
             bool registerLogs = context.LogOutput;
             if (registerLogs)
@@ -383,60 +387,40 @@ namespace qASIC.Console
         /// <summary>Logs a message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
-        public void Log(string message, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, qDebug.DEFAULT_TAG), stackTraceIndex, true);
+        public void Log(string message) =>
+            Log(qLog.CreateNow(message, qDebug.DEFAULT_TAG));
 
         /// <summary>Logs a warning message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
-        public void LogWarning(string message, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, qDebug.WARNING_TAG), stackTraceIndex);
+        public void LogWarning(string message) =>
+            Log(qLog.CreateNow(message, qDebug.WARNING_TAG));
 
         /// <summary>Logs an error message to the console.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
-        public void LogError(string message, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, qDebug.ERROR_TAG), stackTraceIndex);
+        public void LogError(string message) =>
+            Log(qLog.CreateNow(message, qDebug.ERROR_TAG));
 
         /// <summary>Logs a message to the console with a color.</summary>
         /// <param name="message">Message to log.</param>
         /// <param name="color">Message color.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
-        public void Log(string message, qColor color, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, color), stackTraceIndex);
+        public void Log(string message, qColor color) =>
+            Log(qLog.CreateNow(message, color));
 
         /// <summary>Logs a message to the console with a color.</summary>
         /// <param name="message">Message to log.</param>
-        /// <param name="colorTag">Message color.</param>
+        /// <param name="tag">Message tag.</param>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
-        public void Log(string message, string colorTag, int stackTraceIndex = 2) =>
-            Log(qLog.CreateNow(message, colorTag), stackTraceIndex);
+        public void Log(string message, string tag) =>
+            Log(qLog.CreateNow(message, tag));
 
         /// <summary>Logs a log to the console.</summary>
         /// <param name="stackTraceIndex">Index used for gathering log customization attributes.</param>
         /// <param name="useLogModifiers">If true, the console will check for color attributes.</param>
-        public void Log(qLog log, int stackTraceIndex = 2, bool useLogModifiers = false)
+        public void Log(qLog log)
         {
-            if (UseLogModifierAttributes && useLogModifiers)
-            {
-                var stackTrace = new StackTrace();
-                var stackFrame = stackTrace.GetFrame(stackTraceIndex);
-
-                var method = stackFrame?.GetMethod();
-                var declaringType = method?.DeclaringType;
-
-                if (TryGetColorAttributeOfTrace(method, declaringType, out var colorAttr))
-                {
-                    log.tag = colorAttr.ColorTag;
-                    log.color = colorAttr.Color;
-                }
-
-                if (TryGetPrefixAttributeOfTrace(method, declaringType, out var prefixAttr))
-                {
-                    log.message = prefixAttr.FormatMessage(log.message);
-                }
-            }
-
             Logs.Log(log);
         }
 
@@ -446,48 +430,6 @@ namespace qASIC.Console
 
         public qColor GetLogColor(qLog log) =>
             Theme.GetLogColor(log);
-
-        static bool TryGetPrefixAttributeOfTrace(MethodBase method, Type declaringType, out qLogPrefixAttribute attribute)
-        {
-            attribute = null;
-
-            if (method != null &&
-                qConsoleReflections.PrefixAttributeMethods.TryGetValue(qConsoleReflections.CreateMethodId(method), out var methodAttr))
-            {
-                attribute = methodAttr!;
-                return true;
-            }
-
-            if (declaringType != null &&
-                qConsoleReflections.PrefixAttributeDeclaringTypes.TryGetValue(qConsoleReflections.CreateTypeId(declaringType), out var declaringTypeAttr))
-            {
-                attribute = declaringTypeAttr!;
-                return true;
-            }
-
-            return false;
-        }
-
-        static bool TryGetColorAttributeOfTrace(MethodBase method, Type declaringType, out qLogColorAttribute attribute)
-        {
-            attribute = null;
-
-            if (method != null &&
-                qConsoleReflections.ColorAttributeMethods.TryGetValue(qConsoleReflections.CreateMethodId(method), out var methodAttr))
-            {
-                attribute = methodAttr!;
-                return true;
-            }
-
-            if (declaringType != null &&
-                qConsoleReflections.ColorAttributeDeclaringTypes.TryGetValue(qConsoleReflections.CreateTypeId(declaringType), out var declaringTypeAttr))
-            {
-                attribute = declaringTypeAttr!;
-                return true;
-            }
-
-            return false;
-        }
         #endregion
     }
 }

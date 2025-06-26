@@ -3,6 +3,7 @@ using qASIC.CommandPrompts;
 using System;
 using System.Linq;
 using qASIC.Text;
+using qASIC.Logging;
 
 namespace qASIC.Options.Commands
 {

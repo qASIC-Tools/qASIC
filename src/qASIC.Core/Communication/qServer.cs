@@ -4,6 +4,7 @@ using qASIC.Communication.Components;
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using qASIC.Logging;
 
 namespace qASIC.Communication
 {

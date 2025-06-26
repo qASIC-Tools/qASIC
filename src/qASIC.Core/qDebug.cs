@@ -13,7 +13,7 @@ namespace qASIC
         public static event Action<qLog> OnLog;
 
         public static void Log(object message) =>
-            OnLog?.Invoke(qLog.CreateNow(message?.ToString() ?? "NULL", DEFAULT_TAG));
+            OnLog?.Invoke(qLog.CreateNow(message?.ToString() ?? "NULL"));
 
         public static void LogWarning(object message) =>
             OnLog?.Invoke(qLog.CreateNow(message?.ToString() ?? "NULL", WARNING_TAG));

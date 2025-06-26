@@ -16,7 +16,7 @@ namespace qASIC
 
         /// <summary>Determines if the prefix should be applied.</summary>
         public virtual bool ValidPrefix =>
-            !string.IsNullOrEmpty(Prefix);
+            !string.IsNullOrWhiteSpace(Prefix);
 
         /// <summary>Method used for applying prefix to a message.</summary>
         /// <param name="message">Logged message.</param>

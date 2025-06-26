@@ -1,6 +1,7 @@
 ﻿using qASIC.Communication;
 using System;
 using System.Collections.Generic;
+using qASIC.Console.Logging;
 
 namespace qASIC.Console.Comms
 {
@@ -18,7 +19,7 @@ namespace qASIC.Console.Comms
 
             var console = new qConsole(consoleName)
             {
-                Logs = new qConsoleLogManager(logs),
+                Logs = new qSavableLogManager(logs),
                 Theme = args.packet.ReadNetworkSerializable<qConsoleTheme>(),
             };
 

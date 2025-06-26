@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using qASIC.Options.Serialization;
-using qASIC.Parsing;
+using qASIC.Logging;
 
 namespace qASIC.Options
 {

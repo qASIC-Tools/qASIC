@@ -1,4 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Metadata;
 
 namespace qASIC.Logging
 {
@@ -17,6 +22,8 @@ namespace qASIC.Logging
         public string DefaultColorTag { get; set; }
         public string WarningColorTag { get; set; }
         public string ErrorColorTag { get; set; }
+
+        public List<qLogModifier> LogModifiers { get; set; }
 
         #region Closing
         public bool Closed { get; private set; } = false;
@@ -40,6 +47,7 @@ namespace qASIC.Logging
             if (Closed)
                 return;
 
+            ApplyLogModifiers(log);
             InvokeOnLog(log);
         }
 
@@ -50,13 +58,65 @@ namespace qASIC.Logging
             Log(qLog.CreateNow(message, color));
 
         public void Log(string message) =>
-            Log(qLog.CreateNow(message, DefaultColorTag));
+            Log(qLog.CreateNow(message));
 
         public void LogWarning(string message) =>
             Log(qLog.CreateNow(message, WarningColorTag));
 
         public void LogError(string message) =>
             Log(qLog.CreateNow(message, ErrorColorTag));
+        #endregion
+
+        #region Modifiers
+        protected void ApplyLogModifiers(qLog log)
+        {
+            if (LogModifiers != null)
+            {
+                Type callingType = null;
+                MethodBase callingMethod = null;
+
+                //Find classType and method if any modifier needs them
+                if (LogModifiers.Any(x => x.NeedsCallingType))
+                {
+                    //If this class has already been found in stack trace
+                    bool foundThis = false;
+                    var stack = new StackTrace();
+                    for (int i = 0; i < stack.FrameCount; i++)
+                    {
+                        var frame = stack.GetFrame(i);
+                        var m = frame?.GetMethod();
+                        if (m != null)
+                        {
+                            //We mark this class as found if it's included in the stack trace
+                            if (!foundThis &&
+                                m.DeclaringType == GetType())
+                            {
+                                foundThis = true;
+                                continue;
+                            }
+
+                            //Ignore if class has a skip attribute
+                            if (m.DeclaringType?.GetCustomAttribute<qSkipLogModifiersAttribute>() != null)
+                                continue;
+
+                            //In case we run into a frame after we already found this class
+                            if (foundThis)
+                            {
+                                //Finish finding
+                                callingType = m.DeclaringType;
+                                callingMethod = m;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                foreach (var item in LogModifiers)
+                {
+                    item.ModifyLog(log, callingMethod, callingType);
+                }
+            }
+        }
         #endregion
 
         #region Loggables

@@ -1,4 +1,4 @@
-namespace qASIC
+namespace qASIC.Logging
 {
     public interface IHasLogs
     {

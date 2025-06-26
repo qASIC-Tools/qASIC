@@ -2,6 +2,7 @@ using qASIC.Communication;
 using qASIC.Communication.Components;
 using qASIC.CommComponents;
 using qASIC.Communication.Discovery;
+using qASIC.Logging;
 
 namespace qASIC
 {
