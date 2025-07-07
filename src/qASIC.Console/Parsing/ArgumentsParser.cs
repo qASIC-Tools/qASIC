@@ -6,7 +6,10 @@ namespace qASIC.Console.Parsing
     {
         public ArgumentsParser() { }
 
+        public qConsole Console { get; set; }
         public ModularParser ValueParser { get; set; } = new ModularParser();
+
+        public abstract object Execute(string text);
 
         /// <summary>Gets the command name from a console input string.</summary>
         /// <param name="cmd">The console input string.</param>

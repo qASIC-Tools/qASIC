@@ -7,6 +7,110 @@ namespace qASIC.Console.Parsing
 {
     public class QuashParser : ArgumentsParser
     {
+        public override object Execute(string text)
+        {
+            var q = new Queue<char>(text.Replace("\r\n", "\n"));
+
+            while (q.Count > 0)
+            {
+                ReadCommand(q, out var cmd, out var args);
+                Console.Execute();
+            }
+
+            return null;
+        }
+
+        private void ReadCommand(Queue<char> q, out string commandName, out List<QuashArgument> args)
+        {
+            //WHITE SPACE
+            while (q.TryPeek(out var c) && char.IsWhiteSpace(c))
+                q.Dequeue();
+
+            //COMMAND NAME
+            var cmd = new StringBuilder();
+            while (q.TryPeek(out var c) && !char.IsWhiteSpace(c))
+            {
+                cmd.Append(q.Dequeue());
+            }
+
+            commandName = cmd.ToString();
+
+            //ARGS
+            args = new List<QuashArgument>();
+
+            string whiteBefore;
+            var whiteAfter = new StringBuilder();
+
+            //Pre arg white space
+            while (q.TryPeek(out var c) && char.IsWhiteSpace(c))
+                whiteAfter.Append(q.Dequeue());
+
+            var finish = false;
+            //Read all arguments
+            while (q.Count > 0 && !finish)
+            {
+                whiteBefore = whiteAfter.ToString();
+                whiteAfter.Clear();
+                var arg = new StringBuilder();
+                var inQuotes = false;
+
+                //Read single argument
+                while (q.TryDequeue(out var c))
+                {
+                    if (char.IsWhiteSpace(c))
+                    {
+                        if (inQuotes)
+                        {
+                            arg.Append(c);
+                            continue;
+                        }
+
+                        //Finish argument
+                        do
+                        {
+                            whiteAfter.Append(q.Dequeue());
+                        }
+                        while (q.TryPeek(out c) && char.IsWhiteSpace(c));
+                        break;
+                    }
+
+                    if (c == '\\')
+                    {
+                        if (q.TryDequeue(out c))
+                            arg.Append(c);
+
+                        continue;
+                    }
+
+                    if (c == '"')
+                    {
+                        inQuotes = !inQuotes;
+                        continue;
+                    }
+
+                    if (c == '\n')
+                    {
+                        if (inQuotes)
+                        {
+                            arg.Append(c);
+                            continue;
+                        }
+
+                        //End of arguments
+                        finish = true;
+                        break;
+                    }
+                }
+
+
+                args.Add(new QuashArgument(ValueParser, arg.ToString())
+                {
+                    WhiteBefore = whiteBefore,
+                    WhiteAfter = whiteAfter.ToString(),
+                });
+            }
+        }
+
         public override string ParseCommandName(string cmd)
         {
             cmd = cmd.Trim();
@@ -70,7 +174,7 @@ namespace qASIC.Console.Parsing
                         args.Add(new QuashArgument(ValueParser, currentString.ToString())
                         {
                             IsComplex = complex,
-                            StartEmptySpace = empty.ToString(),
+                            WhiteBefore = empty.ToString(),
                         });
 
                         currentString.Clear();
@@ -135,7 +239,7 @@ namespace qASIC.Console.Parsing
             var argIndex = 0;
             while (argIndex < quashArgs.Length)
             {
-                var argLength = quashArgs[argIndex].arg.Length + (quashArgs[argIndex].StartEmptySpace ?? string.Empty).Length;
+                var argLength = quashArgs[argIndex].arg.Length + (quashArgs[argIndex].WhiteBefore ?? string.Empty).Length;
                 if (characterIndex > argLength) break;
                 characterIndex -= argLength;
                 argIndex++;
@@ -152,7 +256,7 @@ namespace qASIC.Console.Parsing
             {
                 if (arg is QuashArgument quashArg)
                 {
-                    txt.Append(quashArg.IsComplex ? $"{quashArg.StartEmptySpace}\"{quashArg.arg.Replace("\"", "\"\"")}\"" : $" {quashArg.arg}");
+                    txt.Append(quashArg.IsComplex ? $"{quashArg.WhiteBefore}\"{quashArg.arg.Replace("\"", "\"\"")}\"" : $" {quashArg.arg}");
                     continue;
                 }
 
@@ -173,7 +277,8 @@ namespace qASIC.Console.Parsing
             public QuashArgument(ModularParser parser, string arg, params object[] values) : base(parser, arg, values) { }
 
             public bool IsComplex { get; set; }
-            public string StartEmptySpace { get; set; }
+            public string WhiteBefore { get; set; }
+            public string WhiteAfter { get; set; }
         }
     }
 }
