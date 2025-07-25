@@ -14,7 +14,7 @@ namespace qASIC.Console.Parsing
             while (q.Count > 0)
             {
                 ReadCommand(q, out var cmd, out var args);
-                Console.Execute();
+                // Console.Execute();
             }
 
             return null;

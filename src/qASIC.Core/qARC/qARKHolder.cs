@@ -139,6 +139,7 @@ namespace qASIC.qARK
         public qARKObject GetObject(string path)
         {
             var obj = new qARKObject($"{PathPrefix}{path}");
+            obj.Parser = Parser;
 
             foreach (var item in Entries)
                 if (item.Key.StartsWith($"{PathPrefix}{path}"))
@@ -187,7 +188,10 @@ namespace qASIC.qARK
                 var objPath = string.Join('.', objParts);
 
                 if (!dict.ContainsKey(objPath))
-                    dict.Add(objPath, new qARKObject(objPath));
+                    dict.Add(objPath, new qARKObject(objPath)
+                    {
+                        Parser = Parser,
+                    });
 
                 dict[objPath].AddRange(item.Value);
             }
