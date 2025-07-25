@@ -53,7 +53,9 @@ namespace qASIC.Console.Commands.BuiltIn
             //help <command>
             if (targetCommand != null)
             {
-                if (!commandList.TryGetCommand(targetCommand, out ICommandLogic command) || command == null)
+                if (!commandList.TryGetCommand(targetCommand, out ICommandLogic command) ||
+                    command == null ||
+                    (CanShowCommand != null && !CanShowCommand(context, command)))
                     throw new qCommandException($"Command '{targetCommand}' does not exist!");
 
                 context.Logs.Log(CreateDetailedInfoForCommand(context, command), "info");
