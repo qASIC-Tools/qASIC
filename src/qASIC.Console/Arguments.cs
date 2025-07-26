@@ -4,11 +4,13 @@
     {
         public qConsoleCommandContext() { }
         public qConsoleCommandContext(qCommandContext other) : base(other)
-        { 
-            if (other is qConsoleCommandContext gameContext)
+        {
+            if (other is qConsoleCommandContext consoleOther)
             {
-                console = gameContext.console;
-                LogOutput = gameContext.LogOutput;
+                console = consoleOther.console;
+                LogOutput = consoleOther.LogOutput;
+                RunTaskResult = consoleOther.RunTaskResult;
+                CleanupLogger = consoleOther.CleanupLogger;
             }
         }
 

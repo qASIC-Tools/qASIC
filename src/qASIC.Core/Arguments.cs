@@ -17,6 +17,9 @@ namespace qASIC
             commandName = other.commandName;
             args = other.args;
             prompt = other.prompt;
+            parser = other.parser;
+            command = other.command;
+            Logs = other.Logs;
         }
 
         public string inputString;

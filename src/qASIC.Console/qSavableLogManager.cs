@@ -24,7 +24,7 @@ namespace qASIC.Console.Logging
         public void Clear()
         {
             if (Closed)
-                throw new Exception("Can't clear logs, log manager closed!");
+                return;
 
             Logs?.Clear();
         }
@@ -35,7 +35,7 @@ namespace qASIC.Console.Logging
         public override void Log(qLog log)
         {
             if (Closed)
-                throw new Exception("Can't log, log manager closed!");
+                return;
 
             if (Logs.Contains(log))
             {
