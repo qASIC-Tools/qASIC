@@ -60,7 +60,11 @@ namespace qASIC.Communication
                     Logs.LogError($"There was a problem in update loop, {e}");
                 }
             }
+
+            OnUpdate();
         }
+
+        public virtual void OnUpdate() { }
 
         public void StopUpdateLog()
         {

@@ -58,15 +58,14 @@ namespace qASIC.Communication
         public int maxConnectionAttempts;
         private int connectionAttempts = 0;
 
-        public TcpClient Socket { get; private set; }
-        public NetworkStream Stream { get; private set; }
+        public Socket Socket { get; private set; }
 
         public Action OnStart;
         public Action OnConnect;
         public Action<DisconnectReason> OnDisconnect;
         public Func<qPacket, NetworkServerInfo> ProcessAppInfo = null;
 
-        public int MaxMissedPings { get; set; } = 3;
+        public int MaxMissedPings { get; set; } = 8;
 
         private byte[] buffer = new byte[0];
         public qPacket currentRead = null;
@@ -101,7 +100,7 @@ namespace qASIC.Communication
                 PrepareStart();
                 connectionAttempts = 0;
 
-                Socket = new TcpClient()
+                Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
                 {
                     ReceiveBufferSize = Constants.BUFFER_SIZE,
                     SendBufferSize = Constants.BUFFER_SIZE,
@@ -109,12 +108,13 @@ namespace qASIC.Communication
                 };
 
                 buffer = new byte[Constants.BUFFER_SIZE];
-                IAsyncResult result = Socket.BeginConnect(Address, Port, null, null);
+                var endPoint = new IPEndPoint(Address, Port);
+                Socket.Connect(endPoint);
 
                 CurrentState = State.Connecting;
                 Logs.Log($"Client is active, connecting to {Address}:{Port}...");
                 SendLoop();
-                Heartbeat(result);
+                Heartbeat();
 
             }
             catch (Exception e)
@@ -124,7 +124,12 @@ namespace qASIC.Communication
             }
         }
 
-        void Heartbeat(IAsyncResult result)
+        public override void OnUpdate()
+        {
+            Receive();
+        }
+
+        void Heartbeat()
         {
             if (!IsActive)
                 return;
@@ -136,10 +141,6 @@ namespace qASIC.Communication
                     case State.Connecting:
                         if (Socket!.Connected)
                         {
-                            Socket.EndConnect(result);
-                            Stream = Socket.GetStream();
-                            Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, OnDataReceived, null);
-
                             Send(new CC_ConnectData().CreateClientConfirmationPacket());
 
                             CurrentState = State.Pending;
@@ -185,32 +186,19 @@ namespace qASIC.Communication
                 Logs.LogError($"Failed to execute update loop: {e}");
             }
 
-            ExecuteLater(1000, () => Heartbeat(result));
+            ExecuteLater(1000, () => Heartbeat());
         }
 
-        void OnDataReceived(IAsyncResult result)
+        void Receive()
         {
-            if (!IsActive) return;
-
             missedPings = 0;
 
             try
             {
-                if (Stream?.CanRead != true)
-                {
-                    Logs.LogError("Stream couldn't be read, disconnecting...");
-                    DisconnectLocal();
+                if (Socket.Available == 0)
                     return;
-                }
-
-                int streamLength = Stream.EndRead(result);
-
-                if (streamLength == 0)
-                {
-                    Logs.LogError("Stream was empty, disconnecting...");
-                    DisconnectLocal();
-                    return;
-                }
+                
+                int streamLength = Socket.Receive(buffer, 0, Constants.BUFFER_SIZE, SocketFlags.None);
 
                 if (logPackets)
                     Logs.Log($"Incomming data, length:{streamLength}");
@@ -240,9 +228,6 @@ namespace qASIC.Communication
                 }
 
                 Array.Clear(buffer, 0, Constants.BUFFER_SIZE);
-
-                if (IsActive)
-                    Stream.BeginRead(buffer, 0, Constants.BUFFER_SIZE, OnDataReceived, null);
             }
             catch (Exception e)
             {
@@ -265,13 +250,12 @@ namespace qASIC.Communication
         {
             try
             {
-                while (Stream?.CanWrite == true &&
-                    packetsToSend.TryDequeue(out var packet))
+                while (packetsToSend.TryDequeue(out var packet))
                 {
                     if (logPackets)
                         Logs.Log($"Sending packet - {packet}");
 
-                    Stream?.Write(packet.ToArray(), 0, packet.bytes.Count);
+                    Socket.Send(packet.ToArray(), 0, packet.bytes.Count, SocketFlags.None);
                 }
             }
             catch
@@ -295,7 +279,6 @@ namespace qASIC.Communication
 
             try
             {
-                Stream?.Close();
                 Socket?.Close();
 
                 PrepareStop();
