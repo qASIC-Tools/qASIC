@@ -2,6 +2,7 @@
 using qASIC.Console.Autocomplete;
 using qASIC.qARK;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -21,8 +22,11 @@ namespace qASIC.Console.Commands.BuiltIn
         public bool MultiplePages { get; set; } = true;
         public bool AllowDetailedDescription { get; set; } = true;
         public int PageCommandLimit { get; set; } = 16;
+        public bool SortCommands { get; set; } = true;
 
         public Func<qConsoleCommandContext, ICommandLogic, bool> CanShowCommand;
+
+        private CommandComparer comparer = new CommandComparer();
 
         public override object Run(qConsoleCommandContext context)
         {
@@ -50,6 +54,9 @@ namespace qASIC.Console.Commands.BuiltIn
                 .Where(x => CanShowCommand?.Invoke(context, x) ?? true)
                 .ToList();
 
+            if (SortCommands)
+                commands.Sort(comparer);
+
             //help <command>
             if (targetCommand != null)
             {
@@ -68,11 +75,11 @@ namespace qASIC.Console.Commands.BuiltIn
             if (startIndex >= commands.Count)
                 throw new qCommandException("Page index out of range");
 
-            StringBuilder stringBuilder = new StringBuilder(MultiplePages ? 
-                $"List of avaliable commands, page: {index} \n" :
+            StringBuilder stringBuilder = new StringBuilder(MultiplePages ?
+                $"List of avaliable commands, page {index + 1} out of {MathF.Ceiling((float)commands.Count / PageCommandLimit)} \n" :
                 "List of avaliable commands \n");
 
-            for (int i = index * PageCommandLimit; i < Math.Max(index * (PageCommandLimit + 1), commands.Count); i++)
+            for (int i = index * PageCommandLimit; i < Math.Min((index + 1) * PageCommandLimit, commands.Count); i++)
                 stringBuilder.AppendLine($"{commands[i].CommandName} - {commands[i].Description ?? "No description"}");
 
             context.Logs.Log(stringBuilder.ToString(), "info");
@@ -126,6 +133,7 @@ namespace qASIC.Console.Commands.BuiltIn
             MultiplePages = data.GetValue("multiplePages", true);
             PageCommandLimit = data.GetValue("pageCommandLimit", 16);
             AllowDetailedDescription = data.GetValue("allowDetailedDescription", true);
+            SortCommands = data.GetValue("SortCommands", true);
         }
 
         public override qARKDocument CreateConfig() =>
@@ -133,6 +141,15 @@ namespace qASIC.Console.Commands.BuiltIn
                 .AddSpace()
                 .AddEntry("multiplePages", MultiplePages)
                 .AddEntry("pageCommandLimit", PageCommandLimit)
-                .AddEntry("allowDetailedDescription", AllowDetailedDescription);
+                .AddEntry("allowDetailedDescription", AllowDetailedDescription)
+                .AddEntry("SortCommands", SortCommands);
+
+        private class CommandComparer : IComparer<ICommandLogic>
+        {
+            public int Compare(ICommandLogic x, ICommandLogic y)
+            {
+                return string.Compare(x.CommandName, y.CommandName);
+            }
+        }
     }
 }
