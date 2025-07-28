@@ -59,8 +59,8 @@ namespace qASIC.Communication.Discovery
 
             Sockets = new Dictionary<IPAddress, Socket>();
             Ip6Link = IPAddress.Parse("ff02::1");
-            EndPoint4 = new IPEndPoint(IPAddress.Broadcast, Port);
-            EndPoint6 = new IPEndPoint(Ip6Link, Port);
+            EndPoint4 = new IPEndPoint(TargetServer.LocalOnly ? IPAddress.Loopback : IPAddress.Broadcast, Port);
+            EndPoint6 = new IPEndPoint(TargetServer.LocalOnly ? IPAddress.Loopback : Ip6Link, Port);
 
             IsActive = true;
             _thread = new Thread(async () => await UpdateLoop());
