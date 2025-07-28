@@ -93,7 +93,21 @@ namespace qASIC.Console
 
         public ICommandList CommandList { get; set; }
 
-        public ArgumentsParser CommandParser { get; set; }
+        private ArgumentsParser _commandParser;
+        public ArgumentsParser CommandParser
+        {
+            get => _commandParser;
+            set
+            {
+                if (_commandParser != null)
+                    _commandParser.Console = null;
+
+                _commandParser = value;
+
+                if (_commandParser != null)
+                    _commandParser.Console = this;
+            }
+        }
 
         public qConsoleTheme Theme { get; set; } = qConsoleTheme.Default;
 
@@ -132,44 +146,11 @@ namespace qASIC.Console
         public async Task<object> ExecuteAsync(string cmd, object previousValue = null) =>
             await ExecuteAsync(CreateContext(cmd, previousValue));
 
-        private bool PreprocessContext(qConsoleCommandContext context)
-        {
-            //Prompt
-            if (context.prompt != null)
-            {
-                context.parser = CommandParser.ValueParser;
+        public object Execute(qConsoleCommandContext context) =>
+            CommandParser.ExecuteParser(context);
 
-                if (!context.prompt.CanExecute(context))
-                    return false;
-
-                context.args = context.prompt.Prepare(context);
-                return true;
-            }
-
-            LogUserInput(context);
-
-            //Normal
-            if (CommandList == null)
-                throw new Exception("Cannot execute commands with no command list!");
-
-            if (context.Logs == null)
-                context.Logs = new qLogManager();
-
-            bool registerLogs = context.LogOutput;
-            if (registerLogs)
-                Logs.RegisterManager(context.Logs);
-
-            if (!CommandList.TryGetCommand(context.commandName, out var command))
-            {
-                context.Logs.LogError($"Command {context.commandName} doesn't exist");
-                Logs.UnregisterManager(context.Logs);
-                return false;
-            }
-
-            context.command = command;
-
-            return true;
-        }
+        public async Task<object> ExecuteAsync(qConsoleCommandContext context) =>
+            await CommandParser.ExecuteParserAsync(context);
 
         private void LogUserInput(qConsoleCommandContext context)
         {
@@ -180,68 +161,6 @@ namespace qASIC.Console
                     CommandParser.ConvertToString(context.commandName, context.args);
 
             Log(qLog.CreateNow(message, LogType.User, "user_input"));
-        }
-
-        private object PostprocessContext(qConsoleCommandContext context, object returnedValue)
-        {
-            var closeLogs = true;
-            if (context.RunTaskResult && returnedValue is Task task)
-            {
-                closeLogs = false;
-                var cmdName = context.commandName;
-                Task.Run(async () =>
-                {
-                    var val = await ExecuteAsync(cmdName, task, context.Logs, false);
-                    PostprocessContext(context, val);
-                });
-            }
-
-            if (returnedValue is CommandPrompt prompt)
-            {
-                prompt.context = context;
-                return returnedValue;
-            }
-
-            if (closeLogs && context.CleanupLogger)
-            {
-                Logs.UnregisterManager(context.Logs);
-                context.Logs.Close();
-            }
-
-            context.Logs = null;
-            return returnedValue;
-        }
-
-        /// <summary>Executes a command.</summary>
-        /// <param name="context">Command arguments.</param>
-        public object Execute(qConsoleCommandContext context)
-        {
-            //Before
-            if (!PreprocessContext(context))
-                return null;
-
-            //Executing
-            var returnedValue = Execute(context.command.CommandName, () => context.command.Run(context), context.Logs);
-
-            //After
-            return PostprocessContext(context, returnedValue);
-        }
-
-        /// <summary>Executes a command asynchronously.</summary>
-        /// <param name="context">Command arguments.</param>
-        public async Task<object> ExecuteAsync(qConsoleCommandContext context)
-        {
-            //Before
-            if (!PreprocessContext(context))
-                return null;
-
-            //Executing
-            var returnedValue = Execute(context.command.CommandName, () => context.command.Run(context), context.Logs);
-            if (returnedValue is Task task)
-                returnedValue = await ExecuteAsync(context.command.CommandName, task, context.Logs);
-
-            //After
-            return PostprocessContext(context, returnedValue);
         }
 
         /// <summary>Executes a command.</summary>
@@ -310,50 +229,34 @@ namespace qASIC.Console
             return null;
         }
 
-        public virtual qConsoleCommandContext CreateContext(string cmd, object previousValue)
+        public qConsoleCommandContext CreateContext(object previousValue = null) =>
+            CreateContext(string.Empty, previousValue); 
+
+        public qConsoleCommandContext CreateContext(string inputString, object previousValue = null)
         {
-            if (previousValue is CommandPrompt prompt &&
-                prompt.context is qConsoleCommandContext promptContext)
-            {
-                promptContext.prompt = prompt;
-                promptContext.inputString = cmd;
-                promptContext.args = prompt.ParseArguments ?
-                    ParseCommandArguments(cmd, previousValue) :
-                    prompt.Prepare(prompt.context);
-
-                if (prompt.ParseArguments)
-                    promptContext.commandName = ParseCommandName(cmd, previousValue);
-
-                return promptContext;
-            }
-
-            var context = new qConsoleCommandContext()
-            {
-                inputString = cmd,
-                commandName = ParseCommandName(cmd, previousValue),
-                args = ParseCommandArguments(cmd, previousValue),
-                console = this,
-            };
-
+            var context = new qConsoleCommandContext();
+            FillContext(ref context, inputString, previousValue);
             return context;
         }
 
-        protected qCommandArgument[] ParseCommandArguments(string cmd, object returnedValue)
+        public void FillContext(ref qConsoleCommandContext context, object returnedValue = null) =>
+            FillContext(ref context, context.inputString, returnedValue);
+
+        public virtual void FillContext(ref qConsoleCommandContext context, string inputString, object returnedValue = null)
         {
-            if (CommandParser == null)
-                throw new Exception("Cannot parse commands with no parser!");
+            context.console = this;
+            context.inputString = inputString;
+            if (returnedValue is CommandPrompt prompt &&
+                prompt.context is qConsoleCommandContext promptContext)
+            {
+                promptContext.prompt = prompt;
+                var promptArgs = prompt.Prepare(prompt.context);
+                if (!prompt.ParseArguments)
+                    promptContext.args = promptArgs;
 
-            var args = CommandParser.ParseArguments(cmd);
-
-            return args;
-        }
-
-        protected string ParseCommandName(string cmd, object returnedValue)
-        {
-            if (CommandParser == null)
-                throw new Exception("Cannot parse commands with no parser!");
-
-            return CommandParser.ParseCommandName(cmd);
+                context = promptContext;
+                return;
+            }
         }
         #endregion
 

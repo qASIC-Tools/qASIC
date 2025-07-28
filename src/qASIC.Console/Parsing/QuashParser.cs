@@ -1,36 +1,100 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using qASIC.Parsing;
 
 namespace qASIC.Console.Parsing
 {
     public class QuashParser : ArgumentsParser
     {
-        public override object Execute(string text)
+        public static readonly char[] Char_End = new char[]
         {
-            var q = new Queue<char>(text.Replace("\r\n", "\n"));
+            '\n',
+            ';'
+        };
 
+        public override object ExecuteParser(qConsoleCommandContext context) =>
+            ExecQ(CreateQ(context), context);
+
+        public override Task<object> ExecuteParserAsync(qConsoleCommandContext context) =>
+            ExecQAsync(CreateQ(context), context);
+
+        private Queue<char> CreateQ(qConsoleCommandContext context) =>
+            CreateQ(context.inputString);
+
+        private Queue<char> CreateQ(string inputString) =>
+            new Queue<char>(inputString.Replace("\r\n", "\n"));
+
+        private object ExecQ(Queue<char> q, qConsoleCommandContext context, object returnedValue = null)
+        {
             while (q.Count > 0)
             {
-                ReadCommand(q, out var cmd, out var args);
-                // Console.Execute();
+                ReadCommand(q, ref context, returnedValue);
+                returnedValue = ExecuteInConsole(context);
+                if (returnedValue is Task task)
+                {
+                    var switchTask = SwitchExecToAsync(q, context, task);
+                    if (context.RunTaskResult)
+                        Task.Run(() => switchTask);
+                    return switchTask;
+                }
             }
 
-            return null;
+            return returnedValue;
         }
 
-        private void ReadCommand(Queue<char> q, out string commandName, out List<QuashArgument> args)
+        private async Task<object> ExecQAsync(Queue<char> q, qConsoleCommandContext context, object returnedValue = null)
         {
+            while (q.Count > 0)
+            {
+                ReadCommand(q, ref context, returnedValue);
+                returnedValue = await ExecuteInConsoleAsync(context);
+            }
+
+            return returnedValue;
+        }
+
+        private async Task SwitchExecToAsync(Queue<char> q, qConsoleCommandContext context, Task task)
+        {
+            var returnedValue = await Console.ExecuteAsync(context.commandName, task, context.Logs);
+            await ExecQAsync(q, context, returnedValue);
+        }
+
+        private void ReadCommand(Queue<char> q, ref qConsoleCommandContext context, object returnedValue)
+        {
+            ReadCommand(q, out var inputString, out var commandName, out var args);
+            context.inputString = inputString;
+            context.commandName = commandName;
+            context.args = args.ToArray();
+            Console.FillContext(ref context, returnedValue);
+        }
+
+        private void ReadCommand(Queue<char> q, out string inputString, out string commandName, out List<QuashArgument> args)
+        {
+            var input = new StringBuilder();
+
             //WHITE SPACE
             while (q.TryPeek(out var c) && char.IsWhiteSpace(c))
-                q.Dequeue();
+                Dequeue();
+
+            {
+                //If reached end character before command name
+                if (q.TryPeek(out var c) && Char_End.Contains(c))
+                {
+                    q.Dequeue();
+                    inputString = input.ToString();
+                    commandName = string.Empty;
+                    args = new List<QuashArgument>();
+                    return;
+                }
+            }
 
             //COMMAND NAME
             var cmd = new StringBuilder();
-            while (q.TryPeek(out var c) && !char.IsWhiteSpace(c))
+            while (q.TryPeek(out var c) && !char.IsWhiteSpace(c) && !Char_End.Contains(c))
             {
-                cmd.Append(q.Dequeue());
+                cmd.Append(Dequeue());
             }
 
             commandName = cmd.ToString();
@@ -43,7 +107,7 @@ namespace qASIC.Console.Parsing
 
             //Pre arg white space
             while (q.TryPeek(out var c) && char.IsWhiteSpace(c))
-                whiteAfter.Append(q.Dequeue());
+                whiteAfter.Append(Dequeue());
 
             var finish = false;
             //Read all arguments
@@ -55,7 +119,7 @@ namespace qASIC.Console.Parsing
                 var inQuotes = false;
 
                 //Read single argument
-                while (q.TryDequeue(out var c))
+                while (TryDequeue(out var c))
                 {
                     if (char.IsWhiteSpace(c))
                     {
@@ -66,17 +130,16 @@ namespace qASIC.Console.Parsing
                         }
 
                         //Finish argument
-                        do
+                        while (q.TryPeek(out c) && char.IsWhiteSpace(c))
                         {
-                            whiteAfter.Append(q.Dequeue());
+                            whiteAfter.Append(Dequeue());
                         }
-                        while (q.TryPeek(out c) && char.IsWhiteSpace(c));
                         break;
                     }
 
                     if (c == '\\')
                     {
-                        if (q.TryDequeue(out c))
+                        if (TryDequeue(out c))
                             arg.Append(c);
 
                         continue;
@@ -88,7 +151,7 @@ namespace qASIC.Console.Parsing
                         continue;
                     }
 
-                    if (c == '\n')
+                    if (Char_End.Contains(c))
                     {
                         if (inQuotes)
                         {
@@ -98,138 +161,88 @@ namespace qASIC.Console.Parsing
 
                         //End of arguments
                         finish = true;
+                        input.Remove(input.Length - 1, 1);
                         break;
                     }
+
+                    arg.Append(c);
                 }
 
-
-                args.Add(new QuashArgument(ValueParser, arg.ToString())
+                if (arg.Length > 0)
                 {
-                    WhiteBefore = whiteBefore,
-                    WhiteAfter = whiteAfter.ToString(),
-                });
-            }
-        }
-
-        public override string ParseCommandName(string cmd)
-        {
-            cmd = cmd.Trim();
-
-            var commandName = new StringBuilder();
-            foreach (var c in cmd)
-            {
-                if (char.IsWhiteSpace(c)) break;
-                commandName.Append(c);
-            }
-
-            return commandName.ToString();
-        }
-
-        public override qCommandArgument[] ParseArguments(string cmd)
-        {
-            var args = new List<QuashArgument>();
-
-            var readCommand = false;
-            var complex = false;
-            var currentString = new StringBuilder();
-            var empty = new StringBuilder();
-
-            cmd = cmd.Trim();
-
-            for (int i = 0; i < cmd.Length; i++)
-            {
-                //CASE: reading command name
-                //Ignore rest until done
-                if (!readCommand)
-                {
-                    if (char.IsWhiteSpace(cmd[i]))
-                        readCommand = true;
-
-                    continue;
-                }
-
-                //CASE: surrounded by quotation marks
-                if (complex)
-                {
-                    if (cmd[i] == '"' &&
-                        (cmd.Length <= i + 1 || char.IsWhiteSpace(cmd[i + 1])))
+                    args.Add(new QuashArgument(ValueParser, arg.ToString())
                     {
-                        complex = false;
-                        continue;
-                    }
-
-                    currentString.Append(cmd[i]);
-                    continue;
+                        WhiteBefore = whiteBefore,
+                        WhiteAfter = whiteAfter.ToString(),
+                    });
                 }
-
-                //CASE: not that
-
-
-                //CASE: whitespace
-                //finish creating argument
-                if (char.IsWhiteSpace(cmd[i]) && currentString.Length > 0)
-                {
-                    if (currentString.Length > 0)
-                    {
-                        args.Add(new QuashArgument(ValueParser, currentString.ToString())
-                        {
-                            IsComplex = complex,
-                            WhiteBefore = empty.ToString(),
-                        });
-
-                        currentString.Clear();
-                        empty.Clear();
-                    }
-
-                    empty.Append(cmd[i]);
-                    continue;
-                }
-
-                //CASE: quotation mark after white space
-                if (cmd[i] == '"' &&
-                    (i != 0 && char.IsWhiteSpace(cmd[i - 1]) || i == 0) &&
-                    currentString.Length == 0)
-                {
-                    complex = true;
-                    continue;
-                }
-
-                currentString.Append(cmd[i]);
             }
 
-            if (currentString.Length > 0)
-                args.Add(new QuashArgument(ValueParser, currentString.ToString())
-                {
-                    IsComplex = complex,
-                });
+            inputString = input.ToString();
 
-            return args.ToArray();
+
+            char Dequeue()
+            {
+                var c = q.Dequeue();
+                input.Append(c);
+                return c;
+            }
+
+            bool TryDequeue(out char c)
+            {
+                if (q.TryDequeue(out c))
+                {
+                    input.Append(c);
+                    return true;
+                }
+
+                return false;
+            }
         }
 
         public override CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex)
         {
+            //Parsed info
+            var q = CreateQ(cmd);
+            var inputString = string.Empty;
+            var commandName = string.Empty;
+            var args = new List<QuashArgument>();
+            while (cmd.Length - q.Count <= characterIndex && q.Count > 0)
+            {
+                ReadCommand(q, out inputString, out commandName, out args);
+            }
+
+            if (q.Count == 0 && cmd.Length > 0 && Char_End.Contains(cmd.Last()))
+            {
+                inputString = string.Empty;
+                commandName = string.Empty;
+                args = new List<QuashArgument>();
+            }
+
             //Prefixes and postfixes
-            var prefix = cmd.Substring(0, cmd.Length - cmd.TrimStart().Length);
-            var postfixStartIndex = cmd.TrimEnd().Length;
+            var prefixEndIndex = cmd.Length - q.Count - inputString.TrimStart().Length;
+
+            var postfixStartIndex = cmd.Length - q.Count;
+            if (inputString.Length > 0 && Char_End.Contains(cmd[postfixStartIndex - 1]))
+            {
+                prefixEndIndex--;
+                postfixStartIndex--;
+            }
+
+            var prefix = cmd.Substring(0, prefixEndIndex);
             var postfix = cmd.Substring(postfixStartIndex, cmd.Length - postfixStartIndex);
+
+            var argsArray = args.ToArray();
 
             //Normalize parameters
             characterIndex -= prefix.Length;
-            cmd = cmd.Trim();
-
-            //Parsed info
-            var commandName = ParseCommandName(cmd);
-            var args = ParseArguments(cmd);
 
             //Final info
-            var info = new CmdCharacterInfo(prefix, postfix, commandName, args);
+            var info = new CmdCharacterInfo(prefix, postfix, commandName, argsArray);
 
             //If it's before the command name
             if (characterIndex < 0)
                 return info.WithScope(CmdCharacterInfo.Scope.CommandName, characterIndex);
-
-            var quashArgs = args.Select(x => x as QuashArgument)
-                .ToArray();
 
             //If it's between command name and first argument
             if (characterIndex < commandName.Length + 1)
@@ -237,9 +250,9 @@ namespace qASIC.Console.Parsing
 
             //Looking for the target argument
             var argIndex = 0;
-            while (argIndex < quashArgs.Length)
+            while (argIndex < args.Count)
             {
-                var argLength = quashArgs[argIndex].arg.Length + (quashArgs[argIndex].WhiteBefore ?? string.Empty).Length;
+                var argLength = args[argIndex].arg.Length + (args[argIndex].WhiteBefore ?? string.Empty).Length;
                 if (characterIndex > argLength) break;
                 characterIndex -= argLength;
                 argIndex++;

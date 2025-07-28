@@ -1,4 +1,8 @@
 using qASIC.Parsing;
+using System;
+using System.Threading.Tasks;
+using qASIC.Logging;
+using qASIC.CommandPrompts;
 
 namespace qASIC.Console.Parsing
 {
@@ -9,17 +13,8 @@ namespace qASIC.Console.Parsing
         public qConsole Console { get; set; }
         public ModularParser ValueParser { get; set; } = new ModularParser();
 
-        public abstract object Execute(string text);
-
-        /// <summary>Gets the command name from a console input string.</summary>
-        /// <param name="cmd">The console input string.</param>
-        /// <returns>Returns the parsed command name.</returns>
-        public abstract string ParseCommandName(string cmd);
-
-        /// <summary>Gets command arguments from a console input string.</summary>
-        /// <param name="cmd">The console input string.</param>
-        /// <returns>Returns a list of command arguments.</returns>
-        public abstract qCommandArgument[] ParseArguments(string cmd);
+        public abstract object ExecuteParser(qConsoleCommandContext context);
+        public abstract Task<object> ExecuteParserAsync(qConsoleCommandContext context);
 
         /// <summary>Converts output back into a string</summary>
         /// <param name="commandName">The name of the command.</param>
@@ -28,5 +23,94 @@ namespace qASIC.Console.Parsing
         public abstract string ConvertToString(string commandName, qCommandArgument[] arguments);
 
         public abstract CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex);
+
+        #region Executing
+        /// <summary>Executes a command.</summary>
+        /// <param name="context">Command arguments.</param>
+        protected object ExecuteInConsole(qConsoleCommandContext context)
+        {
+            //Before
+            if (!PreprocessContext(context))
+                return null;
+
+            //Executing
+            var returnedValue = Console.Execute(context.command.CommandName, () => context.command.Run(context), context.Logs);
+
+            //After
+            return PostprocessContext(context, returnedValue);
+        }
+
+        /// <summary>Executes a command asynchronously.</summary>
+        /// <param name="context">Command arguments.</param>
+        protected async Task<object> ExecuteInConsoleAsync(qConsoleCommandContext context)
+        {
+            //Before
+            if (!PreprocessContext(context))
+                return null;
+
+            //Executing
+            var returnedValue = Console.Execute(context.command.CommandName, () => context.command.Run(context), context.Logs);
+            if (returnedValue is Task task)
+                returnedValue = await Console.ExecuteAsync(context.command.CommandName, task, context.Logs);
+
+            //After
+            return PostprocessContext(context, returnedValue);
+        }
+
+        private bool PreprocessContext(qConsoleCommandContext context)
+        {
+            //Prompt
+            if (context.prompt != null)
+            {
+                context.parser = ValueParser;
+
+                if (!context.prompt.CanExecute(context))
+                    return false;
+
+                context.args = context.prompt.Prepare(context);
+                return true;
+            }
+
+            //Normal
+            if (Console.CommandList == null)
+                throw new Exception("Cannot execute commands with no command list!");
+
+            if (context.Logs == null)
+                context.Logs = new qLogManager();
+
+            bool registerLogs = context.LogOutput;
+            if (registerLogs)
+                Console.Logs.RegisterManager(context.Logs);
+
+            if (!Console.CommandList.TryGetCommand(context.commandName, out var command))
+            {
+                context.Logs.LogError($"Command {context.commandName} doesn't exist");
+                Console.Logs.UnregisterManager(context.Logs);
+                return false;
+            }
+
+            context.command = command;
+
+            return true;
+        }
+
+        private object PostprocessContext(qConsoleCommandContext context, object returnedValue)
+        {
+            if (returnedValue is CommandPrompt prompt)
+            {
+                prompt.context = context;
+                return returnedValue;
+            }
+
+            if (context.CleanupLogger && !(returnedValue is Task))
+            {
+                Console.Logs.UnregisterManager(context.Logs);
+                context.Logs.Close();
+            }
+
+            context.Logs = null;
+            return returnedValue;
+        }
+        #endregion
     }
 }

@@ -70,13 +70,13 @@ namespace qASICRemote
             DiscoveryClient = new DiscoveryClient(52148);
             DiscoveryClient.OnDiscover += args =>
             {
-                GConsole.Log($"Server discovered, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
-                args.Identity.ResetPosition();
+                // GConsole.Log($"Server discovered, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
+                // args.Identity.ResetPosition();
             };
             DiscoveryClient.OnRemoved += args =>
             {
-                GConsole.Log($"Server removed, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
-                args.Identity.ResetPosition();
+                // GConsole.Log($"Server removed, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
+                // args.Identity.ResetPosition();
             };
 
             consoleManager = new qConsoleInstanceManager(client);

@@ -13,13 +13,18 @@ namespace qASIC
         public qCommandContext() { }
         public qCommandContext(qCommandContext other) : this()
         {
-            inputString = other.inputString;
-            commandName = other.commandName;
-            args = other.args;
-            prompt = other.prompt;
-            parser = other.parser;
-            command = other.command;
-            Logs = other.Logs;
+            other?.CopyTo(this);
+        }
+
+        public virtual void CopyTo(qCommandContext target)
+        {
+            target.inputString = inputString;
+            target.commandName = commandName;
+            target.args = args;
+            target.prompt = prompt;
+            target.parser = parser;
+            target.command = command;
+            target.Logs = Logs;
         }
 
         public string inputString;
@@ -163,7 +168,7 @@ namespace qASIC
             foreach (var item in Parser.Parsers)
                 if (item.TryParse(arg, out var val))
                     list.Add(val);
-                
+
             return list;
         }
 

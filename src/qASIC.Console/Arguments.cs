@@ -3,14 +3,17 @@
     public class qConsoleCommandContext : qCommandContext
     {
         public qConsoleCommandContext() { }
-        public qConsoleCommandContext(qCommandContext other) : base(other)
+        public qConsoleCommandContext(qCommandContext other) : base(other) { }
+
+        public override void CopyTo(qCommandContext target)
         {
-            if (other is qConsoleCommandContext consoleOther)
+            base.CopyTo(target);
+            if (target is qConsoleCommandContext consoleTarget)
             {
-                console = consoleOther.console;
-                LogOutput = consoleOther.LogOutput;
-                RunTaskResult = consoleOther.RunTaskResult;
-                CleanupLogger = consoleOther.CleanupLogger;
+                consoleTarget.console = console;
+                consoleTarget.LogOutput = LogOutput;
+                consoleTarget.RunTaskResult = RunTaskResult;
+                consoleTarget.CleanupLogger = CleanupLogger;
             }
         }
 
