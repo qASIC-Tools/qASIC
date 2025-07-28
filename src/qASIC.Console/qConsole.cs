@@ -146,11 +146,17 @@ namespace qASIC.Console
         public async Task<object> ExecuteAsync(string cmd, object previousValue = null) =>
             await ExecuteAsync(CreateContext(cmd, previousValue));
 
-        public object Execute(qConsoleCommandContext context) =>
-            CommandParser.ExecuteParser(context);
+        public object Execute(qConsoleCommandContext context)
+        {
+            LogUserInput(context);
+            return CommandParser.ExecuteParser(context);
+        }
 
-        public async Task<object> ExecuteAsync(qConsoleCommandContext context) =>
-            await CommandParser.ExecuteParserAsync(context);
+        public async Task<object> ExecuteAsync(qConsoleCommandContext context)
+        {
+            LogUserInput(context);
+            return await CommandParser.ExecuteParserAsync(context);
+        }
 
         private void LogUserInput(qConsoleCommandContext context)
         {
