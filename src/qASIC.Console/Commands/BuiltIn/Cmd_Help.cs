@@ -23,6 +23,8 @@ namespace qASIC.Console.Commands.BuiltIn
         public bool AllowDetailedDescription { get; set; } = true;
         public int PageCommandLimit { get; set; } = 16;
         public bool SortCommands { get; set; } = true;
+        public string PageOutOfRangeMessage { get; set; } = "Page index out of range";
+        public string CommandNotFoundMessage { get; set; } = "Command '$0' does not exist";
 
         public Func<qConsoleCommandContext, ICommandLogic, bool> CanShowCommand;
 
@@ -63,28 +65,45 @@ namespace qASIC.Console.Commands.BuiltIn
                 if (!commandList.TryGetCommand(targetCommand, out ICommandLogic command) ||
                     command == null ||
                     (CanShowCommand != null && !CanShowCommand(context, command)))
-                    throw new qCommandException($"Command '{targetCommand}' does not exist!");
+                    throw new qCommandException(string.Format(CommandNotFoundMessage, CommandName));
 
-                context.Logs.Log(CreateDetailedInfoForCommand(context, command), "info");
+                var txt = CreateDetailedInfoForCommand(context, command);
+                if (txt != null)
+                    context.Logs.Log(txt, "info");
                 return null;
             }
 
             //help<index>
-            var startIndex = PageCommandLimit * index;
+            {
+                var startIndex = PageCommandLimit * index;
 
-            if (startIndex >= commands.Count)
-                throw new qCommandException("Page index out of range");
+                if (startIndex >= commands.Count &&
+                    startIndex < 0)
+                    throw new qCommandException(PageOutOfRangeMessage);
 
-            StringBuilder stringBuilder = new StringBuilder(MultiplePages ?
-                $"List of avaliable commands, page {index + 1} out of {MathF.Ceiling((float)commands.Count / PageCommandLimit)} \n" :
-                "List of avaliable commands \n");
+                var txt = CreateCommandPage(commands,
+                    index + 1,
+                    (int)MathF.Ceiling((float)commands.Count / PageCommandLimit),
+                    index * PageCommandLimit,
+                    Math.Min((index + 1) * PageCommandLimit, commands.Count));
 
-            for (int i = index * PageCommandLimit; i < Math.Min((index + 1) * PageCommandLimit, commands.Count); i++)
-                stringBuilder.AppendLine($"{commands[i].CommandName} - {commands[i].Description ?? "No description"}");
-
-            context.Logs.Log(stringBuilder.ToString(), "info");
+                if (txt != null)
+                    context.Logs.Log(txt, "info");
+            }
 
             return null;
+        }
+
+        protected virtual string CreateCommandPage(List<ICommandLogic> commands, int pageIndex, int maxPages, int cmdStartIndex, int cmdEndIndex)
+        {
+            StringBuilder txt = new StringBuilder(MultiplePages ?
+                $"List of avaliable commands, page {pageIndex} out of {maxPages} \n" :
+                "List of avaliable commands \n");
+
+            for (int i = cmdStartIndex; i < cmdEndIndex; i++)
+                txt.AppendLine($"{commands[i].CommandName} - {commands[i].Description ?? "No description"}");
+
+            return txt.ToString();
         }
 
         protected virtual string CreateDetailedInfoForCommand(qConsoleCommandContext context, ICommandLogic cmd)
@@ -134,6 +153,8 @@ namespace qASIC.Console.Commands.BuiltIn
             PageCommandLimit = data.GetValue("pageCommandLimit", 16);
             AllowDetailedDescription = data.GetValue("allowDetailedDescription", true);
             SortCommands = data.GetValue("SortCommands", true);
+            PageOutOfRangeMessage = data.GetValue("PageOutOfRangeMessage", "Page index out of range");
+            CommandNotFoundMessage = data.GetValue("CommandNotFoundMessage", "Command '$0' does not exist");
         }
 
         public override qARKDocument CreateConfig() =>
@@ -142,7 +163,9 @@ namespace qASIC.Console.Commands.BuiltIn
                 .AddEntry("multiplePages", MultiplePages)
                 .AddEntry("pageCommandLimit", PageCommandLimit)
                 .AddEntry("allowDetailedDescription", AllowDetailedDescription)
-                .AddEntry("SortCommands", SortCommands);
+                .AddEntry("SortCommands", SortCommands)
+                .AddEntry("PageOutOfRangeMessage", PageOutOfRangeMessage)
+                .AddEntry("CommandNotFoundMessage", CommandNotFoundMessage);
 
         private class CommandComparer : IComparer<ICommandLogic>
         {
