@@ -25,6 +25,7 @@ namespace qASIC.Console.Commands.BuiltIn
         public bool SortCommands { get; set; } = true;
         public string PageOutOfRangeMessage { get; set; } = "Page index out of range";
         public string CommandNotFoundMessage { get; set; } = "Command '$0' does not exist";
+        public bool PageStartAtOne { get; set; } = true;
 
         public Func<qConsoleCommandContext, ICommandLogic, bool> CanShowCommand;
 
@@ -44,6 +45,8 @@ namespace qASIC.Console.Commands.BuiltIn
                 {
                     case true:
                         index = pageIndex;
+                        if (PageStartAtOne)
+                            index--;
                         break;
                     case false:
                         targetCommand = context[0].arg;
@@ -155,6 +158,7 @@ namespace qASIC.Console.Commands.BuiltIn
             SortCommands = data.GetValue("SortCommands", true);
             PageOutOfRangeMessage = data.GetValue("PageOutOfRangeMessage", "Page index out of range");
             CommandNotFoundMessage = data.GetValue("CommandNotFoundMessage", "Command '$0' does not exist");
+            PageStartAtOne = data.GetValue("PageStartAtOne", true);
         }
 
         public override qARKDocument CreateConfig() =>
@@ -165,7 +169,8 @@ namespace qASIC.Console.Commands.BuiltIn
                 .AddEntry("allowDetailedDescription", AllowDetailedDescription)
                 .AddEntry("SortCommands", SortCommands)
                 .AddEntry("PageOutOfRangeMessage", PageOutOfRangeMessage)
-                .AddEntry("CommandNotFoundMessage", CommandNotFoundMessage);
+                .AddEntry("CommandNotFoundMessage", CommandNotFoundMessage)
+                .AddEntry("PageStartAtOne", PageStartAtOne);
 
         private class CommandComparer : IComparer<ICommandLogic>
         {
