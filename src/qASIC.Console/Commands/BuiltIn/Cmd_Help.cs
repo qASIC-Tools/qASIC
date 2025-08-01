@@ -80,7 +80,7 @@ namespace qASIC.Console.Commands.BuiltIn
             {
                 var startIndex = PageCommandLimit * index;
 
-                if (startIndex >= commands.Count &&
+                if (startIndex >= commands.Count ||
                     startIndex < 0)
                     throw new qCommandException(PageOutOfRangeMessage);
 
