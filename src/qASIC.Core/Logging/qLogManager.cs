@@ -26,6 +26,8 @@ namespace qASIC.Logging
         public List<qLogModifier> LogModifiers { get; set; }
 
         #region Closing
+        /// <summary>When true, the manager will close itself when all other managers get unregistered.</summary>
+        public bool AutoClose { get; set; } = false;
         public bool Closed { get; private set; } = false;
         public Action<qLogManager> OnClose;
 
@@ -120,6 +122,8 @@ namespace qASIC.Logging
         #endregion
 
         #region Loggables
+        public List<qLogManager> RegisteredManagers { get; private set; } = new List<qLogManager>();
+
         /// <summary>Subscribes to messages from a <see cref="IHasLogs"/>.</summary>
         /// <param name="loggable">The loggable to register.</param>
         /// <returns>Returns itself.</returns>
@@ -134,8 +138,12 @@ namespace qASIC.Logging
         /// <returns>Returns itself.</returns>
         public virtual qLogManager RegisterManager(qLogManager other)
         {
-            if (other != null && other != this)
+            if (other != null && other != this && !RegisteredManagers.Contains(other))
+            {
                 other.OnLog += Log;
+                other.OnClose += a => UnregisterManager(a);
+                RegisteredManagers.Add(other);
+            }
 
             return this;
         }
@@ -154,8 +162,15 @@ namespace qASIC.Logging
         /// <returns>Returns itself.</returns>
         public virtual qLogManager UnregisterManager(qLogManager other)
         {
-            if (other != null && other != this)
+            if (other != null && other != this && RegisteredManagers.Contains(other))
+            {
                 other.OnLog -= Log;
+                other.OnClose -= a => UnregisterManager(a);
+                RegisteredManagers.Remove(other);
+
+                if (AutoClose && RegisteredManagers.Count > 0)
+                    Close();
+            }
 
             return this;
         }

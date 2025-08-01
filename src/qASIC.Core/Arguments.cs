@@ -37,9 +37,9 @@ namespace qASIC
         public event Action<qLog> OnLog;
 
         private qLogManager _logs = null;
-        public qLogManager Logs 
+        public qLogManager Logs
         {
-            get => _logs; 
+            get => _logs;
             set
             {
                 if (_logs != null)

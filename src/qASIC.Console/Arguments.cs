@@ -1,4 +1,6 @@
-﻿namespace qASIC.Console
+﻿using qASIC.Logging;
+
+namespace qASIC.Console
 {
     public class qConsoleCommandContext : qCommandContext
     {
@@ -14,6 +16,7 @@
                 consoleTarget.LogOutput = LogOutput;
                 consoleTarget.RunTaskResult = RunTaskResult;
                 consoleTarget.CleanupLogger = CleanupLogger;
+                consoleTarget.ParserData = ParserData;
             }
         }
 
@@ -27,5 +30,13 @@
         public bool RunTaskResult { get; set; } = true;
 
         public bool CleanupLogger { get; set; } = true;
+
+        public qConsoleParserData ParserData { get; set; }
+    }
+
+    public class qConsoleParserData
+    {
+        public qLogManager logs;
+        public bool cleanupLogger;
     }
 }

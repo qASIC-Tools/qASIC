@@ -148,14 +148,22 @@ namespace qASIC.Console
 
         public object Execute(qConsoleCommandContext context)
         {
-            LogUserInput(context);
+            BeforeExecute(context);
             return CommandParser.ExecuteParser(context);
         }
 
         public async Task<object> ExecuteAsync(qConsoleCommandContext context)
         {
-            LogUserInput(context);
+            BeforeExecute(context);
             return await CommandParser.ExecuteParserAsync(context);
+        }
+
+        private void BeforeExecute(qConsoleCommandContext context)
+        {
+            context.Logs ??= new qLogManager();
+            Logs.RegisterManager(context.Logs);
+
+            LogUserInput(context);
         }
 
         private void LogUserInput(qConsoleCommandContext context)
@@ -166,7 +174,7 @@ namespace qASIC.Console
                     $"{context.commandName} {string.Join(" ", context.args.Select(x => x.arg))}" :
                     CommandParser.ConvertToString(context.commandName, context.args);
 
-            Log(qLog.CreateNow(message, LogType.User, "user_input"));
+            context.Logs.Log(qLog.CreateNow(message, LogType.User, "user_input"));
         }
 
         /// <summary>Executes a command.</summary>
@@ -241,14 +249,14 @@ namespace qASIC.Console
         public qConsoleCommandContext CreateContext(string inputString, object previousValue = null)
         {
             var context = new qConsoleCommandContext();
-            FillContext(ref context, inputString, previousValue);
+            context = FillContext(context, inputString, previousValue);
             return context;
         }
 
-        public void FillContext(ref qConsoleCommandContext context, object returnedValue = null) =>
-            FillContext(ref context, context.inputString, returnedValue);
+        public qConsoleCommandContext FillContext(qConsoleCommandContext context, object returnedValue = null) =>
+            FillContext(context, context.inputString, returnedValue);
 
-        public virtual void FillContext(ref qConsoleCommandContext context, string inputString, object returnedValue = null)
+        public virtual qConsoleCommandContext FillContext(qConsoleCommandContext context, string inputString, object returnedValue = null)
         {
             context.console = this;
             context.inputString = inputString;
@@ -261,8 +269,9 @@ namespace qASIC.Console
                     promptContext.args = promptArgs;
 
                 context = promptContext;
-                return;
             }
+            
+            return context;
         }
         #endregion
 

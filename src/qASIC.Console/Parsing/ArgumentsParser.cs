@@ -57,7 +57,7 @@ namespace qASIC.Console.Parsing
             return PostprocessContext(context, returnedValue);
         }
 
-        private bool PreprocessContext(qConsoleCommandContext context)
+        protected virtual bool PreprocessContext(qConsoleCommandContext context)
         {
             //Prompt
             if (context.prompt != null)
@@ -75,17 +75,14 @@ namespace qASIC.Console.Parsing
             if (Console.CommandList == null)
                 throw new Exception("Cannot execute commands with no command list!");
 
-            if (context.Logs == null)
-                context.Logs = new qLogManager();
-
-            bool registerLogs = context.LogOutput;
-            if (registerLogs)
-                Console.Logs.RegisterManager(context.Logs);
+            context.LogOutput = true;
+            context.Logs = new qLogManager();
+            context.ParserData.logs.RegisterManager(context.Logs);
 
             if (!Console.CommandList.TryGetCommand(context.commandName, out var command))
             {
                 context.Logs.LogError($"Command {context.commandName} doesn't exist");
-                Console.Logs.UnregisterManager(context.Logs);
+                context.Logs.Close();
                 return false;
             }
 
@@ -94,7 +91,7 @@ namespace qASIC.Console.Parsing
             return true;
         }
 
-        private object PostprocessContext(qConsoleCommandContext context, object returnedValue)
+        protected virtual object PostprocessContext(qConsoleCommandContext context, object returnedValue)
         {
             if (returnedValue is CommandPrompt prompt)
             {
@@ -104,12 +101,24 @@ namespace qASIC.Console.Parsing
 
             if (context.CleanupLogger && !(returnedValue is Task))
             {
-                Console.Logs.UnregisterManager(context.Logs);
                 context.Logs.Close();
             }
 
             context.Logs = null;
             return returnedValue;
+        }
+
+        protected void FinishExecuting(qConsoleCommandContext context)
+        {
+            if (context.ParserData.cleanupLogger)
+            {
+                if (context.ParserData.logs.RegisteredManagers.Count > 0)
+                    context.ParserData.logs.AutoClose = true;
+                else
+                    context.ParserData.logs.Close();
+            }
+
+            context.ParserData = null;
         }
         #endregion
     }

@@ -1,7 +1,10 @@
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using qASIC.Logging;
 using qASIC.Parsing;
 
 namespace qASIC.Console.Parsing
@@ -20,8 +23,23 @@ namespace qASIC.Console.Parsing
         public override Task<object> ExecuteParserAsync(qConsoleCommandContext context) =>
             ExecQAsync(CreateQ(context), context);
 
-        private Queue<char> CreateQ(qConsoleCommandContext context) =>
-            CreateQ(context.inputString);
+        private Queue<char> CreateQ(qConsoleCommandContext context)
+        {
+            if (!(context.ParserData is QuashData))
+            {
+                context.ParserData = new QuashData()
+                {
+                    logs = context.Logs ?? new qLogManager(),
+                    cleanupLogger = context.CleanupLogger,
+                    queue = CreateQ(context.inputString)
+                };
+
+                context.Logs = null;
+                context.CleanupLogger = true;
+            }
+
+            return (context.ParserData as QuashData).queue;
+        }
 
         private Queue<char> CreateQ(string inputString) =>
             new Queue<char>(inputString.Replace("\r\n", "\n"));
@@ -41,6 +59,7 @@ namespace qASIC.Console.Parsing
                 }
             }
 
+            FinishExecuting(context);
             return returnedValue;
         }
 
@@ -52,6 +71,7 @@ namespace qASIC.Console.Parsing
                 returnedValue = await ExecuteInConsoleAsync(context);
             }
 
+            FinishExecuting(context);
             return returnedValue;
         }
 
@@ -67,7 +87,7 @@ namespace qASIC.Console.Parsing
             context.inputString = inputString;
             context.commandName = commandName;
             context.args = args.ToArray();
-            Console.FillContext(ref context, returnedValue);
+            context = Console.FillContext(context, returnedValue);
         }
 
         private void ReadCommand(Queue<char> q, out string inputString, out string commandName, out List<QuashArgument> args)
@@ -292,6 +312,11 @@ namespace qASIC.Console.Parsing
             public bool IsComplex { get; set; }
             public string WhiteBefore { get; set; }
             public string WhiteAfter { get; set; }
+        }
+
+        public class QuashData : qConsoleParserData
+        {
+            public Queue<char> queue;
         }
     }
 }
