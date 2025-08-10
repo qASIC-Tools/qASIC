@@ -48,7 +48,8 @@ namespace qASIC
             engineVersion = packet.ReadString();
 
             systems.Clear();
-            for (int i = 0; i < packet.ReadInt(); i++)
+            var systemCount = packet.ReadInt();
+            for (int i = 0; i < systemCount; i++)
             {
                 systems.Add(new SystemInfo()
                 {

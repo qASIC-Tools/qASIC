@@ -16,7 +16,6 @@ namespace qASIC.Console
                 consoleTarget.LogOutput = LogOutput;
                 consoleTarget.RunTaskResult = RunTaskResult;
                 consoleTarget.CleanupLogger = CleanupLogger;
-                consoleTarget.ParserData = ParserData;
             }
         }
 
@@ -30,8 +29,22 @@ namespace qASIC.Console
         public bool RunTaskResult { get; set; } = true;
 
         public bool CleanupLogger { get; set; } = true;
+    }
+
+    public class qConsoleContext
+    {
+        public virtual qConsoleCommandContext CreateCommandContext() =>
+            new qConsoleCommandContext()
+            {
+                console = Console,
+            };
 
         public qConsoleParserData ParserData { get; set; }
+        public qConsole Console { get; set; }
+        public qLogManager Logs { get; set; }
+
+        public string inputString;
+        public object previousValue;
     }
 
     public class qConsoleParserData

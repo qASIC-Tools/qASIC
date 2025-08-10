@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using qASIC.CommandPrompts;
 using qASIC.Logging;
 using qASIC.Parsing;
 
@@ -17,25 +17,61 @@ namespace qASIC.Console.Parsing
             ';'
         };
 
-        public override object ExecuteParser(qConsoleCommandContext context) =>
-            ExecQ(CreateQ(context), context);
+        public override object ExecuteParser(qConsoleContext context)
+        {
+            object returnedValue = null;
+            if (TryPreparePromptContextForStart(context, out var promptContext))
+            {
+                returnedValue = Console.ExecuteCommand(promptContext);
+                if (returnedValue is Task task)
+                    return SwitchExecToAsync(CreateQ(context), context, promptContext, task);
+            }
 
-        public override Task<object> ExecuteParserAsync(qConsoleCommandContext context) =>
-            ExecQAsync(CreateQ(context), context);
+            return ExecQ(CreateQ(context), context, returnedValue);
+        }
 
-        private Queue<char> CreateQ(qConsoleCommandContext context)
+        public override async Task<object> ExecuteParserAsync(qConsoleContext context)
+        {
+            object returnedValue = null;
+            if (TryPreparePromptContextForStart(context, out var promptContext))
+                returnedValue = await Console.ExecuteCommandAsync(promptContext);
+
+            return await ExecQAsync(CreateQ(context), context, returnedValue);
+        }
+
+        protected bool TryPreparePromptContextForStart(qConsoleContext context, out qConsoleCommandContext promptContext)
+        {
+            promptContext = null;
+            if (context.previousValue is CommandPrompt prompt &&
+                prompt.context is qConsoleCommandContext)
+            {
+                promptContext = prompt.context as qConsoleCommandContext;
+                promptContext.prompt = prompt;
+                promptContext.inputString = context.inputString;
+
+                if (prompt.ParseArguments)
+                {
+                    ReadCommand(new Queue<char>(promptContext.inputString), out promptContext.inputString, out promptContext.commandName, out var promptArgs);
+                    promptContext.args = promptArgs.ToArray();
+                }
+
+                promptContext.args = prompt.Prepare(promptContext);
+                context.inputString = string.Empty;
+                return true;
+            }
+
+            return false;
+        }
+
+        private Queue<char> CreateQ(qConsoleContext context)
         {
             if (!(context.ParserData is QuashData))
             {
                 context.ParserData = new QuashData()
                 {
                     logs = context.Logs ?? new qLogManager(),
-                    cleanupLogger = context.CleanupLogger,
                     queue = CreateQ(context.inputString)
                 };
-
-                context.Logs = null;
-                context.CleanupLogger = true;
             }
 
             return (context.ParserData as QuashData).queue;
@@ -44,50 +80,96 @@ namespace qASIC.Console.Parsing
         private Queue<char> CreateQ(string inputString) =>
             new Queue<char>(inputString.Replace("\r\n", "\n"));
 
-        private object ExecQ(Queue<char> q, qConsoleCommandContext context, object returnedValue = null)
+        private object ExecQ(Queue<char> q, qConsoleContext context, object returnedValue = null)
         {
             while (q.Count > 0)
             {
-                ReadCommand(q, ref context, returnedValue);
-                returnedValue = ExecuteInConsole(context);
+                var cmdContext = ReadCommand(q, context, returnedValue);
+                returnedValue = Console.ExecuteCommand(cmdContext);
                 if (returnedValue is Task task)
-                {
-                    var switchTask = SwitchExecToAsync(q, context, task);
-                    if (context.RunTaskResult)
-                        Task.Run(() => switchTask);
-                    return switchTask;
-                }
+                    return SwitchExecToAsync(q, context, cmdContext, task);
             }
 
             FinishExecuting(context);
             return returnedValue;
         }
 
-        private async Task<object> ExecQAsync(Queue<char> q, qConsoleCommandContext context, object returnedValue = null)
+        private async Task<object> ExecQAsync(Queue<char> q, qConsoleContext context, object returnedValue = null)
         {
             while (q.Count > 0)
             {
-                ReadCommand(q, ref context, returnedValue);
-                returnedValue = await ExecuteInConsoleAsync(context);
+                var cmdContext = ReadCommand(q, context, returnedValue);
+                returnedValue = await Console.ExecuteCommandAsync(cmdContext);
             }
 
             FinishExecuting(context);
             return returnedValue;
         }
 
-        private async Task SwitchExecToAsync(Queue<char> q, qConsoleCommandContext context, Task task)
+        private Task SwitchExecToAsync(Queue<char> q, qConsoleContext context, qConsoleCommandContext cmdContext, Task task)
         {
-            var returnedValue = await Console.ExecuteAsync(context.commandName, task, context.Logs);
+            var switchTask = SwitchExecToAsyncTask(q, context, cmdContext, task);
+            Task.Run(() => switchTask);
+            return switchTask;
+        }
+
+        private async Task SwitchExecToAsyncTask(Queue<char> q, qConsoleContext context, qConsoleCommandContext cmdContext, Task task)
+        {
+            var returnedValue = await Console.ExecuteCodeAsync(cmdContext.commandName, task, cmdContext.Logs);
             await ExecQAsync(q, context, returnedValue);
         }
 
-        private void ReadCommand(Queue<char> q, ref qConsoleCommandContext context, object returnedValue)
+        private qConsoleCommandContext ReadCommand(Queue<char> q, qConsoleContext context, object returnedValue)
         {
-            ReadCommand(q, out var inputString, out var commandName, out var args);
-            context.inputString = inputString;
-            context.commandName = commandName;
-            context.args = args.ToArray();
-            context = Console.FillContext(context, returnedValue);
+            if (returnedValue is CommandPrompt prompt &&
+                prompt.context is qConsoleCommandContext promptContext)
+            {
+                switch (prompt.ParseArguments)
+                {
+                    case true:
+                        ReadCommand(q, out promptContext.inputString, out promptContext.commandName, out var promptArgs);
+                        promptContext.args = promptArgs.ToArray();
+                        break;
+                    case false:
+                        ReadLine(q, out var line);
+                        promptContext.inputString = line;
+                        break;
+                }
+
+                promptContext.args = prompt.Prepare(promptContext);
+                promptContext.prompt = prompt;
+                return promptContext;               
+            }
+
+            var cmdContext = context.CreateCommandContext();
+            cmdContext.Logs ??= new qLogManager();
+            context.Logs.RegisterManager(cmdContext.Logs);
+            
+            ReadCommand(q, out cmdContext.inputString, out cmdContext.commandName, out var args);
+            cmdContext.args = args.ToArray();
+            return cmdContext;
+        }
+
+        private void ReadLine(Queue<char> q, out string line)
+        {
+            var txt = new StringBuilder();
+            while (q.TryDequeue(out var c))
+            {
+                if (c == '\\')
+                {
+                    if (q.TryDequeue(out c))
+                        txt.Append(c);
+
+                    continue;
+                }
+
+                if (Char_End.Contains(c))
+                    break;
+
+                txt.Append(c);
+            }
+
+            line = txt.ToString();
         }
 
         private void ReadCommand(Queue<char> q, out string inputString, out string commandName, out List<QuashArgument> args)

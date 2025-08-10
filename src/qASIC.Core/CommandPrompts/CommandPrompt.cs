@@ -10,6 +10,7 @@
         public virtual bool CanExecute(qCommandContext context) =>
             true;
 
+        public object ParserData { get; set; }
         public qCommandContext context;
         public virtual bool ParseArguments => false;
         public object DataObject { get; set; }

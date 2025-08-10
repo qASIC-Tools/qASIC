@@ -234,7 +234,7 @@ namespace qASIC.Console.Commands
 
                 object ExecuteInConsole(Func<object> func)
                 {
-                    var obj = context.console.Execute(context.commandName, () =>
+                    var obj = context.console.ExecuteCode(context.commandName, () =>
                     {
                         try
                         {
@@ -250,7 +250,7 @@ namespace qASIC.Console.Commands
                     }, context.Logs, false);
 
                     if (obj is Task task && (!isSingle || targets.Count() > 1))
-                        Task.Run(() => context.console.ExecuteAsync(context.commandName, task, context.Logs, false));
+                        Task.Run(() => context.console.ExecuteCodeAsync(context.commandName, task, context.Logs, false));
 
                     return obj;
                 }
