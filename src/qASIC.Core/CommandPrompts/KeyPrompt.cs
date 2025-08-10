@@ -39,7 +39,7 @@ namespace qASIC.CommandPrompts
         public override bool CanExecute(qCommandContext context) =>
             context.inputString.Length > 0;
 
-        public override qCommandArgument[] Prepare(qCommandContext context)
+        public override void Prepare(qCommandContext context)
         {
             string s = context.inputString.FirstOrDefault().ToString();
 
@@ -56,7 +56,7 @@ namespace qASIC.CommandPrompts
                 new object[] { s[0], s } :
                 new object[] { s };
 
-            return new qCommandArgument[]
+            context.args = new qCommandArgument[]
             {
                 new qCommandArgument(s, values),
             };

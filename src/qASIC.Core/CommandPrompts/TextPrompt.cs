@@ -6,10 +6,10 @@
 
         public string Text { get; private set; }
 
-        public override qCommandArgument[] Prepare(qCommandContext context)
+        public override void Prepare(qCommandContext context)
         {
             Text = context.inputString;
-            return new qCommandArgument[]
+            context.args = new qCommandArgument[]
             {
                 new qCommandArgument(context.inputString, new object[] { context.inputString }),
             };

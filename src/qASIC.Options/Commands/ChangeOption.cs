@@ -34,7 +34,7 @@ namespace qASIC.Options.Commands
             {
                 //Set
                 var value = text.Data.targetOption.value;
-                if (!context.parser.TryParse(text.Data.targetOption.value?.GetType(), text.Text, out value))
+                if (!context.Parser.TryParse(text.Data.targetOption.value?.GetType(), text.Text, out value))
                     throw new qCommandParseException(text.Data.targetOption.value?.GetType(), text.Text);
 
                 Manager.SetOption(text.Data.targetOption.name, value);

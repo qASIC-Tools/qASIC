@@ -11,12 +11,25 @@ namespace qASIC.Console.Parsing
 {
     public class QuashParser : ArgumentsParser
     {
+        public static readonly char[] Char_Escape = new char[]
+        {
+            '\\',
+        };
+
         public static readonly char[] Char_End = new char[]
         {
             '\n',
             ';'
         };
 
+        public static readonly char[] Char_Grouping = new char[]
+        {
+            '\"',
+            '\'',
+            '`',
+        };
+
+        #region Entry point
         public override object ExecuteParser(qConsoleContext context)
         {
             object returnedValue = null;
@@ -24,10 +37,10 @@ namespace qASIC.Console.Parsing
             {
                 returnedValue = Console.ExecuteCommand(promptContext);
                 if (returnedValue is Task task)
-                    return SwitchExecToAsync(CreateQ(context), context, promptContext, task);
+                    return SwitchExecToAsync(CreateQAndPrepare(context), context, promptContext, task);
             }
 
-            return ExecQ(CreateQ(context), context, returnedValue);
+            return ExecQ(CreateQAndPrepare(context), context, returnedValue);
         }
 
         public override async Task<object> ExecuteParserAsync(qConsoleContext context)
@@ -36,16 +49,18 @@ namespace qASIC.Console.Parsing
             if (TryPreparePromptContextForStart(context, out var promptContext))
                 returnedValue = await Console.ExecuteCommandAsync(promptContext);
 
-            return await ExecQAsync(CreateQ(context), context, returnedValue);
+            return await ExecQAsync(CreateQAndPrepare(context), context, returnedValue);
         }
+        #endregion
 
+        #region Preparation
         protected bool TryPreparePromptContextForStart(qConsoleContext context, out qConsoleCommandContext promptContext)
         {
             promptContext = null;
             if (context.previousValue is CommandPrompt prompt &&
-                prompt.context is qConsoleCommandContext)
+                prompt.Context is qConsoleCommandContext)
             {
-                promptContext = prompt.context as qConsoleCommandContext;
+                promptContext = prompt.Context as qConsoleCommandContext;
                 promptContext.prompt = prompt;
                 promptContext.inputString = context.inputString;
 
@@ -55,7 +70,7 @@ namespace qASIC.Console.Parsing
                     promptContext.args = promptArgs.ToArray();
                 }
 
-                promptContext.args = prompt.Prepare(promptContext);
+                prompt.Prepare(promptContext);
                 context.inputString = string.Empty;
                 return true;
             }
@@ -63,7 +78,7 @@ namespace qASIC.Console.Parsing
             return false;
         }
 
-        private Queue<char> CreateQ(qConsoleContext context)
+        protected Queue<char> CreateQAndPrepare(qConsoleContext context)
         {
             if (!(context.ParserData is QuashData))
             {
@@ -77,9 +92,11 @@ namespace qASIC.Console.Parsing
             return (context.ParserData as QuashData).queue;
         }
 
-        private Queue<char> CreateQ(string inputString) =>
+        protected Queue<char> CreateQ(string inputString) =>
             new Queue<char>(inputString.Replace("\r\n", "\n"));
+        #endregion
 
+        #region Executing loops
         private object ExecQ(Queue<char> q, qConsoleContext context, object returnedValue = null)
         {
             while (q.Count > 0)
@@ -88,18 +105,6 @@ namespace qASIC.Console.Parsing
                 returnedValue = Console.ExecuteCommand(cmdContext);
                 if (returnedValue is Task task)
                     return SwitchExecToAsync(q, context, cmdContext, task);
-            }
-
-            FinishExecuting(context);
-            return returnedValue;
-        }
-
-        private async Task<object> ExecQAsync(Queue<char> q, qConsoleContext context, object returnedValue = null)
-        {
-            while (q.Count > 0)
-            {
-                var cmdContext = ReadCommand(q, context, returnedValue);
-                returnedValue = await Console.ExecuteCommandAsync(cmdContext);
             }
 
             FinishExecuting(context);
@@ -119,43 +124,26 @@ namespace qASIC.Console.Parsing
             await ExecQAsync(q, context, returnedValue);
         }
 
-        private qConsoleCommandContext ReadCommand(Queue<char> q, qConsoleContext context, object returnedValue)
+        private async Task<object> ExecQAsync(Queue<char> q, qConsoleContext context, object returnedValue = null)
         {
-            if (returnedValue is CommandPrompt prompt &&
-                prompt.context is qConsoleCommandContext promptContext)
+            while (q.Count > 0)
             {
-                switch (prompt.ParseArguments)
-                {
-                    case true:
-                        ReadCommand(q, out promptContext.inputString, out promptContext.commandName, out var promptArgs);
-                        promptContext.args = promptArgs.ToArray();
-                        break;
-                    case false:
-                        ReadLine(q, out var line);
-                        promptContext.inputString = line;
-                        break;
-                }
-
-                promptContext.args = prompt.Prepare(promptContext);
-                promptContext.prompt = prompt;
-                return promptContext;               
+                var cmdContext = ReadCommand(q, context, returnedValue);
+                returnedValue = await Console.ExecuteCommandAsync(cmdContext);
             }
 
-            var cmdContext = context.CreateCommandContext();
-            cmdContext.Logs ??= new qLogManager();
-            context.Logs.RegisterManager(cmdContext.Logs);
-            
-            ReadCommand(q, out cmdContext.inputString, out cmdContext.commandName, out var args);
-            cmdContext.args = args.ToArray();
-            return cmdContext;
+            FinishExecuting(context);
+            return returnedValue;
         }
+        #endregion
 
+        #region Reading
         private void ReadLine(Queue<char> q, out string line)
         {
             var txt = new StringBuilder();
             while (q.TryDequeue(out var c))
             {
-                if (c == '\\')
+                if (Char_Escape.Contains(c))
                 {
                     if (q.TryDequeue(out c))
                         txt.Append(c);
@@ -170,6 +158,35 @@ namespace qASIC.Console.Parsing
             }
 
             line = txt.ToString();
+        }
+
+        private qConsoleCommandContext ReadCommand(Queue<char> q, qConsoleContext context, object returnedValue)
+        {
+            if (returnedValue is CommandPrompt prompt &&
+                prompt.Context is qConsoleCommandContext promptContext)
+            {
+                switch (prompt.ParseArguments)
+                {
+                    case true:
+                        ReadCommand(q, out promptContext.inputString, out promptContext.commandName, out var promptArgs);
+                        promptContext.args = promptArgs.ToArray();
+                        break;
+                    case false:
+                        ReadLine(q, out var line);
+                        promptContext.inputString = line;
+                        break;
+                }
+
+                return promptContext;
+            }
+
+            var cmdContext = context.CreateCommandContext();
+            cmdContext.Logs ??= new qLogManager();
+            context.Logs.Register(cmdContext.Logs);
+
+            ReadCommand(q, out cmdContext.inputString, out cmdContext.commandName, out var args);
+            cmdContext.args = args.ToArray();
+            return cmdContext;
         }
 
         private void ReadCommand(Queue<char> q, out string inputString, out string commandName, out List<QuashArgument> args)
@@ -218,14 +235,14 @@ namespace qASIC.Console.Parsing
                 whiteBefore = whiteAfter.ToString();
                 whiteAfter.Clear();
                 var arg = new StringBuilder();
-                var inQuotes = false;
+                char? inGrouping = null;
 
                 //Read single argument
                 while (TryDequeue(out var c))
                 {
                     if (char.IsWhiteSpace(c))
                     {
-                        if (inQuotes)
+                        if (inGrouping != null)
                         {
                             arg.Append(c);
                             continue;
@@ -233,13 +250,12 @@ namespace qASIC.Console.Parsing
 
                         //Finish argument
                         while (q.TryPeek(out c) && char.IsWhiteSpace(c))
-                        {
                             whiteAfter.Append(Dequeue());
-                        }
+
                         break;
                     }
 
-                    if (c == '\\')
+                    if (Char_Escape.Contains(c))
                     {
                         if (TryDequeue(out c))
                             arg.Append(c);
@@ -247,15 +263,24 @@ namespace qASIC.Console.Parsing
                         continue;
                     }
 
-                    if (c == '"')
+                    //Start grouping
+                    if (inGrouping == null && inGrouping == c)
                     {
-                        inQuotes = !inQuotes;
+                        inGrouping = c;
                         continue;
                     }
 
+                    //End grouping
+                    if (Char_Grouping.Contains(c))
+                    {
+                        inGrouping = null;
+                        continue;
+                    }
+
+                    //Ending
                     if (Char_End.Contains(c))
                     {
-                        if (inQuotes)
+                        if (inGrouping != null)
                         {
                             arg.Append(c);
                             continue;
@@ -301,7 +326,9 @@ namespace qASIC.Console.Parsing
                 return false;
             }
         }
+        #endregion
 
+        #region Other overrides
         public override CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex)
         {
             //Parsed info
@@ -386,6 +413,7 @@ namespace qASIC.Console.Parsing
 
             return txt.ToString().Trim();
         }
+        #endregion
 
         public class QuashArgument : qCommandArgument
         {

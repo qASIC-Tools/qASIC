@@ -15,7 +15,7 @@ namespace qASIC.Console.Commands.BuiltIn
             context.CheckArgumentCount(0);
 
             var count = 0;
-            foreach (var item in context.console.Logs)
+            foreach (var item in context.Console.Logs)
             {
                 if (!item.sticky) continue;
                 item.UnStick();

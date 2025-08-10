@@ -201,7 +201,7 @@ namespace qASIC.Console.Commands
 
                 if (attr.UseRegisteredTargets)
                 {
-                    var regTargets = context.console.Targets
+                    var regTargets = context.Console.Targets
                         .Where(x => targetType.IsAssignableFrom(x.GetType()));
 
                     targets = targets
@@ -234,7 +234,7 @@ namespace qASIC.Console.Commands
 
                 object ExecuteInConsole(Func<object> func)
                 {
-                    var obj = context.console.ExecuteCode(context.commandName, () =>
+                    var obj = context.Console.ExecuteCode(context.commandName, () =>
                     {
                         try
                         {
@@ -250,7 +250,7 @@ namespace qASIC.Console.Commands
                     }, context.Logs, false);
 
                     if (obj is Task task && (!isSingle || targets.Count() > 1))
-                        Task.Run(() => context.console.ExecuteCodeAsync(context.commandName, task, context.Logs, false));
+                        Task.Run(() => context.Console.ExecuteCodeAsync(context.commandName, task, context.Logs, false));
 
                     return obj;
                 }
@@ -261,7 +261,7 @@ namespace qASIC.Console.Commands
             protected abstract object InvokeForItem(object item, object[] values, qConsoleCommandContext context);
 
             protected void LogExecuteBegin(qConsoleCommandContext context, object target) =>
-                context.console.Log($"Executing command for target '{target ?? "NULL"}'");
+                context.Console.Log($"Executing command for target '{target ?? "NULL"}'");
 
             public MemberInfo memberInfo;
             public qCommandAttribute attr;

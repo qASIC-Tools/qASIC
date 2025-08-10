@@ -22,13 +22,13 @@ namespace qASIC
             RegisteredObjects.OnObjectRegistered += a =>
             {
                 if (a is IHasLogs loggable)
-                    Logs.RegisterLoggable(loggable);
+                    Logs.Register(loggable);
             };
 
             RegisteredObjects.OnObjectDeregistered += a =>
             {
                 if (a is IHasLogs loggable)
-                    Logs.UnregisterLoggable(loggable);
+                    Logs.Unregister(loggable);
             };
         }
 

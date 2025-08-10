@@ -18,39 +18,24 @@ namespace qASIC
 
         public virtual void CopyTo(qCommandContext target)
         {
+            target.Parser = Parser;
             target.inputString = inputString;
             target.commandName = commandName;
             target.args = args;
             target.prompt = prompt;
-            target.parser = parser;
             target.command = command;
             target.Logs = Logs;
         }
+
+        public ModularParser Parser { get; set; }
 
         public string inputString;
         public string commandName;
         public qCommandArgument[] args;
         public CommandPrompt prompt;
-        public ModularParser parser;
         public ICommandLogic command;
 
-        public event Action<qLog> OnLog;
-
-        private qLogManager _logs = null;
-        public qLogManager Logs
-        {
-            get => _logs;
-            set
-            {
-                if (_logs != null)
-                    _logs.OnLog -= OnLog;
-
-                _logs = value;
-
-                if (_logs != null)
-                    _logs.OnLog += OnLog;
-            }
-        }
+        public qLogManager Logs { get; set; }
 
         public qCommandArgument this[int index]
         {

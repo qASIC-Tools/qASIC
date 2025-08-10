@@ -20,7 +20,7 @@ namespace qASIC.Console.Commands.BuiltIn
         {
             context.CheckArgumentCount(0);
 
-            var instance = Instance ?? context.console.Instance;
+            var instance = Instance ?? context.Console.Instance;
             if (instance == null)
                 throw new qCommandException("Unable to get remote inspector server info: no qInstance found. Neither this command nor this console has an instance of qASIC assigned.");
 

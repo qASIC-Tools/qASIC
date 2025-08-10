@@ -36,15 +36,15 @@ namespace qASIC.Console.Commands.BuiltIn
         {
             context.CheckArgumentCount(0);
 
-            var appInfo = context.console.Instance?.AppInfo;
+            var appInfo = context.Console.Instance?.AppInfo;
 
             if (appInfo == null)
             {
-                context.console.LogError("No version information is supplied.");
+                context.Console.LogError("No version information is supplied.");
                 return null;
             }
 
-            context.console.Log(GetInfoString(appInfo));
+            context.Console.Log(GetInfoString(appInfo));
             return null;
         }
     }

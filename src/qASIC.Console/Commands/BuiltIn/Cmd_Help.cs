@@ -54,7 +54,7 @@ namespace qASIC.Console.Commands.BuiltIn
                 }
             }
 
-            var commandList = context.console.CommandList;
+            var commandList = context.Console.CommandList;
             var commands = commandList
                 .Where(x => CanShowCommand?.Invoke(context, x) ?? true)
                 .ToList();
@@ -138,7 +138,7 @@ namespace qASIC.Console.Commands.BuiltIn
                             .ToArray();
 
                         txt.Append("\n  ");
-                        txt.Append(context.console.CommandParser.ConvertToString(cmd.CommandName, args));
+                        txt.Append(context.Console.CommandParser.ConvertToString(cmd.CommandName, args));
                     }
                 }
             }

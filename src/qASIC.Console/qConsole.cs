@@ -27,9 +27,9 @@ namespace qASIC.Console
             {
                 LogModifiers = new System.Collections.Generic.List<qLogModifier>()
                 {
-                    new LOGMOD_Color(),
-                    new LOGMOD_Prefix(),
-                    new LOGMOD_Tag(),
+                    new Logmod_Color(),
+                    new Logmod_Prefix(),
+                    new Logmod_Tag(),
                 },
             };
 
@@ -136,44 +136,74 @@ namespace qASIC.Console
             CommandList != null;
 
         #region Execute
-        /// <summary>Executes a command.</summary>
-        /// <param name="cmd">Command text that will be parsed and executed.</param>
-        public object Execute(string cmd, object previousValue = null) =>
-            Execute(new qConsoleContext()
-            {
-                inputString = cmd,
-                previousValue = previousValue,
-            });
+        /// <summary>Executes a string.</summary>
+        /// <param name="inputString">Command input that will be parsed and executed.</param>
+        /// <param name="previousValue">Previously returned value by this method.</param>
+        /// <returns>Passes the returned value from executing. This will either be a value of a command, a <see cref="Task"/>
+        /// that is executing asynchronous commands or a <see cref="CommandPrompt"/> that's used to make commands interactive. 
+        /// Make sure to store this value and pass it in <paramref name="previousValue"/> when executing this method again.</returns>
+        public object Execute(string inputString, object previousValue = null) =>
+            Execute(new qConsoleContext(inputString, previousValue));
 
-        /// <summary>Executes a command asynchronously.</summary>
-        /// <param name="cmd">Command text that will be parsed and executed.</param>
-        public async Task<object> ExecuteAsync(string cmd, object previousValue = null) =>
-            await ExecuteAsync(new qConsoleContext()
-            {
-                inputString = cmd,
-                previousValue = previousValue,
-            });
+        /// <summary>Executes a string asynchronously.</summary>
+        /// <param name="inputString">Command input that will be parsed and executed.</param>
+        /// <param name="previousValue">Previously returned value by this method.</param>
+        /// <returns>Returns a task with the returned value from executing. This will either be a value of a command or a 
+        /// <see cref="CommandPrompt"/> that's used to make commands interactive. Make sure to store this value and pass 
+        /// it in <paramref name="previousValue"/> when executing this method again.</returns>
+        public async Task<object> ExecuteAsync(string inputString, object previousValue = null) =>
+            await ExecuteAsync(new qConsoleContext(inputString, previousValue));
 
+        /// <summary>Executes a string.</summary>
+        /// <param name="context">Context used by the console to run commands.</param>
+        /// <returns>Passes the returned value from executing. This will either be a value of a command, a <see cref="Task"/>
+        /// that is executing asynchronous commands or a <see cref="CommandPrompt"/> that's used to make commands interactive. 
+        /// Make sure to store this value and pass it in <paramref name="previousValue"/> when executing this method again.</returns>
         public object Execute(qConsoleContext context)
         {
-            PreprocessConsoleContext(context);
-            return CommandParser.ExecuteParser(context);
+            if (!PreprocessConsoleContext(context))
+                return context.previousValue;
+
+            var returnedValue = CommandParser.ExecuteParser(context);
+            return PostProcessConsoleContext(context, returnedValue);
         }
 
+        /// <summary>Executes a string asynchronously.</summary>
+        /// <param name="context">Context used by the console to run commands.</param>
+        /// <returns>Passes the returned value from executing. This will either be a value of a command, a <see cref="Task"/>
+        /// that is executing asynchronous commands or a <see cref="CommandPrompt"/> that's used to make commands interactive. 
+        /// Make sure to store this value and pass it in <paramref name="previousValue"/> when executing this method again.</returns>
         public async Task<object> ExecuteAsync(qConsoleContext context)
         {
-            PreprocessConsoleContext(context);
-            return await CommandParser.ExecuteParserAsync(context);
+            if (!PreprocessConsoleContext(context))
+                return context.previousValue;
+
+            var returnedValue = await CommandParser.ExecuteParserAsync(context);
+            return PostProcessConsoleContext(context, returnedValue);
         }
 
-        private void PreprocessConsoleContext(qConsoleContext context)
+        /// <summary>Invoked before executing an input string in <see cref="Execute(qConsoleContext)"/> and 
+        /// <see cref="ExecuteAsync(qConsoleContext)"/>.</summary>
+        /// <param name="context">Context from the afformentioned methods.</param>
+        /// <returns>Returns whenever the string should be executed.</returns>
+        protected virtual bool PreprocessConsoleContext(qConsoleContext context)
         {
             context.Console = this;
             context.Logs ??= context.ParserData?.logs ?? new qLogManager();
-            Logs.RegisterManager(context.Logs);
+            Logs.Register(context.Logs);
 
             LogUserInput(context);
+            return true;
         }
+
+        /// <summary>Invoked after executing an input string in <see cref="Execute(qConsoleContext)"/> and 
+        /// <see cref="ExecuteAsync(qConsoleContext)"/>.</summary>
+        /// <param name="context">Context from the afformentioned methods.</param>
+        /// <param name="returnedValue">Returned value from running the string.</param>
+        /// <returns>Returns <paramref name="returnedValue"/>. This will be used as the returned value by
+        /// the afformentioned methods.</returns>
+        protected virtual object PostProcessConsoleContext(qConsoleContext context, object returnedValue) =>
+            returnedValue;
         #endregion
 
         private void LogUserInput(qConsoleContext context)
@@ -183,10 +213,10 @@ namespace qASIC.Console
         }
 
         #region ExecuteCode
-        /// <summary>Executes a command.</summary>
+        /// <summary>Executes command code.</summary>
         /// <param name="commandName">Name of the command.</param>
-        /// <param name="command">Command code to execute.</param>
-        /// <param name="logOutput">When true, it will log the output value to the console.</param>
+        /// <param name="command">Code to execute.</param>
+        /// <param name="logOutput">When true, it will log the output value to <paramref name="logs"/>.</param>
         public object ExecuteCode(string commandName, Func<object> command, qLogManager logs = null, bool logOutput = true)
         {
             try
@@ -214,10 +244,10 @@ namespace qASIC.Console
         public async Task<object> ExecuteCodeAsync(string commandName, Func<Task> command, qLogManager logs = null, bool logOutput = true) =>
             await ExecuteCodeAsync(commandName, command.Invoke(), logs, logOutput);
 
-        /// <summary>Executes a command asynchronously.</summary>
+        /// <summary>Executes command code asynchronously.</summary>
         /// <param name="commandName">Name of the command.</param>
-        /// <param name="command">Command task to execute.</param>
-        /// <param name="logOutput">When true, it will log the output value to the console.</param>
+        /// <param name="command">Task to execute.</param>
+        /// <param name="logOutput">When true, it will log the output value to <paramref name="logs"/>.</param>
         public async Task<object> ExecuteCodeAsync(string commandName, Task task, qLogManager logs = null, bool logOutput = true)
         {
             try
@@ -285,7 +315,7 @@ namespace qASIC.Console
 
         protected virtual bool PreprocessCommandContext(qConsoleCommandContext context)
         {
-            context.parser = CommandParser.ValueParser;
+            context.Parser = CommandParser.ValueParser;
 
             //Prompt
             if (context.prompt != null)
@@ -293,7 +323,7 @@ namespace qASIC.Console
                 if (!context.prompt.CanExecute(context))
                     return false;
 
-                context.args = context.prompt.Prepare(context);
+                context.prompt.Prepare(context);
                 return true;
             }
 
@@ -302,12 +332,16 @@ namespace qASIC.Console
                 throw new Exception("Cannot execute commands with no command list!");
 
             context.LogOutput = true;
-            context.Logs ??= new qLogManager();
+            if (context.Logs == null)
+            {
+                context.Logs = new qLogManager();
+                Logs.Register(context.Logs);
+            } 
 
             if (!CommandList.TryGetCommand(context.commandName, out var command))
             {
                 context.Logs.LogError($"Command {context.commandName} doesn't exist");
-                context.Logs.Close();
+                context.Logs.ForceClose();
                 return false;
             }
 
@@ -320,13 +354,14 @@ namespace qASIC.Console
         {
             if (returnedValue is CommandPrompt prompt)
             {
-                prompt.context = context;
+                prompt.Context = context;
+                context.prompt = prompt;
                 return returnedValue;
             }
 
             if (context.CleanupLogger && !(returnedValue is Task))
             {
-                context.Logs.Close();
+                context.Logs.StartClosing();
             }
 
             context.Logs = null;
@@ -350,10 +385,10 @@ namespace qASIC.Console
                 switch (_getLogsFromInstance)
                 {
                     case true:
-                        Logs.RegisterLoggable(_instance);
+                        Logs.Register(_instance);
                         break;
                     case false:
-                        Logs.UnregisterLoggable(_instance);
+                        Logs.Unregister(_instance);
                         break;
                 }
             }

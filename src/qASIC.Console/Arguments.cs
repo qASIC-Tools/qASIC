@@ -12,14 +12,14 @@ namespace qASIC.Console
             base.CopyTo(target);
             if (target is qConsoleCommandContext consoleTarget)
             {
-                consoleTarget.console = console;
+                consoleTarget.Console = Console;
                 consoleTarget.LogOutput = LogOutput;
                 consoleTarget.RunTaskResult = RunTaskResult;
                 consoleTarget.CleanupLogger = CleanupLogger;
             }
         }
 
-        public qConsole console;
+        public qConsole Console { get; set; }
 
         public bool LogOutput { get; set; } = true;
 
@@ -33,10 +33,16 @@ namespace qASIC.Console
 
     public class qConsoleContext
     {
+        public qConsoleContext(string inputString, object previousValue = null)
+        {
+            this.inputString = inputString;
+            this.previousValue = previousValue;
+        }
+
         public virtual qConsoleCommandContext CreateCommandContext() =>
             new qConsoleCommandContext()
             {
-                console = Console,
+                Console = Console,
             };
 
         public qConsoleParserData ParserData { get; set; }
@@ -50,6 +56,5 @@ namespace qASIC.Console
     public class qConsoleParserData
     {
         public qLogManager logs;
-        public bool cleanupLogger;
     }
 }

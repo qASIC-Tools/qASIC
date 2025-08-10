@@ -7,14 +7,14 @@
             DataObject = data;
         }
 
+        public qCommandContext Context { get; set; }
+        public object DataObject { get; set; }
+
         public virtual bool CanExecute(qCommandContext context) =>
             true;
 
-        public object ParserData { get; set; }
-        public qCommandContext context;
         public virtual bool ParseArguments => false;
-        public object DataObject { get; set; }
 
-        public abstract qCommandArgument[] Prepare(qCommandContext context);
+        public abstract void Prepare(qCommandContext context);
     }
 }

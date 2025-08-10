@@ -107,7 +107,7 @@ namespace qASIC.Communication
                     var conn = new Client(nextClientId++, accepted, HandleDataReceive);
                     Logs.Log($"Connection received, creating client id: {conn.id}");
                     Clients.Add(conn);
-                    Logs.RegisterLoggable(conn);
+                    Logs.Register(conn);
                     conn.Initialize();
                 }
                 else
@@ -156,7 +156,7 @@ namespace qASIC.Communication
         {
             client.DisconnectLocal();
             Clients.Remove(client);
-            Logs.UnregisterLoggable(client);
+            Logs.Unregister(client);
 
             OnClientDisconnect?.Invoke(client);
         }

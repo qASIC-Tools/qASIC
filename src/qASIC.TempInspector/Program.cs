@@ -213,7 +213,7 @@ namespace qASICRemote
                 throw new qCommandException("Console does not exist!");
 
             SelectedConsole = console;
-            context.console.Log($"Selected console '{SelectedConsole.Name}'.");
+            context.Console.Log($"Selected console '{SelectedConsole.Name}'.");
         }
 
         [InspectorCommand("selectedconsole")]
@@ -334,7 +334,7 @@ namespace qASICRemote
 
                 data.log.message = logTxt.ToString();
 
-                context.console.Log(data.log);
+                context.Console.Log(data.log);
                 return final ?
                     null :
                     new KeyPrompt<Data>(data);

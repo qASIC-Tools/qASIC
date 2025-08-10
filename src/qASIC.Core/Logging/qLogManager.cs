@@ -12,18 +12,16 @@ namespace qASIC.Logging
     {
         public qLogManager() : this(qDebug.DEFAULT_TAG, qDebug.WARNING_TAG, qDebug.ERROR_TAG) { }
         public qLogManager(string defaultColorTag) : this(defaultColorTag, qDebug.WARNING_TAG, qDebug.ERROR_TAG) { }
-        public qLogManager(string defaultColorTag, string warningColor, string errorColor)
+        public qLogManager(string defaultTag, string warningTag, string errorTag)
         {
-            DefaultColorTag = defaultColorTag;
-            WarningColorTag = warningColor;
-            ErrorColorTag = errorColor;
+            DefaultTag = defaultTag;
+            WarningTag = warningTag;
+            ErrorTag = errorTag;
         }
 
-        public string DefaultColorTag { get; set; }
-        public string WarningColorTag { get; set; }
-        public string ErrorColorTag { get; set; }
-
-        public List<qLogModifier> LogModifiers { get; set; }
+        public string DefaultTag { get; set; }
+        public string WarningTag { get; set; }
+        public string ErrorTag { get; set; }
 
         #region Closing
         /// <summary>When true, the manager will close itself when all other managers get unregistered.</summary>
@@ -31,7 +29,18 @@ namespace qASIC.Logging
         public bool Closed { get; private set; } = false;
         public Action<qLogManager> OnClose;
 
-        public virtual void Close()
+        public void StartClosing()
+        {
+            if (RegisteredManagers.Count > 0)
+            {
+                AutoClose = true;
+                return;
+            }
+
+            ForceClose();
+        }
+
+        public virtual void ForceClose()
         {
             Closed = true;
             OnClose?.Invoke(this);
@@ -63,13 +72,15 @@ namespace qASIC.Logging
             Log(qLog.CreateNow(message));
 
         public void LogWarning(string message) =>
-            Log(qLog.CreateNow(message, WarningColorTag));
+            Log(qLog.CreateNow(message, WarningTag));
 
         public void LogError(string message) =>
-            Log(qLog.CreateNow(message, ErrorColorTag));
+            Log(qLog.CreateNow(message, ErrorTag));
         #endregion
 
         #region Modifiers
+        public List<qLogModifier> LogModifiers { get; set; }
+
         protected void ApplyLogModifiers(qLog log)
         {
             if (LogModifiers != null)
@@ -121,27 +132,27 @@ namespace qASIC.Logging
         }
         #endregion
 
-        #region Loggables
-        public List<qLogManager> RegisteredManagers { get; private set; } = new List<qLogManager>();
+        #region Registering
+        protected List<qLogManager> RegisteredManagers { get; private set; } = new List<qLogManager>();
 
         /// <summary>Subscribes to messages from a <see cref="IHasLogs"/>.</summary>
         /// <param name="loggable">The loggable to register.</param>
         /// <returns>Returns itself.</returns>
-        public qLogManager RegisterLoggable(IHasLogs loggable)
+        public qLogManager Register(IHasLogs loggable)
         {
-            RegisterManager(loggable?.Logs);
+            Register(loggable?.Logs);
             return this;
         }
 
         /// <summary>Subscribes to messages from a <see cref="qLogManager"/>.</summary>
         /// <param name="other">The other manager to register.</param>
         /// <returns>Returns itself.</returns>
-        public virtual qLogManager RegisterManager(qLogManager other)
+        public virtual qLogManager Register(qLogManager other)
         {
             if (other != null && other != this && !RegisteredManagers.Contains(other))
             {
                 other.OnLog += Log;
-                other.OnClose += a => UnregisterManager(a);
+                other.OnClose += a => Unregister(a);
                 RegisteredManagers.Add(other);
             }
 
@@ -151,25 +162,25 @@ namespace qASIC.Logging
         /// <summary>Unsubscribes from messages from a <see cref="IHasLogs"/>.</summary>
         /// <param name="loggable">The loggable to deregister.</param>
         /// <returns>Returns itself.</returns>
-        public qLogManager UnregisterLoggable(IHasLogs loggable)
+        public qLogManager Unregister(IHasLogs loggable)
         {
-            UnregisterManager(loggable?.Logs);
+            Unregister(loggable?.Logs);
             return this;
         }
 
         /// <summary>Unsubscribes from messages from a <see cref="qLogManager"/>.</summary>
         /// <param name="other">The other manager to deregister.</param>
         /// <returns>Returns itself.</returns>
-        public virtual qLogManager UnregisterManager(qLogManager other)
+        public virtual qLogManager Unregister(qLogManager other)
         {
             if (other != null && other != this && RegisteredManagers.Contains(other))
             {
                 other.OnLog -= Log;
-                other.OnClose -= a => UnregisterManager(a);
+                other.OnClose -= a => Unregister(a);
                 RegisteredManagers.Remove(other);
 
                 if (AutoClose && RegisteredManagers.Count > 0)
-                    Close();
+                    ForceClose();
             }
 
             return this;

@@ -51,20 +51,20 @@ namespace qASIC.Console.Logging
         #endregion
 
         #region Registering
-        public override qLogManager RegisterManager(qLogManager other)
+        public override qLogManager Register(qLogManager other)
         {
             if (other is qSavableLogManager gameOther && other != this && !RegisteredManagers.Contains(other))
                 gameOther.OnUpdateLog += Log;
 
-            return base.RegisterManager(other);
+            return base.Register(other);
         }
 
-        public override qLogManager UnregisterManager(qLogManager other)
+        public override qLogManager Unregister(qLogManager other)
         {
             if (other is qSavableLogManager gameOther && other != this && RegisteredManagers.Contains(other))
                 gameOther.OnUpdateLog -= Log;
 
-            return base.UnregisterManager(other);
+            return base.Unregister(other);
         }
         #endregion
 

@@ -22,19 +22,19 @@ namespace qASIC.Console.Parsing
         /// <returns>Returns a console input string.</returns>
         public abstract string ConvertToString(string commandName, qCommandArgument[] arguments);
 
-        public abstract CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex);
+        /// <summary>Gives information about a character in an input string.</summary>
+        /// <param name="inputString">The input string.</param>
+        /// <param name="characterIndex">Index of the character.</param>
+        /// <returns>Returns information about the specified character.</returns>
+        public abstract CmdCharacterInfo GetCharacterInfo(string inputString, int characterIndex);
         
-        protected void FinishExecuting(qConsoleContext context)
+        /// <summary>Finalizes executing of an input string.</summary>
+        /// <param name="context">The context.</param>
+        /// <param name="returnedValue">The last returned value by a command.</param>
+        protected void FinishExecuting(qConsoleContext context, object returnedValue = null)
         {
-            if (context.ParserData.cleanupLogger)
-            {
-                if (context.ParserData.logs.RegisteredManagers.Count > 0)
-                    context.ParserData.logs.AutoClose = true;
-                else
-                    context.ParserData.logs.Close();
-            }
-
-            context.ParserData = null;
+            if (!(returnedValue is CommandPrompt))
+                context.ParserData.logs.StartClosing();
         }
     }
 }
