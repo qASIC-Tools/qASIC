@@ -6,9 +6,9 @@ using qASIC.CommandPrompts;
 
 namespace qASIC.Console.Parsing
 {
-    public abstract class ArgumentsParser
+    public abstract class ConsoleParser
     {
-        public ArgumentsParser() { }
+        public ConsoleParser() { }
 
         public qConsole Console { get; set; }
         public ModularParser ValueParser { get; set; } = new ModularParser();

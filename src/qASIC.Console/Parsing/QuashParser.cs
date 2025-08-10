@@ -9,7 +9,7 @@ using qASIC.Parsing;
 
 namespace qASIC.Console.Parsing
 {
-    public class QuashParser : ArgumentsParser
+    public class QuashParser : ConsoleParser
     {
         public static readonly char[] Char_Escape = new char[]
         {
@@ -189,7 +189,7 @@ namespace qASIC.Console.Parsing
             return cmdContext;
         }
 
-        private void ReadCommand(Queue<char> q, out string inputString, out string commandName, out List<QuashArgument> args)
+        public void ReadCommand(Queue<char> q, out string inputString, out string commandName, out List<QuashArgument> args)
         {
             var input = new StringBuilder();
 

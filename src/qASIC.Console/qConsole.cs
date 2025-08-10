@@ -17,11 +17,11 @@ namespace qASIC.Console
         public const string SYSTEM_NAME = "qASIC.Console";
         public const string SYSTEM_VERSION = "1.0.0";
 
-        public qConsole(ICommandList commandList = null, ArgumentsParser parser = null) :
+        public qConsole(ICommandList commandList = null, ConsoleParser parser = null) :
             this(Guid.NewGuid().ToString(), commandList, parser)
         { }
 
-        public qConsole(string name, ICommandList commandList = null, ArgumentsParser parser = null)
+        public qConsole(string name, ICommandList commandList = null, ConsoleParser parser = null)
         {
             Logs = new qSavableLogManager()
             {
@@ -93,8 +93,8 @@ namespace qASIC.Console
 
         public ICommandList CommandList { get; set; }
 
-        private ArgumentsParser _commandParser;
-        public ArgumentsParser CommandParser
+        private ConsoleParser _commandParser;
+        public ConsoleParser CommandParser
         {
             get => _commandParser;
             set
@@ -227,15 +227,11 @@ namespace qASIC.Console
 
                 return output;
             }
-            catch (qCommandException e)
-            {
-                logs?.LogError(e.ToString(IncludeStackTraceInCommandExceptions));
-            }
             catch (Exception e)
             {
-                logs?.LogError(IncludeStackTraceInUnknownCommandExceptions ?
-                    $"There was an error while executing command '{commandName}': {e}" :
-                    $"There was an error while executing command '{commandName}'.");
+                var logMsg = LogMessage_Exception(commandName, e);
+                if (logMsg != null)
+                    logs?.LogError(logMsg);
             }
 
             return null;
@@ -265,15 +261,11 @@ namespace qASIC.Console
 
                 return output;
             }
-            catch (qCommandException e)
-            {
-                logs?.LogError(e.ToString(IncludeStackTraceInCommandExceptions));
-            }
             catch (Exception e)
             {
-                logs?.LogError(IncludeStackTraceInUnknownCommandExceptions ?
-                    $"There was an error while executing command '{commandName}': {e}" :
-                    $"There was an error while executing command '{commandName}'.");
+                var logMsg = LogMessage_Exception(commandName, e);
+                if (logMsg != null)
+                    logs?.LogError(logMsg);
             }
 
             return null;
@@ -340,7 +332,10 @@ namespace qASIC.Console
 
             if (!CommandList.TryGetCommand(context.commandName, out var command))
             {
-                context.Logs.LogError($"Command {context.commandName} doesn't exist");
+                var logMsg = LogMessage_InvalidCommand(context);
+                if (logMsg != null)
+                    context.Logs.LogError(logMsg);
+                
                 context.Logs.ForceClose();
                 return false;
             }
@@ -366,6 +361,28 @@ namespace qASIC.Console
 
             context.Logs = null;
             return returnedValue;
+        }
+        #endregion
+
+        #region Error ToString
+        /// <summary>Creates a message string used in an error log when the user is trying to run a command that doesn't exist.</summary>
+        /// <param name="context">Context for the invalid command.</param>
+        /// <returns>Returns a string containing a message to the user about their error. If the string is null, the message will not be logged.</returns>
+        protected virtual string LogMessage_InvalidCommand(qConsoleCommandContext context) =>
+            $"Command {context.commandName} doesn't exist!";
+
+        /// <summary>Creates a message string used in an error log when a command throws an exception.</summary>
+        /// <param name="commandName">Name of the command that threw the exception.</param>
+        /// <param name="e">The exception.</param>
+        /// <returns>Returns a string containing information about the thrown exception. If the string is null, the message will not be logged.</returns>
+        protected virtual string LogMessage_Exception(string commandName, Exception e)
+        {
+            if (e is qCommandException commandException)
+                return commandException.ToString(IncludeStackTraceInCommandExceptions);
+
+            return IncludeStackTraceInUnknownCommandExceptions ?
+                $"There was an error while executing command '{commandName}': {e}" :
+                $"There was an error while executing command '{commandName}'.";
         }
         #endregion
 

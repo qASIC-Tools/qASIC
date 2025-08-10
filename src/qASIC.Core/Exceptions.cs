@@ -8,15 +8,13 @@ namespace qASIC
         public qCommandException() : base() { }
         public qCommandException(string message) : base(message) { }
 
-        public override string ToString()
-        {
-            return $"{Message}\n{StackTrace}";
-        }
+        public override string ToString() =>
+            $"{Message}: {StackTrace}";
 
         public string ToString(bool includeStackTrace) =>
             includeStackTrace ?
-            ToString() :
-            Message;
+                ToString() :
+                Message;
     }
 
     public class qCommandParseException : qCommandException
@@ -27,8 +25,8 @@ namespace qASIC
             this.arg = arg;
         }
 
-        Type type;
-        string arg;
+        public Type type;
+        public string arg;
 
         public override string Message =>
             $"Unable to parse '{arg}' to {type}";
@@ -44,23 +42,41 @@ namespace qASIC
             this.maxArgsCount = maxArgsCount;
         }
 
-        int inputArgsCount;
-        int minArgsCount;
-        int maxArgsCount;
+        /// <summary>Type of how the argument acount was missmatched</summary>
+        public enum MissmatchType
+        {
+            /// <summary>When the number of arguments provided by the user is less than the expected amount.</summary>
+            NotEnough,
+            /// <summary>When the number of arguments provided by the user is more than the excepted amount.</summary>
+            TooMany,
+            /// <summary>When the number of arguments provided by the user is correct, but the exception was thrown anyway.</summary>
+            Invalid,
+        }
 
-        public override string Message
+        public int inputArgsCount;
+        public int minArgsCount;
+        public int maxArgsCount;
+
+        public MissmatchType Reason
         {
             get
             {
                 if (inputArgsCount < minArgsCount)
-                    return "Not enough arguments";
+                    return MissmatchType.NotEnough;
 
                 if (inputArgsCount > maxArgsCount)
-                    return "Too many arguments";
+                    return MissmatchType.TooMany;
 
-                return "Invalid argument count";
+                return MissmatchType.Invalid;
             }
         }
+
+        public override string Message => Reason switch
+        {
+            MissmatchType.NotEnough => "Not enough arguments",
+            MissmatchType.TooMany => "Too many arguments",
+            _ => "Invalid argument count",
+        };
     }
 
     public class qCommandOptionException : qCommandException
