@@ -1,4 +1,6 @@
-﻿namespace qASIC.CommandPrompts
+﻿using qASIC.Logging;
+
+namespace qASIC.CommandPrompts
 {
     public abstract class CommandPrompt
     {
@@ -7,6 +9,7 @@
             DataObject = data;
         }
 
+        public qLogManager ParserLogs { get; set; }
         public qCommandContext Context { get; set; }
         public object DataObject { get; set; }
 

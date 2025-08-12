@@ -13,7 +13,6 @@ namespace qASIC.Console
         public string name;
         public bool isMain;
         public bool logQDebug;
-        public bool useLogModifiers;
         public bool traceInCommandExceptions;
         public bool traceInUnknownExceptions;
 
@@ -44,7 +43,6 @@ namespace qASIC.Console
                     .AddEntry("logFileFormat", logFileFormat)
                     .AddSpace()
                     .AddEntry("logQDebug", logQDebug)
-                    .AddEntry("useLogModifiers", useLogModifiers)
                     .AddEntry("traceInCommandExceptions", traceInCommandExceptions)
                     .AddEntry("traceInUnknownExceptions", traceInUnknownExceptions)
                 .FinishGroup()
@@ -74,7 +72,6 @@ namespace qASIC.Console
             logFilePath = data.GetValue("logs.logFilePath", logFilePath);
             logFileFormat  = data.GetValue("logs.logFileFormat", logFileFormat);
             logQDebug = data.GetValue("logs.logQDebug", logQDebug);
-            useLogModifiers = data.GetValue("logs.useLogModifiers", useLogModifiers);
             traceInCommandExceptions = data.GetValue("logs.traceInCommandExceptions", traceInCommandExceptions);
             traceInUnknownExceptions = data.GetValue("logs.traceInUnknownExceptions", traceInUnknownExceptions);
             addBuiltInCommands = data.GetValue("commandList.addBuiltIn", addBuiltInCommands);
@@ -113,7 +110,6 @@ namespace qASIC.Console
             }
 
             console.LogQDebug = logQDebug;
-            console.UseLogModifierAttributes = useLogModifiers;
 
             console.IncludeStackTraceInCommandExceptions = traceInCommandExceptions;
             console.IncludeStackTraceInUnknownCommandExceptions = traceInUnknownExceptions;
@@ -141,7 +137,6 @@ namespace qASIC.Console
                 isMain = true,
 
                 logQDebug = true,
-                useLogModifiers = true,
                 traceInCommandExceptions = false,
                 traceInUnknownExceptions = true,
 

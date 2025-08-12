@@ -114,9 +114,6 @@ namespace qASIC.Console
         /// <summary>Should the console log messages from <see cref="qDebug"/>.</summary>
         public bool LogQDebug { get; set; } = true;
 
-        /// <summary>Determines if console should try looking for attributes that can change log messages and colors.</summary>
-        public bool UseLogModifierAttributes { get; set; } = true;
-
         /// <summary>Determines if it should include exceptions when logging normal errors with executing commands.</summary>
         public bool IncludeStackTraceInCommandExceptions { get; set; } = false;
 
@@ -189,7 +186,15 @@ namespace qASIC.Console
         protected virtual bool PreprocessConsoleContext(qConsoleContext context)
         {
             context.Console = this;
-            context.Logs ??= context.ParserData?.logs ?? new qLogManager();
+
+            //Use context logs if present
+            //If not, use from parser data
+            //If not, use from the prompt
+            //If not, create a new manager
+            context.Logs ??= context.ParserData?.logs;
+            context.Logs ??= (context.previousValue as CommandPrompt)?.ParserLogs;
+            context.Logs ??= new qLogManager();
+
             Logs.Register(context.Logs);
 
             LogUserInput(context);

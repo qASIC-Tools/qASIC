@@ -1,7 +1,5 @@
 using qASIC.Parsing;
-using System;
 using System.Threading.Tasks;
-using qASIC.Logging;
 using qASIC.CommandPrompts;
 
 namespace qASIC.Console.Parsing
@@ -33,8 +31,13 @@ namespace qASIC.Console.Parsing
         /// <param name="returnedValue">The last returned value by a command.</param>
         protected void FinishExecuting(qConsoleContext context, object returnedValue = null)
         {
-            if (!(returnedValue is CommandPrompt))
-                context.ParserData.logs.StartClosing();
+            if (returnedValue is CommandPrompt prompt)
+            {
+                prompt.ParserLogs = context.Logs;
+                return;
+            }
+
+            context.ParserData.logs.StartClosing();
         }
     }
 }
