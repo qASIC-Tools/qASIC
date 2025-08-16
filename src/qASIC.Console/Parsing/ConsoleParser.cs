@@ -8,7 +8,6 @@ namespace qASIC.Console.Parsing
     {
         public ConsoleParser() { }
 
-        public qConsole Console { get; set; }
         public ModularParser ValueParser { get; set; } = new ModularParser();
 
         public abstract object ExecuteParser(qConsoleContext context);
@@ -33,11 +32,11 @@ namespace qASIC.Console.Parsing
         {
             if (returnedValue is CommandPrompt prompt)
             {
-                prompt.ParserLogs = context.Logs;
+                prompt.ParserData = context.ParserData;
                 return;
             }
 
-            context.ParserData.logs.StartClosing();
+            context.ParserData.Logs.StartClosing();
         }
     }
 }

@@ -9,8 +9,8 @@ namespace qASIC.CommandPrompts
             DataObject = data;
         }
 
-        public qLogManager ParserLogs { get; set; }
-        public qCommandContext Context { get; set; }
+        public object ParserData { get; set; }
+        public qCommandContext CommandContext { get; set; }
         public object DataObject { get; set; }
 
         public virtual bool CanExecute(qCommandContext context) =>

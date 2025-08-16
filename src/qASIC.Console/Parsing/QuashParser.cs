@@ -22,11 +22,26 @@ namespace qASIC.Console.Parsing
             ';'
         };
 
-        public static readonly char[] Char_Grouping = new char[]
+        public static readonly char[] Char_Wrapping = new char[]
         {
             '\"',
             '\'',
             '`',
+        };
+
+        public static ReadTokenArgs TA_CommandName = new ReadTokenArgs()
+        {
+            useEscapeCharacters = true,
+            endOnEndCharacters = true,
+            endOnWhiteSpace = true,
+        };
+
+        public static ReadTokenArgs TA_Argument = new ReadTokenArgs()
+        {
+            useEscapeCharacters = true,
+            useWrapping = true,
+            endOnEndCharacters = true,
+            endOnWhiteSpace = true,
         };
 
         #region Entry point
@@ -35,7 +50,7 @@ namespace qASIC.Console.Parsing
             object returnedValue = null;
             if (TryPreparePromptContextForStart(context, out var promptContext))
             {
-                returnedValue = Console.ExecuteCommand(promptContext);
+                returnedValue = context.Console.ExecuteCommand(promptContext);
                 if (returnedValue is Task task)
                     return SwitchExecToAsync(CreateQAndPrepare(context), context, promptContext, task);
             }
@@ -47,7 +62,7 @@ namespace qASIC.Console.Parsing
         {
             object returnedValue = null;
             if (TryPreparePromptContextForStart(context, out var promptContext))
-                returnedValue = await Console.ExecuteCommandAsync(promptContext);
+                returnedValue = await context.Console.ExecuteCommandAsync(promptContext);
 
             return await ExecQAsync(CreateQAndPrepare(context), context, returnedValue);
         }
@@ -58,9 +73,9 @@ namespace qASIC.Console.Parsing
         {
             promptContext = null;
             if (context.previousValue is CommandPrompt prompt &&
-                prompt.Context is qConsoleCommandContext)
+                prompt.CommandContext is qConsoleCommandContext c)
             {
-                promptContext = prompt.Context as qConsoleCommandContext;
+                promptContext = c;
                 promptContext.prompt = prompt;
                 promptContext.inputString = context.inputString;
 
@@ -84,7 +99,7 @@ namespace qASIC.Console.Parsing
             {
                 context.ParserData = new QuashData()
                 {
-                    logs = context.Logs ?? new qLogManager(),
+                    Logs = context.Logs ?? new qLogManager(),
                     queue = CreateQ(context.inputString)
                 };
             }
@@ -102,7 +117,7 @@ namespace qASIC.Console.Parsing
             while (q.Count > 0)
             {
                 var cmdContext = ReadCommand(q, context, returnedValue);
-                returnedValue = Console.ExecuteCommand(cmdContext);
+                returnedValue = context.Console.ExecuteCommand(cmdContext);
                 if (returnedValue is Task task)
                     return SwitchExecToAsync(q, context, cmdContext, task);
             }
@@ -120,7 +135,7 @@ namespace qASIC.Console.Parsing
 
         private async Task SwitchExecToAsyncTask(Queue<char> q, qConsoleContext context, qConsoleCommandContext cmdContext, Task task)
         {
-            var returnedValue = await Console.ExecuteCodeAsync(cmdContext.commandName, task, cmdContext.Logs);
+            var returnedValue = await context.Console.ExecuteCodeAsync(cmdContext.commandName, task, cmdContext.Logs);
             await ExecQAsync(q, context, returnedValue);
         }
 
@@ -129,7 +144,7 @@ namespace qASIC.Console.Parsing
             while (q.Count > 0)
             {
                 var cmdContext = ReadCommand(q, context, returnedValue);
-                returnedValue = await Console.ExecuteCommandAsync(cmdContext);
+                returnedValue = await context.Console.ExecuteCommandAsync(cmdContext);
             }
 
             FinishExecuting(context);
@@ -163,7 +178,7 @@ namespace qASIC.Console.Parsing
         private qConsoleCommandContext ReadCommand(Queue<char> q, qConsoleContext context, object returnedValue)
         {
             if (returnedValue is CommandPrompt prompt &&
-                prompt.Context is qConsoleCommandContext promptContext)
+                prompt.CommandContext is qConsoleCommandContext promptContext)
             {
                 switch (prompt.ParseArguments)
                 {
@@ -194,136 +209,142 @@ namespace qASIC.Console.Parsing
             var input = new StringBuilder();
 
             //WHITE SPACE
-            while (q.TryPeek(out var c) && char.IsWhiteSpace(c))
-                Dequeue();
-
-            {
-                //If reached end character before command name
-                if (q.TryPeek(out var c) && Char_End.Contains(c))
-                {
-                    q.Dequeue();
-                    inputString = input.ToString();
-                    commandName = string.Empty;
-                    args = new List<QuashArgument>();
-                    return;
-                }
-            }
+            input.Append(ReadWhiteSpace(q));
 
             //COMMAND NAME
-            var cmd = new StringBuilder();
-            while (q.TryPeek(out var c) && !char.IsWhiteSpace(c) && !Char_End.Contains(c))
-            {
-                cmd.Append(Dequeue());
-            }
-
-            commandName = cmd.ToString();
+            commandName = ReadToken(q, TA_CommandName, out var readCmd).ToString();
+            input.Append(readCmd);
 
             //ARGS
             args = new List<QuashArgument>();
+            QuashArgument arg = null;
 
-            string whiteBefore;
-            var whiteAfter = new StringBuilder();
-
-            //Pre arg white space
-            while (q.TryPeek(out var c) && char.IsWhiteSpace(c))
-                whiteAfter.Append(Dequeue());
-
-            var finish = false;
-            //Read all arguments
-            while (q.Count > 0 && !finish)
+            while (q.Count > 0)
             {
-                whiteBefore = whiteAfter.ToString();
-                whiteAfter.Clear();
-                var arg = new StringBuilder();
-                char? inGrouping = null;
+                var white = ReadWhiteSpace(q);
+                input.Append(white);
 
-                //Read single argument
-                while (TryDequeue(out var c))
+                if (arg != null)
+                    arg.WhiteAfter = white.ToString();
+
+                //Check can read more arguments
+                if (q.TryPeek(out var c) && Char_End.Contains(c))
+                    break;
+
+                var argTxt = ReadToken(q, TA_Argument, out var readArg);
+                input.Append(readArg);
+                arg = new QuashArgument(ValueParser, argTxt.ToString())
                 {
-                    if (char.IsWhiteSpace(c))
-                    {
-                        if (inGrouping != null)
-                        {
-                            arg.Append(c);
-                            continue;
-                        }
+                    WhiteBefore = white.ToString(),
+                };
 
-                        //Finish argument
-                        while (q.TryPeek(out c) && char.IsWhiteSpace(c))
-                            whiteAfter.Append(Dequeue());
-
-                        break;
-                    }
-
-                    if (Char_Escape.Contains(c))
-                    {
-                        if (TryDequeue(out c))
-                            arg.Append(c);
-
-                        continue;
-                    }
-
-                    //Start grouping
-                    if (inGrouping == null && inGrouping == c)
-                    {
-                        inGrouping = c;
-                        continue;
-                    }
-
-                    //End grouping
-                    if (Char_Grouping.Contains(c))
-                    {
-                        inGrouping = null;
-                        continue;
-                    }
-
-                    //Ending
-                    if (Char_End.Contains(c))
-                    {
-                        if (inGrouping != null)
-                        {
-                            arg.Append(c);
-                            continue;
-                        }
-
-                        //End of arguments
-                        finish = true;
-                        input.Remove(input.Length - 1, 1);
-                        break;
-                    }
-
-                    arg.Append(c);
-                }
-
-                if (arg.Length > 0)
-                {
-                    args.Add(new QuashArgument(ValueParser, arg.ToString())
-                    {
-                        WhiteBefore = whiteBefore,
-                        WhiteAfter = whiteAfter.ToString(),
-                    });
-                }
+                args.Add(arg);
             }
 
+            arg.WhiteAfter ??= string.Empty;
             inputString = input.ToString();
+        }
+
+        public StringBuilder ReadWhiteSpace(Queue<char> q)
+        {
+            var txt = new StringBuilder();
+
+            while (q.TryPeek(out var c))
+            {
+                //If it's an escape character for an empty character
+                if (Char_Escape.Contains(c) && q.Count > 1 && char.IsWhiteSpace(q.ElementAt(1)))
+                {
+                    q.Dequeue();
+                    txt.Append(q.Dequeue());
+                    continue;
+                }
+
+                //Reached end of white spaces or end character
+                if (char.IsWhiteSpace(c) || Char_End.Contains(c))
+                    break;
+
+                txt.Append(q.Dequeue());
+            }
+
+            return txt;
+        }
+
+        public StringBuilder ReadToken(Queue<char> q, ReadTokenArgs args, out StringBuilder readString)
+        {
+            var result = new StringBuilder();
+
+            //We have to do this, because csharp keeps crying about "out parameter inside a local method"
+            readString = new StringBuilder();
+            var read = readString;
+
+            char? wrap = null;
+
+            //Read single argument
+            while (q.TryPeek(out var c))
+            {
+                //Ending
+                if (args.endOnEndCharacters && Char_End.Contains(c))
+                {
+                    if (wrap != null)
+                    {
+                        result.Append(Dequeue());
+                        continue;
+                    }
+
+                    //Reached the end
+                    break;
+                }
+
+                //White space
+                if (args.endOnWhiteSpace && char.IsWhiteSpace(c))
+                {
+                    if (wrap != null)
+                    {
+                        result.Append(Dequeue());
+                        continue;
+                    }
+
+                    //Reached the end
+                    break;
+                }
+
+                //Escape characters
+                if (args.useEscapeCharacters && Char_Escape.Contains(c))
+                {
+                    Dequeue();
+                    if (q.Count > 0)
+                        result.Append(Dequeue());
+
+                    continue;
+                }
+
+                //Start grouping
+                if (args.useWrapping && wrap == null && wrap == c)
+                {
+                    Dequeue();
+                    wrap = c;
+                    continue;
+                }
+
+                //End grouping
+                if (args.useWrapping && Char_Wrapping.Contains(c))
+                {
+                    Dequeue();
+                    wrap = null;
+                    continue;
+                }
+
+                result.Append(Dequeue());
+            }
+
+            return result;
 
 
             char Dequeue()
             {
                 var c = q.Dequeue();
-                input.Append(c);
+                read.Append(c);
                 return c;
-            }
-
-            bool TryDequeue(out char c)
-            {
-                if (q.TryDequeue(out c))
-                {
-                    input.Append(c);
-                    return true;
-                }
-
-                return false;
             }
         }
         #endregion
@@ -427,6 +448,15 @@ namespace qASIC.Console.Parsing
         public class QuashData : qConsoleParserData
         {
             public Queue<char> queue;
+        }
+
+        public struct ReadTokenArgs
+        {
+            public bool useWrapping;
+            public bool useEscapeCharacters;
+            public bool endOnEndCharacters;
+            public bool endOnWhiteSpace;
+            public bool useVariables;
         }
     }
 }

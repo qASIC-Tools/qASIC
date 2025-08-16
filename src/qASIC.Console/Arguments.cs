@@ -48,6 +48,7 @@ namespace qASIC.Console
         public qConsoleParserData ParserData { get; set; }
         public qConsole Console { get; set; }
         public qLogManager Logs { get; set; }
+        public qConsoleVariableList Variables { get; set; }
 
         public string inputString;
         public object previousValue;
@@ -55,6 +56,7 @@ namespace qASIC.Console
 
     public class qConsoleParserData
     {
-        public qLogManager logs;
+        public qLogManager Logs { get; set; }
+        public qConsoleVariableList Variables { get; set; }
     }
 }

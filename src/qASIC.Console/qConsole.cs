@@ -93,21 +93,9 @@ namespace qASIC.Console
 
         public ICommandList CommandList { get; set; }
 
-        private ConsoleParser _commandParser;
-        public ConsoleParser CommandParser
-        {
-            get => _commandParser;
-            set
-            {
-                if (_commandParser != null)
-                    _commandParser.Console = null;
+        public ConsoleParser CommandParser { get; set; }
 
-                _commandParser = value;
-
-                if (_commandParser != null)
-                    _commandParser.Console = this;
-            }
-        }
+        public qConsoleVariableList Variables { get; private set; } = new qConsoleVariableList();
 
         public qConsoleTheme Theme { get; set; } = qConsoleTheme.Default;
 
@@ -187,15 +175,22 @@ namespace qASIC.Console
         {
             context.Console = this;
 
-            //Use context logs if present
-            //If not, use from parser data
-            //If not, use from the prompt
-            //If not, create a new manager
-            context.Logs ??= context.ParserData?.logs;
-            context.Logs ??= (context.previousValue as CommandPrompt)?.ParserLogs;
-            context.Logs ??= new qLogManager();
+            if (context.previousValue is CommandPrompt prompt &&
+                prompt.ParserData is qConsoleParserData parserData)
+            {
+                context.ParserData = parserData;
+            }
 
-            Logs.Register(context.Logs);
+            //Assign Logs to context
+            context.Logs ??= context.ParserData?.Logs;
+            if (context.Logs == null)
+            {
+                context.Logs = new qLogManager();
+                Logs.Register(context.Logs);
+            }
+
+            //Assign Variables to context
+            context.Variables = context.ParserData?.Variables ?? new qConsoleVariableList(Variables);
 
             LogUserInput(context);
             return true;
@@ -354,7 +349,7 @@ namespace qASIC.Console
         {
             if (returnedValue is CommandPrompt prompt)
             {
-                prompt.Context = context;
+                prompt.CommandContext = context;
                 context.prompt = prompt;
                 return returnedValue;
             }
