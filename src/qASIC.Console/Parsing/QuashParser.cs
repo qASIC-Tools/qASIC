@@ -260,7 +260,7 @@ namespace qASIC.Console.Parsing
                 }
 
                 //Reached end of white spaces or end character
-                if (char.IsWhiteSpace(c) || Char_End.Contains(c))
+                if (!char.IsWhiteSpace(c) || Char_End.Contains(c))
                     break;
 
                 txt.Append(q.Dequeue());
@@ -319,7 +319,7 @@ namespace qASIC.Console.Parsing
                 }
 
                 //Start grouping
-                if (args.useWrapping && wrap == null && wrap == c)
+                if (args.useWrapping && wrap == null)
                 {
                     Dequeue();
                     wrap = c;
@@ -327,7 +327,7 @@ namespace qASIC.Console.Parsing
                 }
 
                 //End grouping
-                if (args.useWrapping && Char_Wrapping.Contains(c))
+                if (args.useWrapping && Char_Wrapping.Contains(c) && wrap == c)
                 {
                     Dequeue();
                     wrap = null;
