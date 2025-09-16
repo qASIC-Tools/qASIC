@@ -241,7 +241,9 @@ namespace qASIC.Console.Parsing
                 args.Add(arg);
             }
 
-            arg.WhiteAfter ??= string.Empty;
+            if (arg != null)
+                arg.WhiteAfter ??= string.Empty;
+
             inputString = input.ToString();
         }
 
@@ -318,20 +320,24 @@ namespace qASIC.Console.Parsing
                     continue;
                 }
 
-                //Start grouping
-                if (args.useWrapping && wrap == null)
+                //Wrapping
+                if (args.useWrapping && Char_Wrapping.Contains(c))
                 {
-                    Dequeue();
-                    wrap = c;
-                    continue;
-                }
+                    //Start wrapping
+                    if (wrap == null)
+                    {
+                        Dequeue();
+                        wrap = c;
+                        continue;
+                    }
 
-                //End grouping
-                if (args.useWrapping && Char_Wrapping.Contains(c) && wrap == c)
-                {
-                    Dequeue();
-                    wrap = null;
-                    continue;
+                    //End wrapping
+                    if (wrap == c)
+                    {
+                        Dequeue();
+                        wrap = null;
+                        continue;
+                    }
                 }
 
                 result.Append(Dequeue());
