@@ -13,7 +13,7 @@ namespace qASIC.Console
 
         private Dictionary<string, object> values = new Dictionary<string, object>();
 
-        public void Get(string name) =>
+        public object Get(string name) =>
             values.GetValueOrDefault(name);
 
         public void Set(string name, object value)

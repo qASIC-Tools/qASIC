@@ -108,18 +108,18 @@ namespace qASIC
             _forwardDictionary.Contains(item);
 
         /// <summary>Contains elements mapped to one of the sides (works simular to a dictionary).</summary>
-        /// <typeparam name="T">The key.</typeparam>
-        /// <typeparam name="t">The value.</typeparam>
-        public class Indexer<T, t> : IEnumerable<KeyValuePair<T, t>>
+        /// <typeparam name="TKey">The key.</typeparam>
+        /// <typeparam name="TVal">The value.</typeparam>
+        public class Indexer<TKey, TVal> : IEnumerable<KeyValuePair<TKey, TVal>>
         {
-            private readonly Dictionary<T, t> _dictionary;
+            private readonly Dictionary<TKey, TVal> _dictionary;
 
-            internal Indexer(Dictionary<T, t> dictionary)
+            internal Indexer(Dictionary<TKey, TVal> dictionary)
             {
                 _dictionary = dictionary;
             }
 
-            public t this[T index]
+            public TVal this[TKey index]
             {
                 get { return _dictionary[index]; }
             }
@@ -127,7 +127,7 @@ namespace qASIC
             /// <summary>Determines whenever the <see cref="Indexer{T, t}"/> contains an element with the specified key.</summary>
             /// <param name="key"></param>
             /// <returns></returns>
-            public bool ContainsKey(T key)
+            public bool ContainsKey(TKey key)
             {
                 return _dictionary.ContainsKey(key);
             }
@@ -136,10 +136,10 @@ namespace qASIC
             /// <param name="key">The key of the value to get.</param>
             /// <param name="value">The value.</param>
             /// <returns>If the of the specified key exists.</returns>
-            public bool TryGetValue(T key, out t value) =>
+            public bool TryGetValue(TKey key, out TVal value) =>
                 _dictionary.TryGetValue(key, out value);
 
-            public IEnumerator<KeyValuePair<T, t>> GetEnumerator() =>
+            public IEnumerator<KeyValuePair<TKey, TVal>> GetEnumerator() =>
                 _dictionary.GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() =>

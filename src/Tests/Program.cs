@@ -1,0 +1,1 @@
+﻿new Tests.TestProgram().Run();
