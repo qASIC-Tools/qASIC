@@ -202,8 +202,13 @@ namespace qASIC.Console
         /// <param name="returnedValue">Returned value from running the string.</param>
         /// <returns>Returns <paramref name="returnedValue"/>. This will be used as the returned value by
         /// the afformentioned methods.</returns>
-        protected virtual object PostProcessConsoleContext(qConsoleContext context, object returnedValue) =>
-            returnedValue;
+        protected virtual object PostProcessConsoleContext(qConsoleContext context, object returnedValue)
+        {
+            if (returnedValue is CommandPrompt prompt)
+                prompt.ParserData = context.ParserData;
+
+            return returnedValue;
+        }
         #endregion
 
         private void LogUserInput(qConsoleContext context)

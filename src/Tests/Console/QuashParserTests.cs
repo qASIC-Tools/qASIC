@@ -25,8 +25,6 @@ dont_ask
 @
 ";
 
-    private QuashParser Parser { get; } = new();
-
     public QuashParser.ParsedCodeScope ParseVisually(string txt)
     {
         SysConsole.WriteLine("Parsing script:");
@@ -34,7 +32,7 @@ dont_ask
         SysConsole.WriteLine("END OF SCRIPT");
         SysConsole.WriteLine();
 
-        var result = Parser.QToScope(new(txt));
+        var result = QuashParser.QToScope(new(txt));
 
         SysConsole.WriteLine("Result:");    
         PrintVisually(result);
