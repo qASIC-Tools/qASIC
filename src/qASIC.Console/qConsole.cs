@@ -93,7 +93,7 @@ public class qConsole : IService
 
     public qConsoleVariableList Variables { get; } = new qConsoleVariableList();
 
-    public QConsoleTheme Theme { get; set; } = QConsoleTheme.Default;
+    public qConsoleTheme Theme { get; set; } = qConsoleTheme.Default;
 
     /// <summary>Should the console log messages from <see cref="qDebug"/>.</summary>
     public bool LogQDebug { get; set; } = true;

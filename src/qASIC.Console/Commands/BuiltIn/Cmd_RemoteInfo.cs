@@ -20,7 +20,10 @@ public class Cmd_RemoteInfo : qBuiltinCommandLogic
     {
         context.CheckArgumentCount(0);
 
-        var instance = (Instance ?? context.Console.Instance) ?? throw new qCommandException("Unable to get remote inspector server info: no qInstance found. Neither this command nor this console has an instance of qASIC assigned.");
+        var instance = Instance ?? context.Console.Instance;
+        if (instance == null)
+            throw new qCommandException("Unable to get remote inspector server info: no qInstance found. Neither this command nor this console has an instance of qASIC assigned.");
+
         var tree = TextTree.Fancy;
         var root = new TextTreeItem($"Remote inspector status: {(instance.RemoteInspectorServer.IsActive ? "active" : "offline")}");
         root.Add($"Address: {GetLocalAddress()?.ToString() ?? "UNKNOWN"}");

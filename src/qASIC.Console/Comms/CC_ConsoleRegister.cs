@@ -20,7 +20,7 @@ public class CC_ConsoleRegister : ConsoleCommsComponent
         var console = new qConsole(consoleName)
         {
             Logs = new qSavableLogManager(logs),
-            Theme = args.packet.ReadNetworkSerializable<QConsoleTheme>(),
+            Theme = args.packet.ReadNetworkSerializable<qConsoleTheme>(),
         };
 
         ConsoleManager?.RegisterConsole(console);

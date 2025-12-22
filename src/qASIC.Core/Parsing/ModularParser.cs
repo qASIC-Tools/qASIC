@@ -13,7 +13,7 @@ public class ModularParser : IEnumerable<ValueParser>
         Parsers = new(enumerable);
     }
 
-    public List<ValueParser> Parsers { get; private set; }
+    public List<ValueParser> Parsers { get; }
 
     public ValueParser<T> GetParser<T>()
     {
