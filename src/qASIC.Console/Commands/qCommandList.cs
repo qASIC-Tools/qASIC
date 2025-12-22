@@ -64,7 +64,7 @@ namespace qASIC.Console.Commands
         /// <returns>Returns itself.</returns>
         public qCommandList FindCommands(Type type)
         {
-            var commandTypes = TypeFinder.FindClassesWithAttribute(type, BindingFlags.Public | BindingFlags.NonPublic)
+            var commandTypes = TypeFinder.FindClassesWithAttribute(type)
                 .Where(x => typeof(ICommandLogic).IsAssignableFrom(x));
 
             var commands = TypeFinder.CreateConstructorsFromTypes<ICommandLogic>(commandTypes)
