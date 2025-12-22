@@ -2,121 +2,118 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.Communication.Components
+namespace qASIC.Communication.Components;
+
+public class CommsComponentCollection
 {
-    public class CommsComponentCollection
+    private readonly List<CommsComponent> components = [];
+
+    private readonly Dictionary<Type, CommsComponent> componentsDictionary = [];
+
+    public static CommsComponentCollection GetStandardCollection()
     {
-        private List<CommsComponent> components = new List<CommsComponent>();
+        var comms = new CommsComponentCollection()
+            .AddComponent<CC_ConnectData>()
+            .AddComponent<CC_Disconnect>()
+            .AddComponent<CC_Ping>()
+            .AddComponent<CC_Debug>();
 
-        private Dictionary<Type, CommsComponent> componentsDictionary = new Dictionary<Type, CommsComponent>();
+        return comms;
+    }
 
-        public static CommsComponentCollection GetStandardCollection()
+    public CommsComponentCollection AddComponent<T>() where T : CommsComponent, new() =>
+        AddComponent(new T());
+
+    public CommsComponentCollection AddComponent<T>(T component) where T : CommsComponent
+    {
+        var type = typeof(T);
+        components.Add(component);
+        if (!componentsDictionary.ContainsKey(type))
+            componentsDictionary.Add(type, component);
+
+        return this;
+    }
+
+    public T GetComponent<T>() where T : CommsComponent =>
+        GetComponent(typeof(T)) as T;
+
+    public CommsComponent GetComponent(Type type)
+    {
+        if (!componentsDictionary.TryGetValue(type, out CommsComponent value))
+            return null;
+
+        return value;
+    }
+
+    public T[] GetComponents<T>() where T : CommsComponent =>
+        (T[])GetComponents(typeof(T));
+
+    public CommsComponent[] GetComponents(Type type) =>
+        componentsDictionary
+            .Select(x => x.Value)
+            .Where(x => type.IsAssignableFrom(x.GetType()))
+            .ToArray();
+
+    public void HandlePacketForServer(qServer server, qServer.Client serverClient, qPacket packet)
+    {
+        var compId = packet.ReadString();
+
+        if (server.logPackets)
+            server.Logs.Log($"Handling packet for server, client:{serverClient.id}, component:{compId} - {packet}");
+
+        var targetComp = components
+            .FirstOrDefault(x => x.GetId() == compId);
+
+        if (targetComp == null)
         {
-            var comms = new CommsComponentCollection()
-                .AddComponent<CC_ConnectData>()
-                .AddComponent<CC_Disconnect>()
-                .AddComponent<CC_Ping>()
-                .AddComponent<CC_Debug>();
-
-            return comms;
+            server.Logs.LogError($"Communication Component of id '{compId}' does not exist");
+            return;
         }
 
-        public CommsComponentCollection AddComponent<T>() where T : CommsComponent, new() =>
-            AddComponent(new T());
-
-        public CommsComponentCollection AddComponent<T>(T component) where T : CommsComponent
+        var args = new CommsComponentArgs(PacketType.Server, packet)
         {
-            var type = typeof(T);
-            components.Add(component);
-            if (!componentsDictionary.ContainsKey(type))
-                componentsDictionary.Add(type, component);
+            server = server,
+            targetServerClient = serverClient,
+        };
 
-            return this;
+        try
+        {
+            targetComp.Read(args);
+        }
+        catch (Exception e)
+        {
+            server.Logs.LogError($"There was an error while reading packet from client {serverClient}: {e}");
+        }
+    }
+
+    public void HandlePacketForClient(qClient client, qPacket packet)
+    {
+        var compId = packet.ReadString();
+
+        if (client.logPackets)
+            client.Logs.Log($"Handling packet for client, component:{compId} - {packet}");
+
+        var targetComp = components
+            .FirstOrDefault(x => x.GetId() == compId);
+
+        if (targetComp == null)
+        {
+            client.Logs.LogError($"Communication Component of id '{compId}' does not exist");
+            return;
         }
 
-        public T GetComponent<T>() where T : CommsComponent =>
-            GetComponent(typeof(T)) as T;
-
-        public CommsComponent GetComponent(Type type)
+        var args = new CommsComponentArgs(PacketType.Client, packet)
         {
-            if (!componentsDictionary.ContainsKey(type))
-                return null;
+            client = client,
+        };
 
-            return componentsDictionary[type];
+        try
+        {
+            targetComp.Read(args);
         }
-
-        public T[] GetComponents<T>() where T : CommsComponent =>
-            (T[])GetComponents(typeof(T));
-
-        public CommsComponent[] GetComponents(Type type) =>
-            componentsDictionary
-                .Select(x => x.Value)
-                .Where(x => type.IsAssignableFrom(x.GetType()))
-                .ToArray();
-
-        public void HandlePacketForServer(qServer server, qServer.Client serverClient, qPacket packet)
+        catch (Exception e)
         {
-            var compId = packet.ReadString();
-
-            if (server.logPackets)
-                server.Logs.Log($"Handling packet for server, client:{serverClient.id}, component:{compId} - {packet}");
-
-            var targetComp = components
-                .Where(x => x.GetId() == compId)
-                .FirstOrDefault();
-
-            if (targetComp == null)
-            {
-                server.Logs.LogError($"Communication Component of id '{compId}' does not exist");
-                return;
-            }
-
-            var args = new CommsComponentArgs(PacketType.Server, packet)
-            {
-                server = server,
-                targetServerClient = serverClient,
-            };
-
-            try
-            {
-                targetComp.Read(args);
-            }
-            catch (Exception e)
-            {
-                server.Logs.LogError($"There was an error while reading packet from client {serverClient}: {e}");
-            }
-        }
-
-        public void HandlePacketForClient(qClient client, qPacket packet)
-        {
-            var compId = packet.ReadString();
-
-            if (client.logPackets)
-                client.Logs.Log($"Handling packet for client, component:{compId} - {packet}");
-
-            var targetComp = components
-                .Where(x => x.GetId() == compId)
-                .FirstOrDefault();
-
-            if (targetComp == null)
-            {
-                client.Logs.LogError($"Communication Component of id '{compId}' does not exist");
-                return;
-            }
-
-            var args = new CommsComponentArgs(PacketType.Client, packet)
-            {
-                client = client,
-            };
-
-            try
-            {
-                targetComp.Read(args);
-            }
-            catch (Exception e)
-            {
-                client.Logs.LogError($"There was an error while reading packet from server: {e}");
-            }
+            client.Logs.LogError($"There was an error while reading packet from server: {e}");
         }
     }
 }

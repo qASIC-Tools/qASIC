@@ -3,119 +3,115 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC
+namespace qASIC;
+
+public class qPriorityQueue<TElement, TPriority> : IEnumerable<TElement>, IEnumerable
 {
-    public class qPriorityQueue<TElement, TPriority> : IEnumerable<TElement>, IEnumerable
+    public qPriorityQueue() { }
+    public qPriorityQueue(qPriorityQueue<TElement, TPriority> other)
     {
-        public qPriorityQueue() { }
-        public qPriorityQueue(qPriorityQueue<TElement, TPriority> other)
+        Items = [.. other.Items];
+    }
+
+    protected virtual int ComparePriority(TPriority a, TPriority b) =>
+        Comparer<TPriority>.Default.Compare(a, b);
+
+    protected List<Item> Items { get; } = [];
+
+    public int Count =>
+        Items.Count;
+
+    public void Clear() =>
+        Items.Clear();
+
+    public bool Contains(TElement element) =>
+        Items.Any(x => EqualityComparer<TElement>.Default.Equals(x.element, element));
+
+    public void Enqueue(TElement element, TPriority priority)
+    {
+        int i = 0;
+        for (; i < Items.Count; i++)
         {
-            Items = new List<Item>(other.Items);
+            //If item has higher priority value
+            if (ComparePriority(Items[i].priority, priority) > 0)
+                break;
         }
 
-        protected virtual int ComparePriority(TPriority a, TPriority b) =>
-            Comparer<TPriority>.Default.Compare(a, b);
+        Items.Insert(i, new Item(element, priority));
+    }
 
-        protected List<Item> Items { get; private set; } = new List<Item>();
+    public TElement Dequeue()
+    {
+        var item = Items.First().element;
+        Items.RemoveAt(0);
+        return item;
+    }
 
-        public int Count =>
-            Items.Count;
+    public bool TryDequeue(out TElement result)
+    {
+        result = default;
+        if (Count <= 0)
+            return false;
 
-        public void Clear() =>
-            Items.Clear();
+        result = Dequeue();
+        return true;
+    }
 
-        public bool Contains(TElement element) =>
-            Items.Any(x => EqualityComparer<TElement>.Default.Equals(x.element, element));
+    public TElement Peek() =>
+        Items.First().element;
 
-        public void Enqueue(TElement element, TPriority priority)
-        {
-            int i = 0;
-            for (; i < Items.Count; i++)
-            {
-                //If item has higher priority value
-                if (ComparePriority(Items[i].priority, priority) > 0)
-                    break;
-            }
+    public bool TryPeek(out TElement element)
+    {
+        element = default;
+        if (Count <= 0)
+            return false;
 
-            Items.Insert(i, new Item(element, priority));
-        }
+        element = Peek();
+        return true;
+    }
 
-        public TElement Dequeue()
-        {
-            var item = Items.First().element;
-            Items.RemoveAt(0);
-            return item;
-        }
+    public TPriority PeekPriority() =>
+        Items.Count != 0 ?
+        Items.First().priority :
+        default;
 
-        public bool TryDequeue(out TElement result)
-        {
-            result = default;
-            if (Count <= 0)
-                return false;
+    public bool TryPeekPriority(out TPriority element)
+    {
+        element = default;
+        if (Count <= 0)
+            return false;
 
-            result = Dequeue();
-            return true;
-        }
+        element = PeekPriority();
+        return true;
+    }
 
-        public TElement Peek() =>
-            Items.First().element;
+    public qPriorityQueue<TElement, TOtherPriority> ToOtherPriority<TOtherPriority>(Func<TPriority, TOtherPriority> toOtherPriority)
+    {
+        var queue = new qPriorityQueue<TElement, TOtherPriority>();
 
-        public bool TryPeek(out TElement element)
-        {
-            element = default;
-            if (Count <= 0)
-                return false;
+        var items = Items
+            .Select(x => new qPriorityQueue<TElement, TOtherPriority>.Item(x.element, toOtherPriority(x.priority)))
+            .ToList();
 
-            element = Peek();
-            return true;
-        }
+        queue.Items.Clear();
+        queue.Items.AddRange(items);
 
-        public TPriority PeekPriority() =>
-            Items.Count != 0 ?
-            Items.First().priority :
-            default;
+        return queue;
+    }
 
-        public bool TryPeekPriority(out TPriority element)
-        {
-            element = default;
-            if (Count <= 0)
-                return false;
+    public IEnumerator GetEnumerator() =>
+        Items
+        .Select(x => x.element)
+        .GetEnumerator();
 
-            element = PeekPriority();
-            return true;
-        }
+    IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() =>
+        Items
+        .Select(x => x.element)
+        .GetEnumerator();
 
-        public qPriorityQueue<TElement, TOtherPriority> ToOtherPriority<TOtherPriority>(Func<TPriority, TOtherPriority> toOtherPriority)
-        {
-            var queue = new qPriorityQueue<TElement, TOtherPriority>();
-
-            queue.Items = Items
-                .Select(x => new qPriorityQueue<TElement, TOtherPriority>.Item(x.element, toOtherPriority(x.priority)))
-                .ToList();
-
-            return queue;
-        }
-
-        public IEnumerator GetEnumerator() =>
-            Items
-            .Select(x => x.element)
-            .GetEnumerator();
-
-        IEnumerator<TElement> IEnumerable<TElement>.GetEnumerator() =>
-            Items
-            .Select(x => x.element)
-            .GetEnumerator();
-
-        protected class Item
-        {
-            public Item(TElement element, TPriority priority)
-            {
-                this.element = element;
-                this.priority = priority;
-            }
-
-            public TElement element;
-            public TPriority priority;
-        }
+    protected class Item(TElement element, TPriority priority)
+    {
+        public TElement element = element;
+        public TPriority priority = priority;
     }
 }

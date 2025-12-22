@@ -1,8 +1,7 @@
-﻿namespace qASIC.Parsing
+﻿namespace qASIC.Parsing;
+
+public class qColorParser : ValueParser<qColor>
 {
-    public class qColorParser : ValueParser<qColor>
-    {
-        public override bool TryParse(string s, out qColor result) =>
-            qColor.TryParse(s, out result);
-    }
+    public override bool TryParse(string s, out qColor result) =>
+        qColor.TryParse(s, out result);
 }

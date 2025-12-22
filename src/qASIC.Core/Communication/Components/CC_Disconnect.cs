@@ -1,18 +1,17 @@
-﻿namespace qASIC.Communication.Components
+﻿namespace qASIC.Communication.Components;
+
+public class CC_Disconnect : CommsComponent
 {
-    public class CC_Disconnect : CommsComponent
+    public override void Read(CommsComponentArgs args)
     {
-        public override void Read(CommsComponentArgs args)
+        switch (args.packetType)
         {
-            switch (args.packetType)
-            {
-                case PacketType.Server:
-                    args.server.DisconnectClientLocal(args.targetServerClient);
-                    break;
-                case PacketType.Client:
-                    args.client.DisconnectLocal(qClient.DisconnectReason.ServerShutdown);
-                    break;
-            }
+            case PacketType.Server:
+                args.server.DisconnectClientLocal(args.targetServerClient);
+                break;
+            case PacketType.Client:
+                args.client.DisconnectLocal(qClient.DisconnectReason.ServerShutdown);
+                break;
         }
     }
 }

@@ -119,10 +119,7 @@ namespace qASIC.Console.Commands
                     (qAttributeCommandLogic)Commands.Where(x => x.command.CommandName == commandName).First().command :
                     null;
 
-                command ??= new qAttributeCommandLogic()
-                {
-                    CommandName = commandName,
-                };
+                command ??= new qAttributeCommandLogic(commandName);
 
                 var memberTarget = qAttributeCommandLogic.Target.CreateFromMember(member);
 

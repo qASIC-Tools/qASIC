@@ -1,7 +1,6 @@
-﻿namespace qASIC.CmdAutocomplete
+﻿namespace qASIC.CmdAutocomplete;
+
+public interface ISupportsAutocomplete
 {
-    public interface ISupportsAutocomplete
-    {
-        public ACData CommandAutocomplete { get; }
-    }
+    public ACData CommandAutocomplete { get; }
 }

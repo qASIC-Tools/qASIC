@@ -1,44 +1,31 @@
-namespace qASIC.Console.Parsing
+namespace qASIC.Console.Parsing;
+
+public struct CmdCharacterInfo(string prefix, string postfix, string commandName, qCommandArgument[] arguments)
 {
-    public struct CmdCharacterInfo
+    public enum Scope
     {
-        public CmdCharacterInfo(string prefix, string postfix, string commandName, qCommandArgument[] arguments)
-        {
-            this.prefix = prefix;
-            this.postfix = postfix;
-            this.commandName = commandName;
-            this.arguments = arguments;
-
-            scope = Scope.CommandName;
-            scopedPosition = 0;
-            argumentIndex = 0;
-        }
-
-        public enum Scope
-        {
-            CommandName,
-            Argument,
-        }
-
-        public CmdCharacterInfo WithScope(Scope scope, int scopedPosition) =>
-            WithScope(scope, scopedPosition, 0);
-
-        public CmdCharacterInfo WithScope(Scope scope, int scopedPosition, int argumentIndex)
-        {
-            this.scope = scope;
-            this.scopedPosition = scopedPosition;
-            this.argumentIndex = argumentIndex;
-            return this;
-        }
-
-        public Scope scope;
-        public int scopedPosition;
-        public int argumentIndex;
-
-        public string commandName;
-        public qCommandArgument[] arguments;
-
-        public string prefix;
-        public string postfix;
+        CommandName,
+        Argument,
     }
+
+    public CmdCharacterInfo WithScope(Scope scope, int scopedPosition) =>
+        WithScope(scope, scopedPosition, 0);
+
+    public CmdCharacterInfo WithScope(Scope scope, int scopedPosition, int argumentIndex)
+    {
+        this.scope = scope;
+        this.scopedPosition = scopedPosition;
+        this.argumentIndex = argumentIndex;
+        return this;
+    }
+
+    public Scope scope = Scope.CommandName;
+    public int scopedPosition = 0;
+    public int argumentIndex = 0;
+
+    public string commandName = commandName;
+    public qCommandArgument[] arguments = arguments;
+
+    public string prefix = prefix;
+    public string postfix = postfix;
 }

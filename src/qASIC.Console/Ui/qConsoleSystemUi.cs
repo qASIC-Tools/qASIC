@@ -6,519 +6,515 @@ using qASIC.CommandPrompts;
 using qASIC.Console.Autocomplete;
 using SysConsole = System.Console;
 
-namespace qASIC.Console.Ui
+namespace qASIC.Console.Ui;
+
+/// <summary>Class responsible for displaying and reading information from a Console Application window for a <see cref="qConsole"/> instance.</summary>
+public class qConsoleSystemUi
 {
-    /// <summary>Class responsible for displaying and reading information from a Console Application window for a <see cref="qConsole"/> instance.</summary>
-    public class qConsoleSystemUi
+    public qConsoleSystemUi() : this(new qConsole("MAIN")) { }
+
+    public qConsoleSystemUi(qConsole console)
     {
-        public qConsoleSystemUi() : this(new qConsole("MAIN")) { }
+        Console = console;
+        inputs = [.. new string[1]];
+    }
 
-        public qConsoleSystemUi(qConsole console)
+    /// <summary>Console which will be used by the interface.</summary>
+    public qConsole Console
+    {
+        get;
+        set
         {
-            Console = console;
-            inputs = new List<string>(new string[1]);
-        }
+            if (field == value) return;
 
-        qConsole _console;
-        /// <summary>Console which will be used by the interface.</summary>
-        public qConsole Console
-        {
-            get => _console;
-            set
+            if (field != null)
             {
-                if (_console == value) return;
-
-                if (_console != null)
-                {
-                    _console.Logs.OnLog -= WriteLog;
-                    _console.Logs.OnUpdateLog -= UpdateLog;
-                }
-
-                previousLog = null;
-                previousLogMessage = string.Empty;
-                _console = value;
-
-                if (autocomplete != null)
-                    autocomplete.Console = value;
-
-                if (_console != null)
-                {
-                    _console.Logs.OnLog += WriteLog;
-                    _console.Logs.OnUpdateLog += UpdateLog;
-                }
-            }
-        }
-
-        private AutocompleteEngine autocomplete = new BlockAutocompleteEngine(null);
-        public AutocompleteEngine Autocomplete
-        {
-            get => autocomplete;
-            set
-            {
-                autocomplete = value;
-                autocomplete.Console = _console;
-            }
-        }
-
-        /// <summary>Format string used for converting logs to text. See <see cref="qLog.ToString(string)"/>.</summary>
-        public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE:App,Usr,Int,Clr%] %MESSAGE%";
-        public string UserLogFormat { get; set; } = "%MESSAGE%";
-
-        /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
-        public bool CanRead { get; set; } = true;
-
-        /// <summary>Is the console currently reading input from the command line.</summary>
-        public bool IsReading { get; set; }
-
-        /// <summary>Gets invoked before executing a command. If false, command will not be executed.</summary>
-        public event Func<string, bool> CanExecute;
-
-        /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
-        public event Func<string, string> ProcessCommandString;
-
-        public object ReturnedValue { get; protected set; }
-
-        bool previousLogSticky;
-        qColor previousLogColor;
-        string previousLogMessage = string.Empty;
-        qLog previousLog = null;
-
-        private void WriteLog(qLog log)
-        {
-            if (log.logType == LogType.Clear)
-            {
-                SysConsole.Clear();
-
-                if (previousLogSticky)
-                {
-                    WritePreviousLog();
-                }
-
-                SysConsole.Write(InputString);
-
-                if (!previousLogSticky)
-                {
-                    previousLogMessage = string.Empty;
-                    previousLog = null;
-                }
-
-                return;
+                field.Logs.OnLog -= WriteLog;
+                field.Logs.OnUpdateLog -= UpdateLog;
             }
 
-            var txt = CreateLogText(log);
+            previousLog = null;
+            previousLogMessage = string.Empty;
+            field = value;
 
-            SysConsole.Write(new string('\b', InputCursorPosition));
-            SysConsole.Write(new string(' ', InputString.Length));
-            SysConsole.Write(new string('\b', InputString.Length));
+            Autocomplete?.Console = value;
 
-            if (previousLogSticky)
-                ClearPreviousLog();
+            if (field != null)
+            {
+                field.Logs.OnLog += WriteLog;
+                field.Logs.OnUpdateLog += UpdateLog;
+            }
+        }
+    }
 
-            SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
+    public AutocompleteEngine Autocomplete
+    {
+        get;
+        set
+        {
+            field = value;
+            field.Console = Console;
+        }
+    } = new BlockAutocompleteEngine(null);
+
+    /// <summary>Format string used for converting logs to text. See <see cref="qLog.ToString(string)"/>.</summary>
+    public string LogFormat { get; set; } = "[%TIME:HH:mm:ss.fff%] [%TYPE:App,Usr,Int,Clr%] %MESSAGE%";
+    public string UserLogFormat { get; set; } = "%MESSAGE%";
+
+    /// <summary>Determines if user input should be read in <see cref="StartReading(bool)"/>. By setting this to false, interface will stop reading after the next command.</summary>
+    public bool CanRead { get; set; } = true;
+
+    /// <summary>Is the console currently reading input from the command line.</summary>
+    public bool IsReading { get; set; }
+
+    /// <summary>Gets invoked before executing a command. If false, command will not be executed.</summary>
+    public event Func<string, bool> CanExecute;
+
+    /// <summary>Gets invoked before a command string starts being processed, can be used to modify</summary>
+    public event Func<string, string> ProcessCommandString;
+
+    public object ReturnedValue { get; protected set; }
+
+    private bool previousLogSticky;
+    private qColor previousLogColor;
+    private string previousLogMessage = string.Empty;
+    private qLog previousLog = null;
+
+    private void WriteLog(qLog log)
+    {
+        if (log.logType == LogType.Clear)
+        {
+            SysConsole.Clear();
 
             if (previousLogSticky)
             {
                 WritePreviousLog();
-                SysConsole.Write('\n');
-            }
-            else
-            {
-                previousLogMessage = txt;
-                previousLogColor = log.color;
-                previousLog = log;
-                previousLogSticky = log.sticky;
             }
 
             SysConsole.Write(InputString);
-            SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
-        }
 
-        private void UpdateLog(qLog log)
-        {
-            //Ignore if clear
-            if (log.logType == LogType.Clear)
-                return;
-
-            //If it wasn't the previous log, just log
-            if (previousLog != log)
+            if (!previousLogSticky)
             {
-                WriteLog(log);
-                return;
+                previousLogMessage = string.Empty;
+                previousLog = null;
             }
 
-            //Clear input line
-            SysConsole.Write(new string('\b', InputCursorPosition));
-            SysConsole.Write(new string(' ', InputString.Length));
-            SysConsole.Write(new string('\b', InputString.Length));
+            return;
+        }
 
+        var txt = CreateLogText(log);
+
+        SysConsole.Write(new string('\b', InputCursorPosition));
+        SysConsole.Write(new string(' ', InputString.Length));
+        SysConsole.Write(new string('\b', InputString.Length));
+
+        if (previousLogSticky)
             ClearPreviousLog();
 
-            //Write new message
-            previousLogMessage = CreateLogText(log);
-            previousLogColor = log.color;
-            previousLogSticky = log.sticky;
-            previousLog = log;
+        SysConsole.WriteLine(ColorText(txt, Console.GetLogColor(log)));
+
+        if (previousLogSticky)
+        {
             WritePreviousLog();
-
-            //Restore input line
-            SysConsole.WriteLine('\b');
-            SysConsole.Write(InputString);
-            SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
+            SysConsole.Write('\n');
+        }
+        else
+        {
+            previousLogMessage = txt;
+            previousLogColor = log.color;
+            previousLog = log;
+            previousLogSticky = log.sticky;
         }
 
-        /// <summary>Starts reading user input from the console window.</summary>
-        /// <param name="readOnce">If true, reading will not be repeated.</param>
-        public void StartReading(bool readOnce = false)
+        SysConsole.Write(InputString);
+        SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
+    }
+
+    private void UpdateLog(qLog log)
+    {
+        //Ignore if clear
+        if (log.logType == LogType.Clear)
+            return;
+
+        //If it wasn't the previous log, just log
+        if (previousLog != log)
         {
-            Task.WaitAll(StartReadingAsync(readOnce));
+            WriteLog(log);
+            return;
         }
 
-        /// <summary>Starts reading user input from the console window asynchronously.</summary>
-        /// <param name="readOnce">If true, reading will not be repeated.</param>
-        public async Task StartReadingAsync(bool readOnce = false)
+        //Clear input line
+        SysConsole.Write(new string('\b', InputCursorPosition));
+        SysConsole.Write(new string(' ', InputString.Length));
+        SysConsole.Write(new string('\b', InputString.Length));
+
+        ClearPreviousLog();
+
+        //Write new message
+        previousLogMessage = CreateLogText(log);
+        previousLogColor = log.color;
+        previousLogSticky = log.sticky;
+        previousLog = log;
+        WritePreviousLog();
+
+        //Restore input line
+        SysConsole.WriteLine('\b');
+        SysConsole.Write(InputString);
+        SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
+    }
+
+    /// <summary>Starts reading user input from the console window.</summary>
+    /// <param name="readOnce">If true, reading will not be repeated.</param>
+    public void StartReading(bool readOnce = false)
+    {
+        Task.WaitAll(StartReadingAsync(readOnce));
+    }
+
+    /// <summary>Starts reading user input from the console window asynchronously.</summary>
+    /// <param name="readOnce">If true, reading will not be repeated.</param>
+    public async Task StartReadingAsync(bool readOnce = false)
+    {
+        if (!CanRead)
+            return;
+
+        do
         {
-            if (!CanRead)
-                return;
+            IsReadingInput = true;
 
-            do
+            currentInput = inputs.Count - 1;
+
+            bool isDone = false;
+            while (!isDone)
             {
-                IsReadingInput = true;
+                await Task.Delay(10);
 
-                currentInput = inputs.Count - 1;
-
-                bool isDone = false;
-                while (!isDone)
-                {
-                    await Task.Delay(10);
-
-                    while (SysConsole.KeyAvailable && !isDone)
-                        isDone |= HandleKey(SysConsole.ReadKey(true));
-                }
-
-                var cmd = FinalizeInput();
-
-                if (CanExecute?.Invoke(cmd) == false)
-                    continue;
-
-                cmd = ProcessCommandString?.Invoke(cmd) ?? cmd;
-                ReturnedValue = await Console.ExecuteAsync(cmd, ReturnedValue);
+                while (SysConsole.KeyAvailable && !isDone)
+                    isDone |= HandleKey(SysConsole.ReadKey(true));
             }
-            while (CanRead && !readOnce);
+
+            var cmd = FinalizeInput();
+
+            if (CanExecute?.Invoke(cmd) == false)
+                continue;
+
+            cmd = ProcessCommandString?.Invoke(cmd) ?? cmd;
+            ReturnedValue = await Console.ExecuteAsync(cmd, ReturnedValue);
+        }
+        while (CanRead && !readOnce);
+    }
+
+    #region Input
+    public bool IsReadingInput { get; private set; }
+
+    public int InputCursorPosition { get; private set; } = 0;
+    public string InputString { get; private set; } = string.Empty;
+
+    public int PreviousInputsLimit { get; set; } = 128;
+
+    private readonly List<string> previousInputs = [];
+    private readonly List<string> inputs;
+    private int currentInput = 0;
+
+    string GetInputAfterCursor() =>
+        InputString[InputCursorPosition..];
+
+    string GetInputBeforeCursor() =>
+        InputString[..InputCursorPosition];
+
+    bool HandleKey(ConsoleKeyInfo key)
+    {
+        if (ReturnedValue is KeyPrompt prompt)
+        {
+            if (key.Modifiers != 0)
+                return false;
+
+            var promptKey = key.Key switch
+            {
+                ConsoleKey.UpArrow => KeyPrompt.NavigationKey.Up,
+                ConsoleKey.DownArrow => KeyPrompt.NavigationKey.Down,
+                ConsoleKey.LeftArrow => KeyPrompt.NavigationKey.Left,
+                ConsoleKey.RightArrow => KeyPrompt.NavigationKey.Right,
+                ConsoleKey.Enter => KeyPrompt.NavigationKey.Confirm,
+                ConsoleKey.Escape => KeyPrompt.NavigationKey.Cancel,
+                ConsoleKey.Delete => KeyPrompt.NavigationKey.Delete,
+                ConsoleKey.Tab => KeyPrompt.NavigationKey.Switch,
+                _ => KeyPrompt.NavigationKey.None,
+            };
+
+            InputString = KeyPrompt.keyNames.Backward[promptKey];
+
+            if (promptKey == KeyPrompt.NavigationKey.None)
+            {
+                if (!char.IsLetterOrDigit(key.KeyChar) &&
+                    !char.IsWhiteSpace(key.KeyChar) &&
+                    !char.IsPunctuation(key.KeyChar) &&
+                    !char.IsSymbol(key.KeyChar))
+                    return false;
+
+                InputString = key.KeyChar.ToString();
+            }
+
+            return true;
         }
 
-        #region Input
-        public bool IsReadingInput { get; private set; }
-
-        public int InputCursorPosition { get; private set; } = 0;
-        public string InputString { get; private set; } = string.Empty;
-
-        public int PreviousInputsLimit { get; set; } = 128;
-
-        List<string> previousInputs = new List<string>();
-        List<string> inputs;
-        int currentInput = 0;
-
-        string GetInputAfterCursor() =>
-            InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
-
-        string GetInputBeforeCursor() =>
-            InputString.Substring(0, InputCursorPosition);
-
-        bool HandleKey(ConsoleKeyInfo key)
+        //Handling modifiers
+        if (key.Modifiers != 0 && key.Modifiers != ConsoleModifiers.Shift)
         {
-            if (ReturnedValue is KeyPrompt prompt)
+            if (key.Modifiers == ConsoleModifiers.Control ||
+                key.Modifiers == ConsoleModifiers.Alt)
             {
-                if (key.Modifiers != 0)
-                    return false;
-
-                var promptKey = key.Key switch
+                //Navigation
+                if (key.Key == ConsoleKey.LeftArrow)
                 {
-                    ConsoleKey.UpArrow => KeyPrompt.NavigationKey.Up,
-                    ConsoleKey.DownArrow => KeyPrompt.NavigationKey.Down,
-                    ConsoleKey.LeftArrow => KeyPrompt.NavigationKey.Left,
-                    ConsoleKey.RightArrow => KeyPrompt.NavigationKey.Right,
-                    ConsoleKey.Enter => KeyPrompt.NavigationKey.Confirm,
-                    ConsoleKey.Escape => KeyPrompt.NavigationKey.Cancel,
-                    ConsoleKey.Delete => KeyPrompt.NavigationKey.Delete,
-                    ConsoleKey.Tab => KeyPrompt.NavigationKey.Switch,
-                    _ => KeyPrompt.NavigationKey.None,
-                };
+                    var length = Math.Min(WordBeforeLength() + 1, InputCursorPosition);
+                    InputCursorPosition -= length;
+                    SysConsole.Write(new string('\b', length));
 
-                InputString = KeyPrompt.keyNames.Backward[promptKey];
-
-                if (promptKey == KeyPrompt.NavigationKey.None)
-                {
-                    if (!char.IsLetterOrDigit(key.KeyChar) &&
-                        !char.IsWhiteSpace(key.KeyChar) &&
-                        !char.IsPunctuation(key.KeyChar) &&
-                        !char.IsSymbol(key.KeyChar))
-                        return false;
-
-                    InputString = key.KeyChar.ToString();
-                }
-
-                return true;
-            }
-
-            //Handling modifiers
-            if (key.Modifiers != 0 && key.Modifiers != ConsoleModifiers.Shift)
-            {
-                if (key.Modifiers == ConsoleModifiers.Control ||
-                    key.Modifiers == ConsoleModifiers.Alt)
-                {
-                    //Navigation
-                    if (key.Key == ConsoleKey.LeftArrow)
-                    {
-                        var length = Math.Min(WordBeforeLength() + 1, InputCursorPosition);
-                        InputCursorPosition -= length;
-                        SysConsole.Write(new string('\b', length));
-
-                        return false;
-                    }
-
-                    if (key.Key == ConsoleKey.RightArrow)
-                    {
-                        var length = Math.Min(WordAfterLength(), InputString.Length - InputCursorPosition);
-                        SysConsole.Write(InputString.Substring(InputCursorPosition, length));
-                        InputCursorPosition += length;
-
-                        return false;
-                    }
-
-                    //Deleting
-                    if (key.Key == ConsoleKey.Backspace)
-                    {
-                        DeleteBeforeCursor(WordBeforeLength());
-                        return false;
-                    }
-
-                    if (key.Key == ConsoleKey.Delete)
-                    {
-                        DeleteAfterCursor(WordAfterLength());
-                        return false;
-                    }
-                }
-
-                return false;
-            }
-
-            //Apply
-            if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
-                return true;
-
-            if (!(ReturnedValue is TextPrompt))
-            {
-                //Swapping current input to previous
-                if (key.Key == ConsoleKey.UpArrow && key.Modifiers == 0)
-                {
-                    ChangeInput(currentInput - 1);
                     return false;
                 }
 
-                if (key.Key == ConsoleKey.DownArrow && key.Modifiers == 0)
+                if (key.Key == ConsoleKey.RightArrow)
                 {
-                    ChangeInput(currentInput + 1);
+                    var length = Math.Min(WordAfterLength(), InputString.Length - InputCursorPosition);
+                    SysConsole.Write(InputString.Substring(InputCursorPosition, length));
+                    InputCursorPosition += length;
+
                     return false;
                 }
 
-                //Autocorrect
-                if (key.Key == ConsoleKey.Tab && key.Modifiers == 0)
+                //Deleting
+                if (key.Key == ConsoleKey.Backspace)
                 {
-                    SysConsole.Write(new string('\b', InputCursorPosition));
-                    SysConsole.Write(new string(' ', InputString.Length));
-                    SysConsole.Write(new string('\b', InputString.Length));
-                    (InputString, InputCursorPosition) = Autocomplete.Autocomplete(InputString, InputCursorPosition);
-                    SysConsole.Write(InputString);
-                    SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
+                    DeleteBeforeCursor(WordBeforeLength());
                     return false;
                 }
-            }
 
-
-            //Navigation
-            if (key.Key == ConsoleKey.LeftArrow)
-            {
-                if (InputCursorPosition > 0)
+                if (key.Key == ConsoleKey.Delete)
                 {
-                    InputCursorPosition -= 1;
-                    SysConsole.Write('\b');
+                    DeleteAfterCursor(WordAfterLength());
+                    return false;
                 }
-
-                return false;
-            }
-
-            if (key.Key == ConsoleKey.RightArrow)
-            {
-                if (InputCursorPosition < InputString.Length)
-                {
-                    SysConsole.Write(InputString.Substring(InputCursorPosition, 1));
-                    InputCursorPosition += 1;
-                }
-
-                return false;
-            }
-
-            //Deleting
-            if (key.Key == ConsoleKey.Backspace)
-            {
-                DeleteBeforeCursor(1);
-                return false;
-            }
-
-            if (key.Key == ConsoleKey.Delete)
-            {
-                DeleteAfterCursor(1);
-                return false;
-            }
-
-            //Writting
-            if (!new int[] { 0, 7, 27 }.Contains(key.KeyChar))
-            {
-                var toWrite = InputString.Substring(InputCursorPosition, InputString.Length - InputCursorPosition);
-
-                SysConsole.Write(key.KeyChar);
-                SysConsole.Write(toWrite);
-                SysConsole.Write(new string('\b', toWrite.Length));
-
-                InputString = InputString.Substring(0, InputCursorPosition) + key.KeyChar + toWrite;
-                InputCursorPosition++;
             }
 
             return false;
         }
 
-        void ChangeInput(int newIndex)
-        {
-            if (newIndex < 0 || newIndex >= inputs.Count) return;
+        //Apply
+        if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
+            return true;
 
-            inputs[currentInput] = InputString;
+        if (ReturnedValue is not TextPrompt)
+        {
+            //Swapping current input to previous
+            if (key.Key == ConsoleKey.UpArrow && key.Modifiers == 0)
+            {
+                ChangeInput(currentInput - 1);
+                return false;
+            }
+
+            if (key.Key == ConsoleKey.DownArrow && key.Modifiers == 0)
+            {
+                ChangeInput(currentInput + 1);
+                return false;
+            }
+
+            //Autocorrect
+            if (key.Key == ConsoleKey.Tab && key.Modifiers == 0)
+            {
+                SysConsole.Write(new string('\b', InputCursorPosition));
+                SysConsole.Write(new string(' ', InputString.Length));
+                SysConsole.Write(new string('\b', InputString.Length));
+                (InputString, InputCursorPosition) = Autocomplete.Autocomplete(InputString, InputCursorPosition);
+                SysConsole.Write(InputString);
+                SysConsole.Write(new string('\b', InputString.Length - InputCursorPosition));
+                return false;
+            }
+        }
+
+
+        //Navigation
+        if (key.Key == ConsoleKey.LeftArrow)
+        {
+            if (InputCursorPosition > 0)
+            {
+                InputCursorPosition -= 1;
+                SysConsole.Write('\b');
+            }
+
+            return false;
+        }
+
+        if (key.Key == ConsoleKey.RightArrow)
+        {
+            if (InputCursorPosition < InputString.Length)
+            {
+                SysConsole.Write(InputString.Substring(InputCursorPosition, 1));
+                InputCursorPosition += 1;
+            }
+
+            return false;
+        }
+
+        //Deleting
+        if (key.Key == ConsoleKey.Backspace)
+        {
+            DeleteBeforeCursor(1);
+            return false;
+        }
+
+        if (key.Key == ConsoleKey.Delete)
+        {
+            DeleteAfterCursor(1);
+            return false;
+        }
+
+        //Writting
+        if (!new int[] { 0, 7, 27 }.Contains(key.KeyChar))
+        {
+            var toWrite = InputString[InputCursorPosition..];
+
+            SysConsole.Write(key.KeyChar);
+            SysConsole.Write(toWrite);
+            SysConsole.Write(new string('\b', toWrite.Length));
+
+            InputString = InputString[..InputCursorPosition] + key.KeyChar + toWrite;
+            InputCursorPosition++;
+        }
+
+        return false;
+    }
+
+    void ChangeInput(int newIndex)
+    {
+        if (newIndex < 0 || newIndex >= inputs.Count) return;
+
+        inputs[currentInput] = InputString;
+        SysConsole.Write(new string('\b', InputCursorPosition));
+        SysConsole.Write(new string(' ', InputCursorPosition));
+        SysConsole.Write(new string('\b', InputCursorPosition));
+
+        currentInput = newIndex;
+
+        InputString = inputs[currentInput];
+        SysConsole.Write(InputString);
+        InputCursorPosition = InputString.Length;
+    }
+
+    int WordAfterLength()
+    {
+        var txt = GetInputAfterCursor();
+        return txt.Length - txt.TrimStart().Length +
+            txt.TrimStart().Split(' ').First().Length;
+    }
+
+    int WordBeforeLength()
+    {
+        var txt = GetInputBeforeCursor();
+        return txt.Length - txt.TrimEnd().Length +
+            txt.TrimEnd().Split(' ').Last().Length;
+    }
+
+    void DeleteBeforeCursor(int amount = 1)
+    {
+        amount = Math.Min(amount, InputCursorPosition);
+        InputCursorPosition -= amount;
+        InputString = InputString[..InputCursorPosition] + InputString[(InputCursorPosition + amount)..];
+
+        SysConsole.Write(new string('\b', amount));
+
+        var delLength = InputString.Length - InputCursorPosition + amount;
+        SysConsole.Write(InputString.Substring(InputCursorPosition, delLength - amount) + new string(' ', amount));
+        SysConsole.Write(new string('\b', delLength));
+    }
+
+    void DeleteAfterCursor(int amount = 1)
+    {
+        amount = Math.Min(amount, InputString.Length - InputCursorPosition);
+
+        var toWrite = InputString[(InputCursorPosition + amount)..];
+        SysConsole.Write(toWrite + new string(' ', amount));
+        SysConsole.Write(new string('\b', toWrite.Length + amount));
+        InputString = InputString[..InputCursorPosition] + toWrite;
+    }
+
+    string FinalizeInput()
+    {
+        var cmd = InputString;
+        var inputVisible = ReturnedValue is not CommandPrompt;
+
+        //Finish writing input
+        if (inputVisible)
+        {
             SysConsole.Write(new string('\b', InputCursorPosition));
             SysConsole.Write(new string(' ', InputCursorPosition));
             SysConsole.Write(new string('\b', InputCursorPosition));
-
-            currentInput = newIndex;
-
-            InputString = inputs[currentInput];
-            SysConsole.Write(InputString);
-            InputCursorPosition = InputString.Length;
         }
 
-        int WordAfterLength()
+        //Clear
+        InputString = "";
+        InputCursorPosition = 0;
+        IsReadingInput = false;
+
+        if (inputVisible)
         {
-            var txt = GetInputAfterCursor();
-            return txt.Length - txt.TrimStart().Length +
-                txt.TrimStart().Split(' ').First().Length;
-        }
+            //Ignore rest if empty
+            if (string.IsNullOrWhiteSpace(cmd))
+                return cmd;
 
-        int WordBeforeLength()
-        {
-            var txt = GetInputBeforeCursor();
-            return txt.Length - txt.TrimEnd().Length +
-                txt.TrimEnd().Split(' ').Last().Length;
-        }
+            //Saving previous inputs
 
-        void DeleteBeforeCursor(int amount = 1)
-        {
-            amount = Math.Min(amount, InputCursorPosition);
-            InputCursorPosition -= amount;
-            InputString = InputString.Substring(0, InputCursorPosition) + InputString.Substring(InputCursorPosition + amount, InputString.Length - InputCursorPosition - amount);
+            //Add final input and apply
+            previousInputs.Add(cmd);
+            inputs[inputs.Count - 1] = cmd;
 
-            SysConsole.Write(new string('\b', amount));
-
-            var delLength = InputString.Length - InputCursorPosition + amount;
-            SysConsole.Write(InputString.Substring(InputCursorPosition, delLength - amount) + new string(' ', amount));
-            SysConsole.Write(new string('\b', delLength));
-        }
-
-        void DeleteAfterCursor(int amount = 1)
-        {
-            amount = Math.Min(amount, InputString.Length - InputCursorPosition);
-
-            var toWrite = InputString.Substring(InputCursorPosition + amount, InputString.Length - InputCursorPosition - amount);
-            SysConsole.Write(toWrite + new string(' ', amount));
-            SysConsole.Write(new string('\b', toWrite.Length + amount));
-            InputString = InputString.Substring(0, InputCursorPosition) + toWrite;
-        }
-
-        string FinalizeInput()
-        {
-            var cmd = InputString;
-            var inputVisible = !(ReturnedValue is CommandPrompt);
-
-            //Finish writing input
-            if (inputVisible)
+            //Ensure limit
+            while (previousInputs.Count > PreviousInputsLimit)
             {
-                SysConsole.Write(new string('\b', InputCursorPosition));
-                SysConsole.Write(new string(' ', InputCursorPosition));
-                SysConsole.Write(new string('\b', InputCursorPosition));
+                currentInput--;
+                previousInputs.RemoveAt(0);
+                inputs.RemoveAt(0);
             }
 
-            //Clear
-            InputString = "";
-            InputCursorPosition = 0;
-            IsReadingInput = false;
+            //If a previous input was modified and executed, revert to old one
+            if (currentInput >= 0)
+                inputs[currentInput] = previousInputs[currentInput];
 
-            if (inputVisible)
-            {
-                //Ignore rest if empty
-                if (string.IsNullOrWhiteSpace(cmd))
-                    return cmd;
-
-                //Saving previous inputs
-
-                //Add final input and apply
-                previousInputs.Add(cmd);
-                inputs[inputs.Count - 1] = cmd;
-
-                //Ensure limit
-                while (previousInputs.Count > PreviousInputsLimit)
-                {
-                    currentInput--;
-                    previousInputs.RemoveAt(0);
-                    inputs.RemoveAt(0);
-                }
-
-                //If a previous input was modified and executed, revert to old one
-                if (currentInput >= 0)
-                    inputs[currentInput] = previousInputs[currentInput];
-
-                inputs.Add(string.Empty);
-            }
-
-            return cmd;
-        }
-        #endregion
-
-        protected string CreateLogText(qLog log) =>
-            log.ToString(log.logType == LogType.User ? UserLogFormat : LogFormat);
-
-        protected string ColorText(string txt, qColor color) =>
-            $"\u001b[38;2;{color.red};{color.green};{color.blue}m{txt}\u001b[0m";
-        //txt;
-
-        protected string CreateEmptyStringForLog(qLog log) =>
-            ColorText(new string(CreateLogText(log).Select(x => char.IsControl(x) ? x : ' ').ToArray()), log.color);
-
-        protected void ClearPreviousLog()
-        {
-            //Calculate previous message length
-            var consoleWidth = SysConsole.BufferWidth;
-            var lineLength = previousLogMessage.Split('\n')
-                .Select(x => (x.Length - 1) / consoleWidth + 1)
-                .Sum();
-            var top = Math.Max(0, SysConsole.CursorTop - lineLength);
-
-            //Clear previous message
-            SysConsole.CursorTop = top;
-            SysConsole.CursorLeft = 0;
-            SysConsole.Write(new string(' ', lineLength * consoleWidth));
-            SysConsole.CursorTop = top;
-            SysConsole.CursorLeft = 0;
+            inputs.Add(string.Empty);
         }
 
-        protected void WritePreviousLog()
-        {
-            SysConsole.Write(ColorText(previousLogMessage, previousLogColor));
-        }
+        return cmd;
+    }
+    #endregion
+
+    protected string CreateLogText(qLog log) =>
+        log.ToString(log.logType == LogType.User ? UserLogFormat : LogFormat);
+
+    protected static string ColorText(string txt, qColor color) =>
+        $"\u001b[38;2;{color.red};{color.green};{color.blue}m{txt}\u001b[0m";
+    //txt;
+
+    protected string CreateEmptyStringForLog(qLog log) =>
+        ColorText(new string(CreateLogText(log).Select(x => char.IsControl(x) ? x : ' ').ToArray()), log.color);
+
+    protected void ClearPreviousLog()
+    {
+        //Calculate previous message length
+        var consoleWidth = SysConsole.BufferWidth;
+        var lineLength = previousLogMessage.Split('\n')
+            .Select(x => (x.Length - 1) / consoleWidth + 1)
+            .Sum();
+        var top = Math.Max(0, SysConsole.CursorTop - lineLength);
+
+        //Clear previous message
+        SysConsole.CursorTop = top;
+        SysConsole.CursorLeft = 0;
+        SysConsole.Write(new string(' ', lineLength * consoleWidth));
+        SysConsole.CursorTop = top;
+        SysConsole.CursorLeft = 0;
+    }
+
+    protected void WritePreviousLog()
+    {
+        SysConsole.Write(ColorText(previousLogMessage, previousLogColor));
     }
 }

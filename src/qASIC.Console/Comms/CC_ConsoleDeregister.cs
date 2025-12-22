@@ -1,12 +1,11 @@
 ﻿using qASIC.Communication;
 
-namespace qASIC.Console.Comms
+namespace qASIC.Console.Comms;
+
+public class CC_ConsoleDeregister : ConsoleCommsComponent
 {
-    public class CC_ConsoleDeregister : ConsoleCommsComponent
+    public override void ReadForConsole(CommsComponentArgs args, qConsole console)
     {
-        public override void ReadForConsole(CommsComponentArgs args, qConsole console)
-        {
-            ConsoleManager?.DeregisterConsole(console);
-        }
+        ConsoleManager?.DeregisterConsole(console);
     }
 }

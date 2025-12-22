@@ -1,19 +1,18 @@
-namespace qASIC.Text
+namespace qASIC.Text;
+
+public interface ITextMenu
 {
-    public interface ITextMenu
-    {
-        string GenerateMenu();
+    string GenerateMenu();
 
-        object Confirm();
-        bool Cancel();
+    object Confirm();
+    bool Cancel();
 
-        void Select();
-        void Deselect();
+    void Select();
+    void Deselect();
 
-        bool TryInvokeItemAction(char key, out object result);
+    bool TryInvokeItemAction(char key, out object result);
 
-        void Move(int delta);
+    void Move(int delta);
 
-        int Position { get; set; }
-    }
+    int Position { get; set; }
 }

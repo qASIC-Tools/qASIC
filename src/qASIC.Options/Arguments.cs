@@ -1,8 +1,7 @@
-namespace qASIC.Options
+namespace qASIC.Options;
+
+public struct ChangeOptionArgs
 {
-    public struct ChangeOptionArgs
-    {
-        public string optionName;
-        public object value;
-    }
+    public string optionName;
+    public object value;
 }

@@ -1,32 +1,31 @@
 ﻿using qASIC.CmdAutocomplete;
 using System;
 
-namespace qASIC.Console.Commands.BuiltIn
+namespace qASIC.Console.Commands.BuiltIn;
+
+public class Cmd_Exit : qBuiltinCommandLogic
 {
-    public class Cmd_Exit : qBuiltinCommandLogic
+    protected override string DefaultCommandName => "exit";
+    protected override string DefaultDescription => "Closes the application.";
+    protected override string[] DefaultAliases => ["quit"];
+
+    public override ACData CommandAutocomplete => new ACData()
+        .AddVariant().Finish();
+
+    public event Action ExitMethod;
+
+    public override object Run(qConsoleCommandContext context)
     {
-        protected override string DefaultCommandName => "exit";
-        protected override string DefaultDescription => "Closes the application.";
-        protected override string[] DefaultAliases => new string[] { "quit" };
+        context.CheckArgumentCount(0);
+        context.Logs.Log("Goodbye");
 
-        public override ACData CommandAutocomplete => new ACData()
-            .AddVariant().Finish();
-
-        public event Action ExitMethod;
-
-        public override object Run(qConsoleCommandContext context)
+        if (ExitMethod != null)
         {
-            context.CheckArgumentCount(0);
-            context.Logs.Log("Goodbye");
-
-            if (ExitMethod != null)
-            {
-                ExitMethod?.Invoke();
-                return null;
-            }
-
-            Environment.Exit(0);
+            ExitMethod?.Invoke();
             return null;
         }
+
+        Environment.Exit(0);
+        return null;
     }
 }

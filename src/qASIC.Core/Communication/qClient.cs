@@ -5,291 +5,290 @@ using System;
 using qASIC.Communication.Components;
 using System.Linq;
 
-namespace qASIC.Communication
+namespace qASIC.Communication;
+
+public class qClient : qPeer
 {
-    public class qClient : qPeer
+    public qClient(CommsComponentCollection components, int maxConnectionAttempts = 8) :
+        this(components, IPAddress.Parse("127.0.0.1"), Constants.DEFAULT_PORT, maxConnectionAttempts)
+    { }
+
+    public qClient(CommsComponentCollection components, IPAddress address, int port, int maxConnectionAttempts = 8)
     {
-        public qClient(CommsComponentCollection components, int maxConnectionAttempts = 8) :
-            this(components, IPAddress.Parse("127.0.0.1"), Constants.DEFAULT_PORT, maxConnectionAttempts)
-        { }
+        Components = components;
 
-        public qClient(CommsComponentCollection components, IPAddress address, int port, int maxConnectionAttempts = 8)
+        Address = address;
+        Port = port;
+
+        this.maxConnectionAttempts = maxConnectionAttempts;
+    }
+
+    public enum DisconnectReason
+    {
+        /// <summary>Client disconnected voluntarily</summary>
+        None,
+        /// <summary>Server was shut down</summary>
+        ServerShutdown,
+        /// <summary>Couldn't connect to the server in time</summary>
+        FailedToEstablishConnection,
+        /// <summary>Couldn't receive network server info in time</summary>
+        FailedToReceiveConnectionInformation,
+        /// <summary>Client didn't receive a pong signal in time</summary>
+        NoResponse,
+        /// <summary>General error</summary>
+        Error,
+        SendError,
+    }
+
+    public enum State
+    {
+        Offline,
+        Connecting,
+        Pending,
+        Connected,
+    }
+
+    public NetworkServerInfo AppInfo { get; set; } = new NetworkServerInfo();
+
+    public IPAddress Address { get; private set; }
+    public int Port { get; private set; }
+    public State CurrentState { get; internal set; } = State.Offline;
+    public override bool IsActive => CurrentState != State.Offline;
+
+    public int maxConnectionAttempts;
+    private int connectionAttempts = 0;
+
+    public Socket Socket { get; private set; }
+
+    public Action OnStart;
+    public Action OnConnect;
+    public Action<DisconnectReason> OnDisconnect;
+    public Func<qPacket, NetworkServerInfo> ProcessAppInfo = null;
+
+    public int MaxMissedPings { get; set; } = 8;
+
+    private byte[] buffer = [];
+    public qPacket currentRead = null;
+    public int readLength;
+
+    internal int missedPings;
+
+    public bool logPackets = false;
+
+    public qClient WithUpdateLoop(int milisecondsPerUpdate = 10)
+    {
+        StartUpdateLoop(milisecondsPerUpdate);
+        return this;
+    }
+
+    public void Connect() =>
+        Connect(Address, Port);
+
+    public void Connect(IPAddress address, int port)
+    {
+        if (IsActive)
+            throw new Exception("Cannot connect client, client is already active!");
+
+        Address = address;
+        Port = port;
+
+        OnStart?.Invoke();
+        Logs.Log("Starting client...");
+
+        try
         {
-            Components = components;
+            PrepareStart();
+            connectionAttempts = 0;
 
-            Address = address;
-            Port = port;
-
-            this.maxConnectionAttempts = maxConnectionAttempts;
-        }
-
-        public enum DisconnectReason
-        {
-            /// <summary>Client disconnected voluntarily</summary>
-            None,
-            /// <summary>Server was shut down</summary>
-            ServerShutdown,
-            /// <summary>Couldn't connect to the server in time</summary>
-            FailedToEstablishConnection,
-            /// <summary>Couldn't receive network server info in time</summary>
-            FailedToReceiveConnectionInformation,
-            /// <summary>Client didn't receive a pong signal in time</summary>
-            NoResponse,
-            /// <summary>General error</summary>
-            Error,
-            SendError,
-        }
-
-        public enum State
-        {
-            Offline,
-            Connecting,
-            Pending,
-            Connected,
-        }
-
-        public NetworkServerInfo AppInfo { get; set; } = new NetworkServerInfo();
-
-        public IPAddress Address { get; private set; }
-        public int Port { get; private set; }
-        public State CurrentState { get; internal set; } = State.Offline;
-        public override bool IsActive => CurrentState != State.Offline;
-
-        public int maxConnectionAttempts;
-        private int connectionAttempts = 0;
-
-        public Socket Socket { get; private set; }
-
-        public Action OnStart;
-        public Action OnConnect;
-        public Action<DisconnectReason> OnDisconnect;
-        public Func<qPacket, NetworkServerInfo> ProcessAppInfo = null;
-
-        public int MaxMissedPings { get; set; } = 8;
-
-        private byte[] buffer = new byte[0];
-        public qPacket currentRead = null;
-        public int readLength;
-
-        internal int missedPings;
-
-        public bool logPackets = false;
-
-        public qClient WithUpdateLoop(int milisecondsPerUpdate = 10)
-        {
-            StartUpdateLoop(milisecondsPerUpdate);
-            return this;
-        }
-
-        public void Connect() =>
-            Connect(Address, Port);
-
-        public void Connect(IPAddress address, int port)
-        {
-            if (IsActive)
-                throw new Exception("Cannot connect client, client is already active!");
-
-            Address = address;
-            Port = port;
-
-            OnStart?.Invoke();
-            Logs.Log("Starting client...");
-
-            try
+            Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
             {
-                PrepareStart();
-                connectionAttempts = 0;
+                ReceiveBufferSize = Constants.BUFFER_SIZE,
+                SendBufferSize = Constants.BUFFER_SIZE,
+                NoDelay = false,
+            };
 
-                Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-                {
-                    ReceiveBufferSize = Constants.BUFFER_SIZE,
-                    SendBufferSize = Constants.BUFFER_SIZE,
-                    NoDelay = false,
-                };
+            buffer = new byte[Constants.BUFFER_SIZE];
+            var endPoint = new IPEndPoint(Address, Port);
+            Socket.Connect(endPoint);
 
-                buffer = new byte[Constants.BUFFER_SIZE];
-                var endPoint = new IPEndPoint(Address, Port);
-                Socket.Connect(endPoint);
+            CurrentState = State.Connecting;
+            Logs.Log($"Client is active, connecting to {Address}:{Port}...");
+            SendLoop();
+            Heartbeat();
 
-                CurrentState = State.Connecting;
-                Logs.Log($"Client is active, connecting to {Address}:{Port}...");
-                SendLoop();
-                Heartbeat();
+        }
+        catch (Exception e)
+        {
+            Logs.LogError($"Failed to connect client: {e}");
+            Disconnect(DisconnectReason.Error);
+        }
+    }
 
-            }
-            catch (Exception e)
+    public override void OnUpdate()
+    {
+        Receive();
+    }
+
+    private void Heartbeat()
+    {
+        if (!IsActive)
+            return;
+
+        try
+        {
+            switch (CurrentState)
             {
-                Logs.LogError($"Failed to connect client: {e}");
-                Disconnect(DisconnectReason.Error);
+                case State.Connecting:
+                    if (Socket!.Connected)
+                    {
+                        Send(new CC_ConnectData().CreateClientConfirmationPacket());
+
+                        CurrentState = State.Pending;
+                        Logs.Log($"Connection established, waiting for connection confirmation");
+                        break;
+                    }
+
+                    if (connectionAttempts >= maxConnectionAttempts)
+                    {
+                        Logs.Log($"Couldn't establish connection");
+                        DisconnectLocal(DisconnectReason.FailedToEstablishConnection);
+                        return;
+                    }
+
+                    Logs.Log($"Connection attempt: {connectionAttempts}");
+                    connectionAttempts++;
+                    break;
+                case State.Pending:
+                    if (connectionAttempts >= maxConnectionAttempts)
+                    {
+                        Logs.Log($"Failed to receive connection confirmation.");
+                        Disconnect(DisconnectReason.FailedToReceiveConnectionInformation);
+                        return;
+                    }
+
+                    connectionAttempts++;
+                    break;
+                case State.Connected:
+                    if (missedPings > MaxMissedPings)
+                    {
+                        Logs.Log($"Server didn't respond, disconnecting...");
+                        DisconnectLocal(DisconnectReason.NoResponse);
+                        return;
+                    }
+
+                    missedPings++;
+                    Send(new CC_Ping().CreateEmptyComponentPacket());
+                    break;
             }
         }
-
-        public override void OnUpdate()
+        catch (Exception e)
         {
-            Receive();
+            Logs.LogError($"Failed to execute update loop: {e}");
         }
 
-        void Heartbeat()
+        ExecuteLater(1000, () => Heartbeat());
+    }
+
+    private void Receive()
+    {
+        missedPings = 0;
+
+        try
         {
-            if (!IsActive)
+            if (Socket.Available == 0)
                 return;
+            
+            int streamLength = Socket.Receive(buffer, 0, Constants.BUFFER_SIZE, SocketFlags.None);
 
-            try
+            if (logPackets)
+                Logs.Log($"Incomming data, length:{streamLength}");
+
+            var packet = new qPacket();
+            packet.bytes.AddRange(buffer.Take(streamLength));
+
+            while (packet.bytes.Count > 0)
             {
-                switch (CurrentState)
+                if (currentRead == null)
                 {
-                    case State.Connecting:
-                        if (Socket!.Connected)
-                        {
-                            Send(new CC_ConnectData().CreateClientConfirmationPacket());
-
-                            CurrentState = State.Pending;
-                            Logs.Log($"Connection established, waiting for connection confirmation");
-                            break;
-                        }
-
-                        if (connectionAttempts >= maxConnectionAttempts)
-                        {
-                            Logs.Log($"Couldn't establish connection");
-                            DisconnectLocal(DisconnectReason.FailedToEstablishConnection);
-                            return;
-                        }
-
-                        Logs.Log($"Connection attempt: {connectionAttempts}");
-                        connectionAttempts++;
-                        break;
-                    case State.Pending:
-                        if (connectionAttempts >= maxConnectionAttempts)
-                        {
-                            Logs.Log($"Failed to receive connection confirmation.");
-                            Disconnect(DisconnectReason.FailedToReceiveConnectionInformation);
-                            return;
-                        }
-
-                        connectionAttempts++;
-                        break;
-                    case State.Connected:
-                        if (missedPings > MaxMissedPings)
-                        {
-                            Logs.Log($"Server didn't respond, disconnecting...");
-                            DisconnectLocal(DisconnectReason.NoResponse);
-                            return;
-                        }
-
-                        missedPings++;
-                        Send(new CC_Ping().CreateEmptyComponentPacket());
-                        break;
-                }
-            }
-            catch (Exception e)
-            {
-                Logs.LogError($"Failed to execute update loop: {e}");
-            }
-
-            ExecuteLater(1000, () => Heartbeat());
-        }
-
-        void Receive()
-        {
-            missedPings = 0;
-
-            try
-            {
-                if (Socket.Available == 0)
-                    return;
-                
-                int streamLength = Socket.Receive(buffer, 0, Constants.BUFFER_SIZE, SocketFlags.None);
-
-                if (logPackets)
-                    Logs.Log($"Incomming data, length:{streamLength}");
-
-                var packet = new qPacket();
-                packet.bytes.AddRange(buffer.Take(streamLength));
-
-                while (packet.bytes.Count > 0)
-                {
-                    if (currentRead == null)
-                    {
-                        currentRead = new qPacket();
-                        readLength = packet.ReadInt();
-                        packet.RemoveReadBytes();
-                    }
-
-                    var dataLength = Math.Min(packet.bytes.Count, readLength - currentRead.bytes.Count);
-                    currentRead.WriteBytes(packet.ReadCurrentBytes(dataLength));
+                    currentRead = new qPacket();
+                    readLength = packet.ReadInt();
                     packet.RemoveReadBytes();
-
-                    if (currentRead.bytes.Count == readLength)
-                    {
-                        Components.HandlePacketForClient(this, currentRead);
-                        currentRead = null;
-                        readLength = 0;
-                    }
                 }
 
-                Array.Clear(buffer, 0, Constants.BUFFER_SIZE);
-            }
-            catch (Exception e)
-            {
-                Logs.LogError($"There was an error while processing data: {e}");
-            }
-        }
+                var dataLength = Math.Min(packet.bytes.Count, readLength - currentRead.bytes.Count);
+                currentRead.WriteBytes(packet.ReadCurrentBytes(dataLength));
+                packet.RemoveReadBytes();
 
-        Queue<qPacket> packetsToSend = new Queue<qPacket>();
-
-        public override void Send(qPacket packet)
-        {
-            packet.bytes.InsertRange(0, new qPacket()
-                .Write(packet.bytes.Count));
-
-            //Enqueue packet to be send in send loop
-            packetsToSend.Enqueue(packet);
-        }
-
-        private void SendLoop()
-        {
-            try
-            {
-                while (packetsToSend.TryDequeue(out var packet))
+                if (currentRead.bytes.Count == readLength)
                 {
-                    if (logPackets)
-                        Logs.Log($"Sending packet - {packet}");
-
-                    Socket.Send(packet.ToArray(), 0, packet.bytes.Count, SocketFlags.None);
+                    Components.HandlePacketForClient(this, currentRead);
+                    currentRead = null;
+                    readLength = 0;
                 }
             }
-            catch
-            {
-                Logs.LogError($"There was a problem while sending, disconecting...");
-                DisconnectLocal(DisconnectReason.SendError);
-            }
 
-            ExecuteLater(MilisecondsPerSend, SendLoop);
+            Array.Clear(buffer, 0, Constants.BUFFER_SIZE);
+        }
+        catch (Exception e)
+        {
+            Logs.LogError($"There was an error while processing data: {e}");
+        }
+    }
+
+    private readonly Queue<qPacket> packetsToSend = new();
+
+    public override void Send(qPacket packet)
+    {
+        packet.bytes.InsertRange(0, new qPacket()
+            .Write(packet.bytes.Count));
+
+        //Enqueue packet to be send in send loop
+        packetsToSend.Enqueue(packet);
+    }
+
+    private void SendLoop()
+    {
+        try
+        {
+            while (packetsToSend.TryDequeue(out var packet))
+            {
+                if (logPackets)
+                    Logs.Log($"Sending packet - {packet}");
+
+                Socket.Send(packet.ToArray(), 0, packet.bytes.Count, SocketFlags.None);
+            }
+        }
+        catch
+        {
+            Logs.LogError($"There was a problem while sending, disconecting...");
+            DisconnectLocal(DisconnectReason.SendError);
         }
 
-        public void Disconnect(DisconnectReason reason = DisconnectReason.None)
+        ExecuteLater(MilisecondsPerSend, SendLoop);
+    }
+
+    public void Disconnect(DisconnectReason reason = DisconnectReason.None)
+    {
+        Send(new CC_Disconnect().CreateEmptyComponentPacket());
+        ExecuteLater(MilisecondsPerSend, () => DisconnectLocal(reason));
+    }
+
+    public void DisconnectLocal(DisconnectReason reason = DisconnectReason.None)
+    {
+        CurrentState = State.Offline;
+
+        try
         {
-            Send(new CC_Disconnect().CreateEmptyComponentPacket());
-            ExecuteLater(MilisecondsPerSend, () => DisconnectLocal(reason));
+            Socket?.Close();
+
+            PrepareStop();
+
+            Logs.Log("Client disconnected");
+            OnDisconnect?.Invoke(reason);
         }
-
-        public void DisconnectLocal(DisconnectReason reason = DisconnectReason.None)
+        catch (Exception e)
         {
-            CurrentState = State.Offline;
-
-            try
-            {
-                Socket?.Close();
-
-                PrepareStop();
-
-                Logs.Log("Client disconnected");
-                OnDisconnect?.Invoke(reason);
-            }
-            catch (Exception e)
-            {
-                Logs.LogError($"There was a problem while disconnecting. Please restart application! {e}");
-            }
+            Logs.LogError($"There was a problem while disconnecting. Please restart application! {e}");
         }
     }
 }

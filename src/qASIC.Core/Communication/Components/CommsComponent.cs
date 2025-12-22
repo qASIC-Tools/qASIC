@@ -1,13 +1,12 @@
-﻿namespace qASIC.Communication.Components
+﻿namespace qASIC.Communication.Components;
+
+public abstract class CommsComponent
 {
-    public abstract class CommsComponent
-    {
-        public virtual string GetId() =>
-            GetType().Name;
+    public virtual string GetId() =>
+        GetType().Name;
 
-        public abstract void Read(CommsComponentArgs args);
+    public abstract void Read(CommsComponentArgs args);
 
-        public qPacket CreateEmptyComponentPacket() =>
-            new qPacket().Write(GetId());
-    }
+    public qPacket CreateEmptyComponentPacket() =>
+        new qPacket().Write(GetId());
 }

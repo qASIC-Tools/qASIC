@@ -1,7 +1,6 @@
-﻿namespace qASIC
+﻿namespace qASIC;
+
+public interface IService
 {
-    public interface IService
-    {
-        qInstance Instance { get; set; }
-    }
+    qInstance Instance { get; set; }
 }

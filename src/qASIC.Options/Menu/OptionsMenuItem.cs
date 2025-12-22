@@ -1,17 +1,16 @@
 ﻿using System;
 
-namespace qASIC.Options.Menu
+namespace qASIC.Options.Menu;
+
+public abstract class OptionsMenuItem
 {
-    public abstract class OptionsMenuItem
-    {
-        public string name;
-        public string displayName;
+    public string name;
+    public string displayName;
 
-        public abstract Type ValueType { get; }
-    }
+    public abstract Type ValueType { get; }
+}
 
-    public abstract class OptionsMenuItem<T> : OptionsMenuItem
-    {
-        public override Type ValueType => typeof(T);
-    }
+public abstract class OptionsMenuItem<T> : OptionsMenuItem
+{
+    public override Type ValueType => typeof(T);
 }

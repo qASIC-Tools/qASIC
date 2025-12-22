@@ -1,29 +1,28 @@
 ﻿using qASIC.Communication;
 using qASIC.Communication.Components;
 
-namespace qASIC.Console.Comms
+namespace qASIC.Console.Comms;
+
+public abstract class ConsoleCommsComponent : CommsComponent
 {
-    public abstract class ConsoleCommsComponent : CommsComponent
+    public qConsoleInstanceManager ConsoleManager { get; set; }
+
+    public override void Read(CommsComponentArgs args)
     {
-        public qConsoleInstanceManager ConsoleManager { get; set; }
-
-        public override void Read(CommsComponentArgs args)
+        var consoleName = args.packet.ReadString();
+        var console = ConsoleManager?.Get(consoleName)?.Console;
+        if (console == null)
         {
-            var consoleName = args.packet.ReadString();
-            var console = ConsoleManager?.Get(consoleName)?.Console;
-            if (console == null)
-            {
-                args.Logs.LogError("Console not registered");
-                return;
-            }
-
-            ReadForConsole(args, console);
+            args.Logs.LogError("Console not registered");
+            return;
         }
 
-        public abstract void ReadForConsole(CommsComponentArgs args, qConsole console);
-
-        public qPacket CreateEmptyPacketForConsole(qConsole console) =>
-            CreateEmptyComponentPacket()
-            .Write(console.Name);
+        ReadForConsole(args, console);
     }
+
+    public abstract void ReadForConsole(CommsComponentArgs args, qConsole console);
+
+    public qPacket CreateEmptyPacketForConsole(qConsole console) =>
+        CreateEmptyComponentPacket()
+        .Write(console.Name);
 }

@@ -1,7 +1,6 @@
-﻿namespace qASIC.CmdAutocomplete
+﻿namespace qASIC.CmdAutocomplete;
+
+public interface IAutocompleteEngine
 {
-    public interface IAutocompleteEngine
-    {
-        (string, int) Autocomplete(string cmd, int cursorPosition);
-    }
+    (string, int) Autocomplete(string cmd, int cursorPosition);
 }

@@ -1,7 +1,6 @@
-namespace qASIC.Logging
+namespace qASIC.Logging;
+
+public interface IHasLogs
 {
-    public interface IHasLogs
-    {
-        qLogManager Logs { get; }
-    }
+    qLogManager Logs { get; }
 }

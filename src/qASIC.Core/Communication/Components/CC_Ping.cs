@@ -1,7 +1,6 @@
-﻿namespace qASIC.Communication.Components
+﻿namespace qASIC.Communication.Components;
+
+public class CC_Ping : CommsComponent
 {
-    public class CC_Ping : CommsComponent
-    {
-        public override void Read(CommsComponentArgs args) { }
-    }
+    public override void Read(CommsComponentArgs args) { }
 }

@@ -2,66 +2,65 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.CmdAutocomplete
+namespace qASIC.CmdAutocomplete;
+
+public class ACData : IEnumerable<ACVariant>
 {
-    public class ACData : IEnumerable<ACVariant>
+    public List<ACVariant> Variants { get; } = [];
+
+    public IEnumerator<ACVariant> GetEnumerator() =>
+        Variants.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() =>
+        GetEnumerator();
+
+    public ACVariant AddVariant()
     {
-        public List<ACVariant> Variants { get; private set; } = new List<ACVariant>();
+        var variant = new ACVariant(this);
+        Variants.Add(variant);
+        return variant;
+    }
 
-        public IEnumerator<ACVariant> GetEnumerator() =>
-            Variants.GetEnumerator();
-
-        IEnumerator IEnumerable.GetEnumerator() =>
-            GetEnumerator();
-
-        public ACVariant AddVariant()
-        {
-            var variant = new ACVariant(this);
+    public ACVariant AddVariantIf(bool condition)
+    {
+        var variant = new ACVariant(this);
+        if (condition)
             Variants.Add(variant);
-            return variant;
-        }
 
-        public ACVariant AddVariantIf(bool condition)
+        return variant;
+    }
+
+    public List<ACVariant> GetValidVariants(qCommandArgument[] args)
+    {
+        List<ACVariant> variants = [];
+        variants.AddRange(Do(Variants.Where(x => x.Arguments.Count == args.Length), 0));
+        variants.AddRange(Do(Variants.Where(x => x.Arguments.Count > args.Length), 0));
+
+        IEnumerable<ACVariant> Do(IEnumerable<ACVariant> v, int i)
         {
-            var variant = new ACVariant(this);
-            if (condition)
-                Variants.Add(variant);
+            if (i >= args.Length)
+                return v;
 
-            return variant;
-        }
+            var types = args[i].values.Select(x => x.GetType())
+                .Concat(args[i].Parser.Select(x => x.ValueType))
+                .Distinct();
 
-        public List<ACVariant> GetValidVariants(qCommandArgument[] args)
-        {
-            List<ACVariant> variants = new List<ACVariant>();
-            variants.AddRange(Do(Variants.Where(x => x.Arguments.Count == args.Length), 0));
-            variants.AddRange(Do(Variants.Where(x => x.Arguments.Count > args.Length), 0));
+            List<ACVariant> res = new List<ACVariant>();
 
-            IEnumerable<ACVariant> Do(IEnumerable<ACVariant> v, int i)
+            foreach (var t in types)
             {
-                if (i >= args.Length)
-                    return v;
+                if (!args[i].CanGetValue(t))
+                    continue;
 
-                var types = args[i].values.Select(x => x.GetType())
-                    .Concat(args[i].Parser.Select(x => x.ValueType))
-                    .Distinct();
+                var val = v.Where(x => i < x.Arguments.Count)
+                    .Where(x => x.Arguments[i].type == t);
 
-                List<ACVariant> res = new List<ACVariant>();
-
-                foreach (var t in types)
-                {
-                    if (!args[i].CanGetValue(t))
-                        continue;
-
-                    var val = v.Where(x => i < x.Arguments.Count)
-                        .Where(x => x.Arguments[i].type == t);
-
-                    res.AddRange(Do(val, i + 1));
-                }
-
-                return res;
+                res.AddRange(Do(val, i + 1));
             }
 
-            return variants;
+            return res;
         }
+
+        return variants;
     }
 }

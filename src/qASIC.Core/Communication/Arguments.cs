@@ -1,48 +1,32 @@
 using qASIC.Logging;
 
-namespace qASIC.Communication
+namespace qASIC.Communication;
+
+public class OnServerReceiveDataArgs(qServer.Client client, qPacket packet)
 {
-    public class OnServerReceiveDataArgs
+    public qServer.Client client = client;
+    public qPacket data = packet;
+}
+
+public class CommsComponentArgs(PacketType packetType, qPacket packet)
+{
+    public PacketType packetType = packetType;
+    public qPacket packet = packet;
+    public qClient client;
+    public qServer server;
+
+    public qServer.Client targetServerClient;
+
+    public qLogManager Logs
     {
-        public OnServerReceiveDataArgs(qServer.Client client, qPacket packet)
+        get
         {
-            this.client = client;
-            data = packet;
-        }
-
-        public qServer.Client client;
-        public qPacket data;
-    }
-
-    public class CommsComponentArgs
-    {
-        public CommsComponentArgs(PacketType packetType, qPacket packet)
-        {
-            this.packet = packet;
-            this.packetType = packetType;
-        }
-
-        public PacketType packetType;
-        public qPacket packet;
-        public qClient client;
-        public qServer server;
-
-        public qServer.Client targetServerClient;
-
-        public qLogManager Logs
-        {
-            get
+            return packetType switch
             {
-                switch (packetType)
-                {
-                    case PacketType.Server:
-                        return server.Logs;
-                    case PacketType.Client:
-                        return client.Logs;
-                    default:
-                        return null;
-                }
-            }
+                PacketType.Server => server.Logs,
+                PacketType.Client => client.Logs,
+                _ => null,
+            };
         }
     }
 }

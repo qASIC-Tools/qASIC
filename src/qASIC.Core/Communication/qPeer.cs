@@ -5,96 +5,92 @@ using System.Threading;
 using System.Threading.Tasks;
 using qASIC.Logging;
 
-namespace qASIC.Communication
+namespace qASIC.Communication;
+
+public abstract class qPeer : IPeer, IHasLogs
 {
-    public abstract class qPeer : IPeer, IHasLogs
+    public CommsComponentCollection Components { get; protected set; }
+
+    public qLogManager Logs { get; } = new qLogManager();
+
+    public virtual bool IsActive { get; protected set; } = false;
+
+    private readonly qPriorityQueue<KeyValuePair<Action, long>, long> eventQueue = new();
+
+    public int MilisecondsPerUpdate { get; set; }
+    public int MilisecondsPerSend { get; set; } = 10;
+
+    private readonly System.Diagnostics.Stopwatch stopwatch = new();
+    private long CurrentTime { get; set; }
+
+    CancellationTokenSource updateCancel;
+
+    public void StartUpdateLoop(int milisecondsPerUpdate = 10)
     {
-        public CommsComponentCollection Components { get; protected set; }
+        StopUpdateLog();
 
-        public qLogManager Logs { get; set; } = new qLogManager();
+        MilisecondsPerUpdate = milisecondsPerUpdate;
 
-        public virtual bool IsActive { get; protected set; } = false;
-
-        qPriorityQueue<KeyValuePair<Action, long>, long> eventQueue = new qPriorityQueue<KeyValuePair<Action, long>, long>();
-
-        public int MilisecondsPerUpdate { get; set; }
-        public int MilisecondsPerSend { get; set; } = 10;
-
-        private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
-        private long CurrentTime { get; set; }
-
-        CancellationTokenSource updateCancel;
-
-        public void StartUpdateLoop(int milisecondsPerUpdate = 10)
+        updateCancel = new CancellationTokenSource();
+        Task.Run(async () =>
         {
-            StopUpdateLog();
-
-            MilisecondsPerUpdate = milisecondsPerUpdate;
-
-            updateCancel = new CancellationTokenSource();
-            Task.Run(async () =>
+            var cancel = updateCancel;
+            while (cancel != null && !cancel.IsCancellationRequested && MilisecondsPerUpdate > 0)
             {
-                var cancel = updateCancel;
-                while (cancel != null && !cancel.IsCancellationRequested && MilisecondsPerUpdate > 0)
-                {
-                    Update();
-                    await Task.Delay(MilisecondsPerUpdate);
-                }
-            });
-        }
-
-        public void Update()
-        {
-            if (!IsActive) return;
-
-            CurrentTime = stopwatch.ElapsedMilliseconds;
-
-            while (eventQueue.Count > 0 && eventQueue.Peek().Value <= CurrentTime)
-            {
-                try
-                {
-                    eventQueue.Dequeue().Key.Invoke();
-                }
-                catch (Exception e)
-                {
-                    Logs.LogError($"There was a problem in update loop, {e}");
-                }
+                Update();
+                await Task.Delay(MilisecondsPerUpdate);
             }
+        });
+    }
 
-            OnUpdate();
-        }
+    public void Update()
+    {
+        if (!IsActive) return;
 
-        public virtual void OnUpdate() { }
+        CurrentTime = stopwatch.ElapsedMilliseconds;
 
-        public void StopUpdateLog()
+        while (eventQueue.Count > 0 && eventQueue.Peek().Value <= CurrentTime)
         {
-            if (updateCancel != null)
+            try
             {
-                updateCancel.Cancel();
-                updateCancel = null;
+                eventQueue.Dequeue().Key.Invoke();
+            }
+            catch (Exception e)
+            {
+                Logs.LogError($"There was a problem in update loop, {e}");
             }
         }
 
-        protected void PrepareStart()
-        {
-            CurrentTime = 0;
-            stopwatch.Restart();
-        }
+        OnUpdate();
+    }
 
-        protected void PrepareStop()
-        {
-            StopUpdateLog();
-            eventQueue.Clear();
-            CurrentTime = 0;
-            stopwatch.Stop();
-        }
+    public virtual void OnUpdate() { }
 
-        public abstract void Send(qPacket packet);
+    public void StopUpdateLog()
+    {
+        updateCancel?.Cancel();
+        updateCancel = null;
+    }
 
-        protected void ExecuteLater(long inMs, Action delayedAction)
-        {
-            var t = CurrentTime + inMs;
-            eventQueue.Enqueue(new KeyValuePair<Action, long>(delayedAction, t), t);
-        }
+    protected void PrepareStart()
+    {
+        CurrentTime = 0;
+        stopwatch.Restart();
+    }
+
+    protected void PrepareStop()
+    {
+        StopUpdateLog();
+        eventQueue.Clear();
+        CurrentTime = 0;
+        stopwatch.Stop();
+    }
+
+    public abstract void Send(qPacket packet);
+
+    protected void ExecuteLater(long inMs, Action delayedAction)
+    {
+        var t = CurrentTime + inMs;
+        eventQueue.Enqueue(new KeyValuePair<Action, long>(delayedAction, t), t);
     }
 }

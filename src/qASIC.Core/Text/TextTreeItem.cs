@@ -1,23 +1,22 @@
 using System.Collections.Generic;
 
-namespace qASIC.Text
+namespace qASIC.Text;
+
+public class TextTreeItem
 {
-    public class TextTreeItem
+    public string Text { get; set; }
+    public List<TextTreeItem> children = [];
+
+    public TextTreeItem() { }
+
+    public TextTreeItem(string text)
     {
-        public string Text { get; set; }
-        public List<TextTreeItem> children = new List<TextTreeItem>();
-
-        public TextTreeItem() { }
-
-        public TextTreeItem(string text)
-        {
-            Text = text;
-        }
-
-        public void Add(TextTreeItem item) =>
-            children?.Add(item);
-
-        public void Add(string text) =>
-            Add(new TextTreeItem(text));
+        Text = text;
     }
+
+    public void Add(TextTreeItem item) =>
+        children?.Add(item);
+
+    public void Add(string text) =>
+        Add(new TextTreeItem(text));
 }

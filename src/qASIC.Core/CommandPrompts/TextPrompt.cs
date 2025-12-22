@@ -1,29 +1,21 @@
-﻿namespace qASIC.CommandPrompts
+﻿namespace qASIC.CommandPrompts;
+
+public class TextPrompt(object data = null) : CommandPrompt(data)
 {
-    public class TextPrompt : CommandPrompt
+    public string Text { get; private set; }
+
+    public override void Prepare(qCommandContext context)
     {
-        public TextPrompt(object data = null) : base(data) { }
-
-        public string Text { get; private set; }
-
-        public override void Prepare(qCommandContext context)
-        {
-            Text = context.inputString;
-            context.args = new qCommandArgument[]
-            {
-                new qCommandArgument(context.inputString, new object[] { context.inputString }),
-            };
-        }
+        Text = context.inputString;
+        context.args = [new qCommandArgument(context.inputString, [context.inputString])];
     }
+}
 
-    public class TextPrompt<T> : TextPrompt
+public class TextPrompt<T>(T data) : TextPrompt(data)
+{
+    public T Data
     {
-        public TextPrompt(T data) : base(data) { }
-
-        public T Data
-        {
-            get => (T)DataObject;
-            set => DataObject = value;
-        }
+        get => (T)DataObject;
+        set => DataObject = value;
     }
 }

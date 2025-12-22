@@ -1,72 +1,71 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.Options.Menu
+namespace qASIC.Options.Menu;
+
+public class OptionsMenu
 {
-    public class OptionsMenu
+    public OptionsMenu() { }
+
+    public OptionsMenu(string header) : this(null, "") { }
+
+    public OptionsMenu(OptionsMenu parent) : this(parent, "") { }
+
+    public OptionsMenu(OptionsMenu parent, string header)
     {
-        public OptionsMenu() { }
+        Parent = parent;
+        Header = header;
+    }
 
-        public OptionsMenu(string header) : this(null, "") { }
+    public string Header { get; set; }
+    public List<OptionsMenu> Sections { get; } = [];
+    public List<OptionsMenuItem> Options { get; } = [];
 
-        public OptionsMenu(OptionsMenu parent) : this(parent, "") { }
+    public OptionsMenu Parent { get; set; }
 
-        public OptionsMenu(OptionsMenu parent, string header)
-        {
-            Parent = parent;
-            Header = header;
-        }
+    public OptionsMenu StartNewSection(string header)
+    {
+        var section = new OptionsMenu(this);
+        section.Header = header;
+        Sections.Add(section);
+        return section;
+    }
 
-        public string Header { get; set; }
-        public List<OptionsMenu> Sections { get; private set; } = new List<OptionsMenu>();
-        public List<OptionsMenuItem> Options { get; private set; } = new List<OptionsMenuItem>();
+    public OptionsMenu FinishSection() =>
+        Parent;
 
-        public OptionsMenu Parent { get; set; }
+    public OptionsMenu AddOption(OptionsMenuItem option)
+    {
+        Options.Add(option);
+        return this;
+    }
 
-        public OptionsMenu StartNewSection(string header)
-        {
-            var section = new OptionsMenu(this);
-            section.Header = header;
-            Sections.Add(section);
-            return section;
-        }
+    public IEnumerable<OptionsMenuItem> GetMultipleOptions(string optionName) =>
+        GetAllOptions()
+        .Where(x => x?.name == optionName);
 
-        public OptionsMenu FinishSection() =>
-            Parent;
+    public OptionsMenuItem GetOption(string optionName) =>
+        GetMultipleOptions(optionName)
+        .FirstOrDefault();
 
-        public OptionsMenu AddOption(OptionsMenuItem option)
-        {
-            Options.Add(option);
-            return this;
-        }
+    public IEnumerable<OptionsMenuItem> GetAllOptions()
+    {
+        var options = Sections
+            .SelectMany(x => x.GetAllOptions())
+            .Concat(Options);
 
-        public IEnumerable<OptionsMenuItem> GetMultipleOptions(string optionName) =>
-            GetAllOptions()
-            .Where(x => x?.name == optionName);
+        return options;
+    }
 
-        public OptionsMenuItem GetOption(string optionName) =>
-           GetMultipleOptions(optionName)
-           .FirstOrDefault();
+    public IEnumerable<string> GetListOfMissingOptions(OptionsList list)
+    {
+        var existingOptions = GetAllOptions()
+            .Where(x => x != null)
+            .Select(x => x.name);
 
-        public IEnumerable<OptionsMenuItem> GetAllOptions()
-        {
-            var options = Sections
-                .SelectMany(x => x.GetAllOptions())
-                .Concat(Options);
+        var allOptions = list
+            .Select(x => x.Key);
 
-            return options;
-        }
-
-        public IEnumerable<string> GetListOfMissingOptions(OptionsList list)
-        {
-            var existingOptions = GetAllOptions()
-                .Where(x => x != null)
-                .Select(x => x.name);
-
-            var allOptions = list
-                .Select(x => x.Key);
-
-            return allOptions.Except(existingOptions);
-        }
+        return allOptions.Except(existingOptions);
     }
 }

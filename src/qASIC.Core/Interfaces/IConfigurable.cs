@@ -1,10 +1,9 @@
 ﻿using qASIC.qARK;
 
-namespace qASIC
+namespace qASIC;
+
+public interface IConfigurable
 {
-    public interface IConfigurable
-    {
-        qARKDocument CreateConfig();
-        void LoadConfig(qARKHolder data);
-    }
+    qARKDocument CreateConfig();
+    void LoadConfig(qARKHolder data);
 }

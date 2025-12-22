@@ -1,26 +1,23 @@
 using System.Text;
 
-namespace qASIC.Options.Commands
+namespace qASIC.Options.Commands;
+
+public class OptionsList(OptionsManager manager) : OptionsCommand(manager)
 {
-    public class OptionsList : OptionsCommand
+    public override string CommandName => "optionslist";
+    public override string[] Aliases => ["settingslist", "listoptions", "listsettings"];
+    public override string Description => "Shows a list of options.";
+
+    public override object Run(qCommandContext context)
     {
-        public OptionsList(OptionsManager manager) : base(manager) { }
+        context.CheckArgumentCount(0);
 
-        public override string CommandName => "optionslist";
-        public override string[] Aliases => new string[] { "settingslist", "listoptions", "listsettings" };
-        public override string Description => "Shows a list of options.";
+        var txt = new StringBuilder("List of options:");
 
-        public override object Run(qCommandContext context)
-        {
-            context.CheckArgumentCount(0);
+        foreach (var item in Manager.OptionsList)
+            txt.Append($"\n- {item.Key}:{item.Value.value} (default: {item.Value.defaultValue})");
 
-            StringBuilder txt = new StringBuilder("List of options:");
-
-            foreach (var item in Manager.OptionsList)
-                txt.Append($"\n- {item.Key}:{item.Value.value} (default: {item.Value.defaultValue})");
-
-            context.Logs.Log(txt.ToString());
-            return null;
-        }
+        context.Logs.Log(txt.ToString());
+        return null;
     }
 }

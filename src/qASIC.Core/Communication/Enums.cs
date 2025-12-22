@@ -1,8 +1,7 @@
-﻿namespace qASIC.Communication
+﻿namespace qASIC.Communication;
+
+public enum PacketType : byte
 {
-    public enum PacketType : byte
-    {
-        Server,
-        Client,
-    }
+    Server,
+    Client,
 }

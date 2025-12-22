@@ -1,10 +1,9 @@
 ﻿using qASIC.Communication.Components;
 
-namespace qASIC.Communication
+namespace qASIC.Communication;
+
+public interface IPeer
 {
-    public interface IPeer
-    {
-        void Send(qPacket packet);
-        CommsComponentCollection Components { get; }
-    }
+    void Send(qPacket packet);
+    CommsComponentCollection Components { get; }
 }

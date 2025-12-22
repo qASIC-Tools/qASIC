@@ -1,49 +1,48 @@
 ﻿using System;
 
-namespace qASIC.Communication.Components
+namespace qASIC.Communication.Components;
+
+public class CC_ConnectData : CommsComponent
 {
-    public class CC_ConnectData : CommsComponent
+    public event Action<NetworkServerInfo> OnRead;
+
+    public override void Read(CommsComponentArgs args)
     {
-        public event Action<NetworkServerInfo> OnRead;
-
-        public override void Read(CommsComponentArgs args)
+        switch (args.packetType)
         {
-            switch (args.packetType)
-            {
-                case PacketType.Server:
-                    args.targetServerClient.Connected = true;
-                    args.server.Send(args.targetServerClient, CreateServerResponsePacket(args.server));
-                    args.server.Logs.Log($"Client connected id: '{args.targetServerClient.id}'");
-                    args.server.OnClientConnect?.Invoke(args.targetServerClient);
-                    break;
-                case PacketType.Client:
-                    var info = args.client.ProcessAppInfo == null ?
-                        (NetworkServerInfo)args.packet.ReadNetworkSerializable(args.client.AppInfo) :
-                        args.client.ProcessAppInfo(args.packet);
+            case PacketType.Server:
+                args.targetServerClient.Connected = true;
+                args.server.Send(args.targetServerClient, CreateServerResponsePacket(args.server));
+                args.server.Logs.Log($"Client connected id: '{args.targetServerClient.id}'");
+                args.server.OnClientConnect?.Invoke(args.targetServerClient);
+                break;
+            case PacketType.Client:
+                var info = args.client.ProcessAppInfo == null ?
+                    (NetworkServerInfo)args.packet.ReadNetworkSerializable(args.client.AppInfo) :
+                    args.client.ProcessAppInfo(args.packet);
 
-                    if (info.protocolVersion > Constants.PROTOCOL_VERSION)
-                    {
-                        args.client?.Logs.Log($"Server uses a newer version of the communication protocol that is currently unsupported by this application. Please update communication library version to latest!");
-                        args.client?.Disconnect();
-                        return;
-                    }
+                if (info.protocolVersion > Constants.PROTOCOL_VERSION)
+                {
+                    args.client?.Logs.Log($"Server uses a newer version of the communication protocol that is currently unsupported by this application. Please update communication library version to latest!");
+                    args.client?.Disconnect();
+                    return;
+                }
 
-                    args.client?.Logs.Log($"Connected to project using protocol version: {info.protocolVersion}");
-                    args.client.AppInfo = info;
-                    args.client.CurrentState = qClient.State.Connected;
-                    args.client.Logs.Log("Client connected");
-                    args.client.OnConnect?.Invoke();
+                args.client?.Logs.Log($"Connected to project using protocol version: {info.protocolVersion}");
+                args.client.AppInfo = info;
+                args.client.CurrentState = qClient.State.Connected;
+                args.client.Logs.Log("Client connected");
+                args.client.OnConnect?.Invoke();
 
-                    OnRead?.Invoke(info);
-                    break;
-            }
+                OnRead?.Invoke(info);
+                break;
         }
-
-        public qPacket CreateClientConfirmationPacket() =>
-            CreateEmptyComponentPacket();
-
-        public qPacket CreateServerResponsePacket(qServer server) =>
-            CreateEmptyComponentPacket()
-            .Write(server.AppInfo);
     }
+
+    public qPacket CreateClientConfirmationPacket() =>
+        CreateEmptyComponentPacket();
+
+    public qPacket CreateServerResponsePacket(qServer server) =>
+        CreateEmptyComponentPacket()
+        .Write(server.AppInfo);
 }

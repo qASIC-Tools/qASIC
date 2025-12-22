@@ -1,11 +1,10 @@
-﻿namespace qASIC.Options.Menu
+﻿namespace qASIC.Options.Menu;
+
+public class OptionsMenuToggle : OptionsMenuItem<bool>
 {
-    public class OptionsMenuToggle : OptionsMenuItem<bool>
+    public OptionsMenuToggle(string name, string displayName)
     {
-        public OptionsMenuToggle(string name, string displayName)
-        {
-            this.name = name;
-            this.displayName = displayName;
-        }
+        this.name = name;
+        this.displayName = displayName;
     }
 }

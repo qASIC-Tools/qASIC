@@ -1,8 +1,7 @@
-﻿namespace qASIC.Communication
+﻿namespace qASIC.Communication;
+
+public interface INetworkSerializable
 {
-    public interface INetworkSerializable
-    {
-        void Read(qPacket packet);
-        qPacket Write(qPacket packet);
-    }
+    void Read(qPacket packet);
+    qPacket Write(qPacket packet);
 }

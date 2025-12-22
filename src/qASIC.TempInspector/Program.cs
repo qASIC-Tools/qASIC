@@ -9,392 +9,377 @@ using qASIC.CommandPrompts;
 using qASIC.Text;
 using qASIC.Console.Ui;
 
-namespace qASICRemote
+namespace qASICRemote;
+
+public class InspectorCommand : qCommandAttribute
 {
-    public class InspectorCommand : qCommandAttribute
+    public InspectorCommand(string name) : base(name) { }
+    public InspectorCommand(string name, params string[] aliases) : base(name, aliases) { }
+}
+
+internal class Program
+{
+    private static void Main(string[] args)
     {
-        public InspectorCommand(string name) : base(name) { }
-        public InspectorCommand(string name, params string[] aliases) : base(name, aliases) { }
+        var inspector = new Inspector();
+        inspector.Run(args);
+    }
+}
+
+[qLogColor(255, 192, 179)]
+public class Inspector
+{
+    public Inspector()
+    {
+        var appInfo = new RemoteAppInfo()
+        {
+            projectName = "qRemote Inspector (Simple)",
+            version = "1.0.0",
+        };
+
+        QasicInstance = new qInstance(appInfo)
+        {
+            autoStartRemoteInspectorServer = false,
+        };
+
+        var commands = new qCommandList()
+            .AddBuiltInCommands()
+            .AddCommand(new ConnectionsListCommand(this))
+            .AddCommand(new SendCmdCommand(this))
+            .FindAttributeCommands<InspectorCommand>();
+
+        GConsole = new qConsole("MAIN", commands);
+        GConsole.Targets.Register(this);
+
+        Interface = new qConsoleSystemUi(GConsole);
+
+        AppDomain.CurrentDomain.ProcessExit += OnApplicationClose;
+
+        QasicInstance.cc_log.OnReceiveLog += Cc_log_OnReceiveLog;
+
+        client = new qClient(QasicInstance.RemoteInspectorComponents)
+        {
+            AppInfo = appInfo,
+        };
+
+        client.OnDisconnect += Client_OnDisconnect;
+        client.OnConnect += Client_OnConnect;
+        client.OnStart += Client_OnStart;
+        client.Logs.OnLog += a => GConsole.Log($"[Client] {a.message}", new qColor(179, 255, 254));
+
+        DiscoveryClient = new DiscoveryClient(52148);
+        DiscoveryClient.OnDiscover += args =>
+        {
+            // GConsole.Log($"Server discovered, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
+            // args.Identity.ResetPosition();
+        };
+        DiscoveryClient.OnRemoved += args =>
+        {
+            // GConsole.Log($"Server removed, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
+            // args.Identity.ResetPosition();
+        };
+
+        consoleManager = new qConsoleInstanceManager(client);
+        consoleManager.CC_Log.OnRead += CC_Log_OnRead;
+        consoleManager.OnConsoleRegister += ConsoleManager_OnConsoleRegister;
+
+        QasicInstance.Services.Add(GConsole);
     }
 
-    internal class Program
+    const int UPDATE_FREQUENCY = 200;
+
+    public qClient client = null;
+
+    public qInstance QasicInstance { get; private set; } = null;
+    public qConsole GConsole { get; private set; } = null;
+    public qConsoleSystemUi Interface { get; private set; } = null;
+    public DiscoveryClient DiscoveryClient { get; private set; } = null;
+
+    public qConsoleInstanceManager consoleManager;
+
+    bool AutoConnect { get; set; } = false;
+
+    public qConsole SelectedConsole { get; private set; }
+
+    [qLogColor(GenericColor.White)]
+    public void Run(string[] args)
     {
-        private static void Main(string[] args)
+        QasicInstance.Start();
+        DiscoveryClient.Start();
+
+        new Task(async () =>
         {
-            var inspector = new Inspector();
-            inspector.Run(args);
-        }
+            while (true)
+                await Update();
+        }).Start();
+
+        GConsole.Log($"Created update loop, update frequency: {UPDATE_FREQUENCY}ms");
+
+        GConsole.Log("-----------------------------------------------------");
+        GConsole.Log("Type 'help' to list all commands");
+
+        Interface.StartReading();
     }
 
-    [qLogColor(255, 192, 179)]
-    public class Inspector
+    private void ConsoleManager_OnConsoleRegister(qConsole console)
     {
-        public Inspector()
-        {
-            var appInfo = new RemoteAppInfo()
-            {
-                projectName = "qRemote Inspector (Simple)",
-                version = "1.0.0",
-            };
-
-            QasicInstance = new qInstance(appInfo)
-            {
-                autoStartRemoteInspectorServer = false,
-            };
-
-            var commands = new qCommandList()
-                .AddBuiltInCommands()
-                .AddCommand(new ConnectionsListCommand(this))
-                .AddCommand(new SendCmdCommand(this))
-                .FindAttributeCommands<InspectorCommand>();
-
-            GConsole = new qConsole("MAIN", commands);
-            GConsole.Targets.Register(this);
-
-            Interface = new qConsoleSystemUi(GConsole);
-
-            AppDomain.CurrentDomain.ProcessExit += OnApplicationClose;
-
-            QasicInstance.cc_log.OnReceiveLog += Cc_log_OnReceiveLog;
-
-            client = new qClient(QasicInstance.RemoteInspectorComponents)
-            {
-                AppInfo = appInfo,
-            };
-
-            client.OnDisconnect += Client_OnDisconnect;
-            client.OnConnect += Client_OnConnect;
-            client.OnStart += Client_OnStart;
-            client.Logs.OnLog += a => GConsole.Log($"[Client] {a.message}", new qColor(179, 255, 254));
-
-            DiscoveryClient = new DiscoveryClient(52148);
-            DiscoveryClient.OnDiscover += args =>
-            {
-                // GConsole.Log($"Server discovered, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
-                // args.Identity.ResetPosition();
-            };
-            DiscoveryClient.OnRemoved += args =>
-            {
-                // GConsole.Log($"Server removed, address: {args.Address}:{args.Port}, identity: {args.Identity.ReadNetworkSerializable<RemoteAppInfo>()}");
-                // args.Identity.ResetPosition();
-            };
-
-            consoleManager = new qConsoleInstanceManager(client);
-            consoleManager.CC_Log.OnRead += CC_Log_OnRead;
-            consoleManager.OnConsoleRegister += ConsoleManager_OnConsoleRegister;
-
-            QasicInstance.Services.Add(GConsole);
-        }
-
-        const int UPDATE_FREQUENCY = 200;
-
-        public qClient client = null;
-
-        public qInstance QasicInstance { get; private set; } = null;
-        public qConsole GConsole { get; private set; } = null;
-        public qConsoleSystemUi Interface { get; private set; } = null;
-        public DiscoveryClient DiscoveryClient { get; private set; } = null;
-
-        public qConsoleInstanceManager consoleManager;
-
-        bool AutoConnect { get; set; } = false;
-
-        public qConsole SelectedConsole { get; private set; }
-
-        [qLogColor(GenericColor.White)]
-        public void Run(string[] args)
-        {
-            QasicInstance.Start();
-            DiscoveryClient.Start();
-
-            new Task(async () =>
-            {
-                while (true)
-                    await Update();
-            }).Start();
-
-            GConsole.Log($"Created update loop, update frequency: {UPDATE_FREQUENCY}ms");
-
-            GConsole.Log("-----------------------------------------------------");
-            GConsole.Log("Type 'help' to list all commands");
-
-            Interface.StartReading();
-        }
-
-        private void ConsoleManager_OnConsoleRegister(qConsole console)
-        {
-            if (SelectedConsole == null)
-                SelectedConsole = console;
-
-            GConsole?.Log($"Registered console '{console.Name}'");
-
-            if (SelectedConsole == console)
-                foreach (var log in console.Logs)
-                    CC_Log_OnRead(console, log);
-        }
-
-        private void CC_Log_OnRead(qConsole console, qLog log)
-        {
-            if (SelectedConsole != console) return;
-            log.message = $"[R:{console.Name}] {log.message}";
-            GConsole?.Log(log);
-        }
-
-        private void Client_OnStart()
-        {
-            GConsole.Clear();
-        }
-
-        [InspectorCommand("disconnect", "dc", Description = "Disconnects from connected application.")]
-        public void Disconnect()
-        {
-            if (client?.IsActive != true)
-            {
-                GConsole?.LogError("Client is not active!");
-                return;
-            }
-
-            client.Disconnect();
-        }
-
-        [InspectorCommand("connect", "cn", Description = "Connects to an application.")]
-        private void Connect() =>
-            Connect("127.0.0.1");
-
-        [InspectorCommand("connect")]
-        private void Connect(int port) =>
-            Connect($"127.0.0.1:{port}");
-
-        [InspectorCommand("connect")]
-        private void Connect(string address)
-        {
-            var addressParts = address.Split(":");
-
-            int port = client.Port;
-            if (addressParts.Length > 2 ||
-                !IPAddress.TryParse(addressParts[0], out IPAddress finalAddress) ||
-                (addressParts.Length == 2 && !int.TryParse(addressParts[1], out port)))
-                throw new qCommandException($"Could not parse address '{address}'");
-
-            if (client!.IsActive)
-                throw new qCommandException("Client is already active, this application doesn't support multiple client instances!");
-
-            client.Connect(finalAddress, port);
-        }
-
-        [InspectorCommand("listconsoles", "lc", Description = "Lists all registered consoles.")]
-        private void ListConsoles()
-        {
-            TextTree tree = TextTree.Fancy;
-            TextTreeItem root = new TextTreeItem("Registered consoles:");
-            var consoles = consoleManager.ToArray();
-            for (int i = 0; i < consoles.Length; i++)
-                root.Add($"{i}: {consoles[i].Console.Name}");
-
-            GConsole?.Log(tree.GenerateTree(root));
-        }
-
-        [InspectorCommand("selectedconsole", "sc", Description = "Console that's currently selected.")]
-        private string Cmd_SelectedConsoleIndex()
-        {
-            if (SelectedConsole == null)
-                throw new qCommandException("No console is selected");
-
-            return SelectedConsole.Name;
-        }
-
-        [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(qConsoleCommandContext context, string val)
-        {
-            var console = consoleManager.Where(x => x.Console.Name == val)
-                .FirstOrDefault()?.Console;
-
-            if (console == null)
-                throw new qCommandException("Console does not exist!");
-
+        if (SelectedConsole == null)
             SelectedConsole = console;
-            context.Console.Log($"Selected console '{SelectedConsole.Name}'.");
+
+        GConsole?.Log($"Registered console '{console.Name}'");
+
+        if (SelectedConsole == console)
+            foreach (var log in console.Logs)
+                CC_Log_OnRead(console, log);
+    }
+
+    private void CC_Log_OnRead(qConsole console, qLog log)
+    {
+        if (SelectedConsole != console) return;
+        log.message = $"[R:{console.Name}] {log.message}";
+        GConsole?.Log(log);
+    }
+
+    private void Client_OnStart()
+    {
+        GConsole.Clear();
+    }
+
+    [InspectorCommand("disconnect", "dc", Description = "Disconnects from connected application.")]
+    public void Disconnect()
+    {
+        if (client?.IsActive != true)
+        {
+            GConsole?.LogError("Client is not active!");
+            return;
         }
 
-        [InspectorCommand("selectedconsole")]
-        private void Cmd_SelectedConsoleIndex(qConsoleCommandContext context, int index)
+        client.Disconnect();
+    }
+
+    [InspectorCommand("connect", "cn", Description = "Connects to an application.")]
+    private void Connect() =>
+        Connect("127.0.0.1");
+
+    [InspectorCommand("connect")]
+    private void Connect(int port) =>
+        Connect($"127.0.0.1:{port}");
+
+    [InspectorCommand("connect")]
+    private void Connect(string address)
+    {
+        var addressParts = address.Split(":");
+
+        int port = client.Port;
+        if (addressParts.Length > 2 ||
+            !IPAddress.TryParse(addressParts[0], out IPAddress finalAddress) ||
+            (addressParts.Length == 2 && !int.TryParse(addressParts[1], out port)))
+            throw new qCommandException($"Could not parse address '{address}'");
+
+        if (client!.IsActive)
+            throw new qCommandException("Client is already active, this application doesn't support multiple client instances!");
+
+        client.Connect(finalAddress, port);
+    }
+
+    [InspectorCommand("listconsoles", "lc", Description = "Lists all registered consoles.")]
+    private void ListConsoles()
+    {
+        TextTree tree = TextTree.Fancy;
+        TextTreeItem root = new TextTreeItem("Registered consoles:");
+        var consoles = consoleManager.ToArray();
+        for (int i = 0; i < consoles.Length; i++)
+            root.Add($"{i}: {consoles[i].Console.Name}");
+
+        GConsole?.Log(tree.GenerateTree(root));
+    }
+
+    [InspectorCommand("selectedconsole", "sc", Description = "Console that's currently selected.")]
+    private string Cmd_SelectedConsoleIndex()
+    {
+        if (SelectedConsole == null)
+            throw new qCommandException("No console is selected");
+
+        return SelectedConsole.Name;
+    }
+
+    [InspectorCommand("selectedconsole")]
+    private void Cmd_SelectedConsoleIndex(qConsoleCommandContext context, string val)
+    {
+        var console = consoleManager.Where(x => x.Console.Name == val)
+            .FirstOrDefault()?.Console;
+
+        if (console == null)
+            throw new qCommandException("Console does not exist!");
+
+        SelectedConsole = console;
+        context.Console.Log($"Selected console '{SelectedConsole.Name}'.");
+    }
+
+    [InspectorCommand("selectedconsole")]
+    private void Cmd_SelectedConsoleIndex(qConsoleCommandContext context, int index)
+    {
+        var consoles = consoleManager.ToArray();
+
+        if (!consoles.IndexInRange(index))
+            throw new qCommandException("Console index is out of range!");
+
+        Cmd_SelectedConsoleIndex(context, consoles[index].Console.Name);
+    }
+
+    private void Cc_log_OnReceiveLog(qLog log, PacketType packetType)
+    {
+        log.message = $"[qDebug] {log.message}";
+        GConsole?.Log(log);
+    }
+
+    [qLogColor(GenericColor.White)]
+    private void Client_OnConnect()
+    {
+        var appInfo = (RemoteAppInfo)client!.AppInfo;
+        GConsole?.Log($"Connected to '{appInfo.projectName}' v{appInfo.version} made with '{appInfo.engine}' v{appInfo.engineVersion} using protocol version {appInfo.protocolVersion}");
+
+        var systems = appInfo.systems
+            .Select(x => $"\n- {x.name} v{x.version}");
+
+        GConsole?.Log($"Used systems by projects:{string.Join(string.Empty, systems)}");
+    }
+
+    private void Client_OnDisconnect(qClient.DisconnectReason reason)
+    {
+        SelectedConsole = null;
+
+        switch (reason)
         {
-            var consoles = consoleManager.ToArray();
-
-            if (!consoles.IndexInRange(index))
-                throw new qCommandException("Console index is out of range!");
-
-            Cmd_SelectedConsoleIndex(context, consoles[index].Console.Name);
+            case qClient.DisconnectReason.None:
+                return;
+            default:
+                if (AutoConnect)
+                    client?.Connect();
+                break;
         }
+    }
 
-        private void Cc_log_OnReceiveLog(qLog log, PacketType packetType)
+    public async Task Update()
+    {
+        client.Update();
+        await Task.Delay(UPDATE_FREQUENCY);
+    }
+
+    private void OnApplicationClose(object sender, EventArgs e)
+    {
+        client?.Disconnect();
+        DiscoveryClient?.Stop();
+    }
+
+    class ConnectionsListCommand(Inspector inspector) : qCommandLogic
+    {
+        public override string CommandName => "connectionslist";
+        public override string[] Aliases => ["cl"];
+
+        public override string Description => "Shows a list of discovered connections and allows to connect to them.";
+
+        private readonly Inspector inspector = inspector;
+
+
+        public override object Run(qConsoleCommandContext context)
         {
-            log.message = $"[qDebug] {log.message}";
-            GConsole?.Log(log);
-        }
+            var data = context.prompt?.DataObject as Data ?? new Data();
 
-        [qLogColor(GenericColor.White)]
-        private void Client_OnConnect()
-        {
-            var appInfo = (RemoteAppInfo)client!.AppInfo;
-            GConsole?.Log($"Connected to '{appInfo.projectName}' v{appInfo.version} made with '{appInfo.engine}' v{appInfo.engineVersion} using protocol version {appInfo.protocolVersion}");
+            var logTxt = new StringBuilder("Navigate with arrows, left arrow to exit");
+            bool final = false;
 
-            var systems = appInfo.systems
-                .Select(x => $"\n- {x.name} v{x.version}");
-
-            GConsole?.Log($"Used systems by projects:{string.Join(string.Empty, systems)}");
-        }
-
-        private void Client_OnDisconnect(qClient.DisconnectReason reason)
-        {
-            SelectedConsole = null;
-
-            switch (reason)
+            if (context.prompt is KeyPrompt<Data> prompt)
             {
-                case qClient.DisconnectReason.None:
-                    return;
-                default:
-                    if (AutoConnect)
-                        client?.Connect();
-                    break;
-            }
-        }
-
-        public async Task Update()
-        {
-            client.Update();
-            await Task.Delay(UPDATE_FREQUENCY);
-        }
-
-        private void OnApplicationClose(object sender, EventArgs e)
-        {
-            client?.Disconnect();
-            DiscoveryClient?.Stop();
-        }
-
-        class ConnectionsListCommand : qCommandLogic
-        {
-            public ConnectionsListCommand(Inspector inspector)
-            {
-                this.inspector = inspector;
-            }
-
-            public override string CommandName => "connectionslist";
-            public override string[] Aliases => new string[] { "cl" };
-
-            public override string Description => "Shows a list of discovered connections and allows to connect to them.";
-
-            Inspector inspector;
-
-
-            public override object Run(qConsoleCommandContext context)
-            {
-                var data = context.prompt?.DataObject as Data ?? new Data();
-
-                StringBuilder logTxt = new StringBuilder("Navigate with arrows, left arrow to exit");
-                bool final = false;
-
-                if (context.prompt is KeyPrompt<Data> prompt)
+                switch (prompt.Key)
                 {
-                    switch (prompt.Key)
-                    {
-                        case KeyPrompt.NavigationKey.Cancel:
-                        case KeyPrompt.NavigationKey.Left:
-                            final = true;
-                            break;
-                        case KeyPrompt.NavigationKey.Up:
-                            data.index = Math.Clamp(data.index - 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
-                            break;
-                        case KeyPrompt.NavigationKey.Down:
-                            data.index = Math.Clamp(data.index + 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
-                            break;
-                        case KeyPrompt.NavigationKey.Right:
-                        case KeyPrompt.NavigationKey.Confirm:
-                            var targetConn = inspector.DiscoveryClient.Discovered[data.index];
-                            inspector.client.Connect(targetConn.Address, targetConn.Port);
-                            final = true;
-                            break;
-                    }
+                    case KeyPrompt.NavigationKey.Cancel:
+                    case KeyPrompt.NavigationKey.Left:
+                        final = true;
+                        break;
+                    case KeyPrompt.NavigationKey.Up:
+                        data.index = Math.Clamp(data.index - 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
+                        break;
+                    case KeyPrompt.NavigationKey.Down:
+                        data.index = Math.Clamp(data.index + 1, 0, Math.Max(inspector.DiscoveryClient.Discovered.Count - 1, 0));
+                        break;
+                    case KeyPrompt.NavigationKey.Right:
+                    case KeyPrompt.NavigationKey.Confirm:
+                        var targetConn = inspector.DiscoveryClient.Discovered[data.index];
+                        inspector.client.Connect(targetConn.Address, targetConn.Port);
+                        final = true;
+                        break;
                 }
-
-                for (int i = 0; i < inspector.DiscoveryClient.Discovered.Count; i++)
-                {
-                    logTxt.Append("\n");
-                    logTxt.Append(data.index == i ? (final ? "]" : ">") : " ");
-                    logTxt.Append(" ");
-                    var conn = inspector.DiscoveryClient.Discovered[i];
-                    var info = conn.Identity.ReadNetworkSerializable<RemoteAppInfo>();
-                    conn.Identity.ResetPosition();
-
-                    logTxt.Append($" {conn.Address}:{conn.Port} - {(string.IsNullOrWhiteSpace(info.projectName) ? "UNKNOWN" : info.projectName)}");
-
-                    if (!string.IsNullOrWhiteSpace(info.version))
-                        logTxt.Append($" v{info.version}");
-                }
-
-                data.log.message = logTxt.ToString();
-
-                context.Console.Log(data.log);
-                return final ?
-                    null :
-                    new KeyPrompt<Data>(data);
             }
 
-            public class Data
+            for (int i = 0; i < inspector.DiscoveryClient.Discovered.Count; i++)
             {
-                public qLog log = qLog.CreateNow("");
-                public int index = 0;
+                logTxt.Append('\n');
+                logTxt.Append(data.index == i ? (final ? ']' : '>') : ' ');
+                logTxt.Append(' ');
+                var conn = inspector.DiscoveryClient.Discovered[i];
+                var info = conn.Identity.ReadNetworkSerializable<RemoteAppInfo>();
+                conn.Identity.ResetPosition();
+
+                logTxt.Append($" {conn.Address}:{conn.Port} - {(string.IsNullOrWhiteSpace(info.projectName) ? "UNKNOWN" : info.projectName)}");
+
+                if (!string.IsNullOrWhiteSpace(info.version))
+                    logTxt.Append($" v{info.version}");
             }
+
+            data.log.message = logTxt.ToString();
+
+            context.Console.Log(data.log);
+            return final ?
+                null :
+                new KeyPrompt<Data>(data);
         }
 
-        class SendCmdCommand : qCommandLogic
+        public class Data
         {
-            public SendCmdCommand(Inspector inspector)
+            public qLog log = qLog.CreateNow("");
+            public int index = 0;
+        }
+    }
+
+    class SendCmdCommand(Inspector inspector) : qCommandLogic
+    {
+        private readonly Inspector inspector = inspector;
+
+        public override string CommandName => "sendcmd";
+        public override string[] Aliases => ["snc", "sudo"];
+
+        public override string Description => "Sends a command to the selected console";
+
+        public override object Run(qConsoleCommandContext context)
+        {
+            if (inspector.client.CurrentState != qClient.State.Connected)
             {
-                this.inspector = inspector;
-            }
-
-            Inspector inspector;
-
-            public override string CommandName => "sendcmd";
-            public override string[] Aliases => new string[]
-            {
-                "snc",
-                "sudo",
-            };
-
-            public override string Description => "Sends a command to the selected console";
-
-            public override object Run(qConsoleCommandContext context)
-            {
-                if (inspector.client.CurrentState != qClient.State.Connected)
-                {
-                    context.Logs.LogError("Cannot send cmd, client not connected. Make sure to connect to an application first before running this command.");
-                    return null;
-                }
-
-                if (inspector.consoleManager.Count() == 0)
-                {
-                    context.Logs.LogError("Cannot send cmd, no consoles registered. It seems like the connected application has no active consoles or it hasn't registered them to be used remotely.");
-                    return null;
-                }
-
-                if (inspector.SelectedConsole == null)
-                {
-                    context.Logs.LogError("Cannot send cmd, no console selected. Make sure to run selectedconsole to select a console");
-                    return null;
-                }
-
-                var cmd = context.inputString.TrimStart();
-                cmd = cmd.Substring(context.commandName.Length, cmd.Length - context.commandName.Length)
-                    .TrimStart();
-
-                inspector.consoleManager
-                    .Get(inspector.SelectedConsole.Name)
-                    .SendCommand(cmd);
-
+                context.Logs.LogError("Cannot send cmd, client not connected. Make sure to connect to an application first before running this command.");
                 return null;
             }
+
+            if (inspector.consoleManager.Count() == 0)
+            {
+                context.Logs.LogError("Cannot send cmd, no consoles registered. It seems like the connected application has no active consoles or it hasn't registered them to be used remotely.");
+                return null;
+            }
+
+            if (inspector.SelectedConsole == null)
+            {
+                context.Logs.LogError("Cannot send cmd, no console selected. Make sure to run selectedconsole to select a console");
+                return null;
+            }
+
+            var cmd = context.inputString.TrimStart();
+            cmd = cmd.Substring(context.commandName.Length, cmd.Length - context.commandName.Length)
+                .TrimStart();
+
+            inspector.consoleManager
+                .Get(inspector.SelectedConsole.Name)
+                .SendCommand(cmd);
+
+            return null;
         }
     }
 }

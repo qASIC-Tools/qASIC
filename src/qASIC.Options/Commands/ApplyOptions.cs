@@ -1,18 +1,17 @@
-﻿namespace qASIC.Options.Commands
+﻿namespace qASIC.Options.Commands;
+
+public class ApplyOptions : OptionsCommand
 {
-    public class ApplyOptions : OptionsCommand
+    public ApplyOptions(OptionsManager manager) : base(manager) { }
+
+    public override string CommandName => "applyoptions";
+    public override string[] Aliases => ["applysettings", "optionsapply", "settingsapply"];
+    public override string Description => "Saves options to disk.";
+
+    public override object Run(qCommandContext context)
     {
-        public ApplyOptions(OptionsManager manager) : base(manager) { }
-
-        public override string CommandName => "applyoptions";
-        public override string[] Aliases => new string[] { "applysettings", "optionsapply", "settingsapply" };
-        public override string Description => "Saves options to disk.";
-
-        public override object Run(qCommandContext context)
-        {
-            context.CheckArgumentCount(0);
-            Manager.Apply();
-            return null;
-        }
+        context.CheckArgumentCount(0);
+        Manager.Apply();
+        return null;
     }
 }

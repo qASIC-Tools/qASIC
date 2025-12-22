@@ -1,104 +1,96 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace qASIC.CommandPrompts
+namespace qASIC.CommandPrompts;
+
+public class KeyPrompt(object data = null) : CommandPrompt(data)
 {
-    public class KeyPrompt : CommandPrompt
+    public enum NavigationKey
     {
-        public KeyPrompt(object data = null) : base(data) { }
-
-        public enum NavigationKey
-        {
-            None,
-            Up,
-            Down,
-            Left,
-            Right,
-            Confirm,
-            Cancel,
-            Delete,
-            Switch,
-        }
-
-        public static readonly Map<string, NavigationKey> keyNames = new Map<string, NavigationKey>(new Dictionary<string, NavigationKey>()
-        {
-            [""] = NavigationKey.None,
-            ["up"] = NavigationKey.Up,
-            ["down"] = NavigationKey.Down,
-            ["left"] = NavigationKey.Left,
-            ["right"] = NavigationKey.Right,
-            ["confirm"] = NavigationKey.Confirm,
-            ["cancel"] = NavigationKey.Cancel,
-            ["delete"] = NavigationKey.Delete,
-            ["switch"] = NavigationKey.Switch,
-        });
-
-        public NavigationKey Key { get; private set; } = NavigationKey.None;
-        public char Character { get; private set; }
-
-        public override bool CanExecute(qCommandContext context) =>
-            context.inputString.Length > 0;
-
-        public override void Prepare(qCommandContext context)
-        {
-            string s = context.inputString.FirstOrDefault().ToString();
-
-            if (keyNames.Forward.TryGetValue(context.inputString.ToLower(), out var key))
-            {
-                Key = key;
-                s = context.inputString.ToLower();
-            }
-
-            if (s.Length == 1)
-                Character = s[0];
-
-            var values = s.Length == 1 ?
-                new object[] { s[0], s } :
-                new object[] { s };
-
-            context.args = new qCommandArgument[]
-            {
-                new qCommandArgument(s, values),
-            };
-        }
-
-        public object UseTextMenu(Text.ITextMenu menu)
-        {
-            switch (Key)
-            {
-                case NavigationKey.Up:
-                    menu.Move(-1);
-                    break;
-                case NavigationKey.Down:
-                    menu.Move(1);
-                    break;
-                case NavigationKey.Left:
-                    menu.Deselect();
-                    break;
-                case NavigationKey.Right:
-                    menu.Select();
-                    break;
-                case NavigationKey.Confirm:
-                    return menu.Confirm();
-                case NavigationKey.Cancel:
-                    return menu.Cancel() ? null : this;
-            }
-
-            if (menu.TryInvokeItemAction(Character, out var itemActionResult))
-                return itemActionResult;
-
-            return this;
-        }
+        None,
+        Up,
+        Down,
+        Left,
+        Right,
+        Confirm,
+        Cancel,
+        Delete,
+        Switch,
     }
 
-    public class KeyPrompt<T> : KeyPrompt
+    public static readonly Map<string, NavigationKey> keyNames = new Map<string, NavigationKey>(new Dictionary<string, NavigationKey>()
     {
-        public KeyPrompt(T data) : base(data) { }
+        [""] = NavigationKey.None,
+        ["up"] = NavigationKey.Up,
+        ["down"] = NavigationKey.Down,
+        ["left"] = NavigationKey.Left,
+        ["right"] = NavigationKey.Right,
+        ["confirm"] = NavigationKey.Confirm,
+        ["cancel"] = NavigationKey.Cancel,
+        ["delete"] = NavigationKey.Delete,
+        ["switch"] = NavigationKey.Switch,
+    });
 
-        public T Data
+    public NavigationKey Key { get; private set; } = NavigationKey.None;
+    public char Character { get; private set; }
+
+    public override bool CanExecute(qCommandContext context) =>
+        context.inputString.Length > 0;
+
+    public override void Prepare(qCommandContext context)
+    {
+        string s = context.inputString.FirstOrDefault().ToString();
+
+        if (keyNames.Forward.TryGetValue(context.inputString.ToLower(), out var key))
         {
-            get => (T)DataObject;
-            set => DataObject = value;
+            Key = key;
+            s = context.inputString.ToLower();
         }
+
+        if (s.Length == 1)
+            Character = s[0];
+
+        var values = s.Length == 1 ?
+            [s[0], s] :
+            new object[] { s };
+
+        context.args = [new qCommandArgument(s, values)];
+    }
+
+    public object UseTextMenu(Text.ITextMenu menu)
+    {
+        switch (Key)
+        {
+            case NavigationKey.Up:
+                menu.Move(-1);
+                break;
+            case NavigationKey.Down:
+                menu.Move(1);
+                break;
+            case NavigationKey.Left:
+                menu.Deselect();
+                break;
+            case NavigationKey.Right:
+                menu.Select();
+                break;
+            case NavigationKey.Confirm:
+                return menu.Confirm();
+            case NavigationKey.Cancel:
+                return menu.Cancel() ? null : this;
+        }
+
+        if (menu.TryInvokeItemAction(Character, out var itemActionResult))
+            return itemActionResult;
+
+        return this;
+    }
+}
+
+public class KeyPrompt<T>(T data) : KeyPrompt(data)
+{
+    public T Data
+    {
+        get => (T)DataObject;
+        set => DataObject = value;
     }
 }

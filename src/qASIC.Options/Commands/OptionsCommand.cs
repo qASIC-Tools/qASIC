@@ -1,27 +1,21 @@
 ﻿using qASIC.CmdAutocomplete;
 
-namespace qASIC.Options.Commands
+namespace qASIC.Options.Commands;
+
+public abstract class OptionsCommand(OptionsManager manager) : ICommandLogic, ISupportsAutocomplete
 {
-    public abstract class OptionsCommand : ICommandLogic, ISupportsAutocomplete
-    {
-        public OptionsCommand(OptionsManager manager)
-        {
-            Manager = manager;
-        }
+    protected OptionsManager Manager { get; } = manager;
 
-        protected OptionsManager Manager { get; private set; }
+    public abstract string CommandName { get; }
 
-        public abstract string CommandName { get; }
+    public virtual string[] Aliases { get; }
 
-        public virtual string[] Aliases { get; }
+    public virtual string Description { get; }
 
-        public virtual string Description { get; }
+    public virtual string DetailedDescription { get; }
 
-        public virtual string DetailedDescription { get; }
+    public virtual ACData CommandAutocomplete => new ACData()
+        .AddVariant().Finish();
 
-        public virtual ACData CommandAutocomplete => new ACData()
-            .AddVariant().Finish();
-
-        public abstract object Run(qCommandContext context);
-    }
+    public abstract object Run(qCommandContext context);
 }

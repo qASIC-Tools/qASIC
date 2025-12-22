@@ -1,7 +1,3 @@
-﻿namespace qASIC
-{
-    public abstract class qConfigBase
-    {
+﻿namespace qASIC;
 
-    }
-}
+public abstract class qConfigBase { }
