@@ -1,3 +1,4 @@
+using System.Xml.Serialization;
 using qASIC.Console.Parsing;
 
 using SysConsole = System.Console;
@@ -12,6 +13,7 @@ escape hello\ world\
 
 wrapping ""argument 1"" 'argument 2' `argument 3`
 unusual_wrapping arg""ument ""1 ""argument ""2 argument"" 3""
+selective_wrapping ""argument' argument ` '`""
 
 VARIABLE=3 command
 command $VARIABLE Inside\ $VARIABLE\ inside ""Wrapped $VARIABLE ""
@@ -22,111 +24,111 @@ command
 @ask_for_input
 dont_ask
 ^force_input
+^^arg1 ""arg2 arg2"" arg3
 @
 ";
 
-    public QuashParser.ParsedCodeScope ParseVisually(string txt)
+    public List<QuashParser.LexItem> ParseVisually(string txt)
     {
         SysConsole.WriteLine("Parsing script:");
         SysConsole.WriteLine(txt);
         SysConsole.WriteLine("END OF SCRIPT");
         SysConsole.WriteLine();
 
-        var result = QuashParser.QToScope(new(txt));
+        var result = QuashParser.Lex(new(txt));
 
-        SysConsole.WriteLine("Result:");    
-        PrintVisually(result);
+        SysConsole.WriteLine("Lexed:");
+
+        foreach (var item in result)
+        {
+            SysConsole.ResetColor();
+            switch (item)
+            {
+                case QuashParser.LexCodeText:
+                    break;
+                case QuashParser.LexEnd:
+                    SysConsole.BackgroundColor = ConsoleColor.DarkRed;
+                    SysConsole.Write('&');
+                    SysConsole.ResetColor();
+                    break;
+                case QuashParser.LexSpecialToken:
+                    SysConsole.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case QuashParser.LexWhiteSpace:
+                    SysConsole.BackgroundColor = ConsoleColor.DarkBlue;
+                    break;
+            }
+
+            SysConsole.Write(item.readString);
+        }
+
+        SysConsole.ResetColor();
+
+        SysConsole.WriteLine();
+        SysConsole.WriteLine("Parsed:");
+        foreach (var item in QuashParser.ParseFromLexer(result).items)
+        {
+            switch (item)
+            {
+                case QuashParser.ParsedCommand cmd:
+                    PrintTypeText("COMMAND", cmd.commandName);
+                    PrintArgs(cmd.arguments);
+                    break;
+                case QuashParser.ParsedVariableSet varSet:
+                    PrintTypeText("VAR SET", $"{varSet.variableName}");
+                    PrintArgs([varSet.argument]);
+                    break;
+                case QuashParser.ParsedInputAsk:
+                    PrintTypeText("INPUT ASK", "");
+                    break;
+                case QuashParser.ParsedPromptArgsResponse argResponse:
+                    PrintTypeText("RESPONSE ARG", " ");
+                    PrintArgs(argResponse.arguments);
+                    break;
+                case QuashParser.ParsedPromptLineResponse lineResponse:
+                    PrintTypeText("RESPONSE LINE", lineResponse.line);
+                    break;
+
+            }
+        }
+        
         return result;
 
-        
-        void PrintVisually(QuashParser.ParsedCodeScope scope, int indent = 0)
+
+        void PrintTypeText(string type, string text)
         {
-            indent++;
-            var scopeIndent = new string(' ', (indent - 1) * 2);
-            var indentString = new string(' ', indent * 2);
-            SysConsole.WriteLine($"{scopeIndent}SCOPE START");
+            SysConsole.ForegroundColor = ConsoleColor.DarkGray;
+            SysConsole.Write($"{type}{(string.IsNullOrEmpty(text) ? "" : ": ")}");
+            SysConsole.ResetColor();
+            SysConsole.WriteLine(text);
+        }
 
-            foreach (var item in scope.methods)
-                PrintVisually(item, indent);
-
-            foreach (var item in scope.items)
+        void PrintArgs(List<QuashParser.ParsedCommand.Argument> arguments)
+        {
+            for (int i = 0; i < arguments.Count; i++)
             {
-                SysConsole.Write(indentString);
                 SysConsole.ForegroundColor = ConsoleColor.DarkGray;
-                switch (item)
+                SysConsole.Write($"  {i}: ");
+                SysConsole.ResetColor();
+                foreach (var part in arguments[i].parts)
                 {
-                    case QuashParser.ParsedCommand cmd:
-                        SysConsole.Write($"{(cmd.askForUserInput ? "@" : "")}COMMAND");
-                        break;
-                    case QuashParser.ParsedComment:
-                        SysConsole.Write("COMMENT");
-                        break;
-                    case QuashParser.ParsedEmpty:
-                        SysConsole.Write("EMPTY");
-                        break;
-                    case QuashParser.ParsedPromptInput:
-                        SysConsole.Write("INPUT");
-                        break;
-                    case QuashParser.ParsedVariableSet:
-                        SysConsole.Write("SET");
-                        break;
-                    default:
-                        SysConsole.Write("UNKNOWN");
-                        break;
+                    switch (part)
+                    {
+                        case QuashParser.ParsedCommand.Argument.TextPart textPart:
+                            SysConsole.Write(textPart.text);
+                            break;
+                        case QuashParser.ParsedCommand.Argument.VariablePart varPart:
+                            SysConsole.BackgroundColor = ConsoleColor.DarkGreen;
+                            SysConsole.Write($"${varPart.variableName}");
+                            break;
+                    }
+
+                    SysConsole.ResetColor();
                 }
 
                 SysConsole.ResetColor();
-
-                switch (item)
-                {
-                    case QuashParser.ParsedCommand cmd:
-                        SysConsole.WriteLine($": {cmd.commandName}");
-                        for (int i = 0; i < cmd.arguments.Count; i++)
-                        {
-                            SysConsole.Write($"{indentString}  {i}: ");
-                            PrintArgumentContents(cmd.arguments[i]);
-                            SysConsole.WriteLine();
-                        }
-                        
-                        break;
-                    case QuashParser.ParsedComment cmt:
-                        SysConsole.WriteLine($": {cmt.comment}");
-                        break;
-                    case QuashParser.ParsedEmpty:
-                        SysConsole.WriteLine();
-                        break;
-                    case QuashParser.ParsedPromptInput input:
-                        SysConsole.WriteLine($": {input}");
-                        break;
-                    case QuashParser.ParsedVariableSet variable:
-                        SysConsole.WriteLine($": {variable.variableName}=");
-                        PrintArgumentContents(variable.value);
-                        break;
-                    default:
-                        SysConsole.WriteLine($": {item}");
-                        break;
-                }
-            }
-
-            SysConsole.WriteLine($"{scopeIndent}SCOPE END");
-        }
-
-        void PrintArgumentContents(QuashParser.ParsedArgument argument)
-        {
-            foreach (var part in argument.parts)
-            {
-                switch (part)
-                {
-                    case QuashParser.ParsedArgument.ParsedVariable variable:
-                        SysConsole.BackgroundColor = ConsoleColor.DarkGreen;
-                        SysConsole.Write(variable.variableName);
-                        SysConsole.ResetColor();
-                        break;
-                    default:
-                        SysConsole.Write(part.ToArgPart(null, null));
-                        break;
-                }
+                SysConsole.WriteLine();
             }
         }
-    }     
+    }
 }

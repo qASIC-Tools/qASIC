@@ -26,8 +26,8 @@ public class QuashParser : ConsoleParser
             context.ParserData = data;
         }
 
-        if (data.scopeStack.Count == 0)
-            data.scopeStack.Push((QToScope(new Queue<char>(context.inputString)), 0));
+        // if (data.scopeStack.Count == 0)
+        //     data.scopeStack.Push((QToScope(new Queue<char>(context.inputString)), 0));
 
         return ExecuteLoop(context, data);
     }
@@ -40,11 +40,11 @@ public class QuashParser : ConsoleParser
             context.ParserData = data;
         }
 
-        if (context.previousValue is CommandPrompts.CommandPrompt)
-            data.scopeStack.Push((new ParsedCodeScope() { items = [new ParsedPromptInput() { input = context.inputString }] }, 0));
+        // if (context.previousValue is CommandPrompts.CommandPrompt)
+        //     data.scopeStack.Push((new ParsedCodeScope() { items = [new ParsedPromptInput() { input = context.inputString }] }, 0));
 
-        if (data.scopeStack.Count == 0)
-            data.scopeStack.Push((QToScope(new Queue<char>(context.inputString)), 0));
+        // if (data.scopeStack.Count == 0)
+        //     data.scopeStack.Push((QToScope(new Queue<char>(context.inputString)), 0));
         
         return await ExecuteLoopAsync(context, data);
     }
@@ -77,59 +77,59 @@ public class QuashParser : ConsoleParser
 
         while (data.scopeStack.TryPop(out var item))
         {
-            (var scope, var i) = item;
+            // (var scope, var i) = item;
 
-            for (; i < scope.items.Count; i++)
-            {
-                if (scope.items[i] is not ParsedCommand and not ParsedPromptInput)
-                    continue;
+            // for (; i < scope.items.Count; i++)
+            // {
+            //     if (scope.items[i] is not ParsedCommand and not ParsedPromptInput)
+            //         continue;
 
-                // In case the previous command returned a prompt
-                if (context.previousValue is CommandPrompts.CommandPrompt prompt)
-                {
-                    if (!firstNow && (!data.executePromptSelf || scope.items[i] is ParsedCommand { askForUserInput: true }))
-                    {
-                        data.scopeStack.Push((scope, i));
-                        return false;
-                    }
+            //     // In case the previous command returned a prompt
+            //     if (context.previousValue is CommandPrompts.CommandPrompt prompt)
+            //     {
+            //         if (!firstNow && (!data.executePromptSelf || scope.items[i] is ParsedCommand { askForUserInput: true }))
+            //         {
+            //             data.scopeStack.Push((scope, i));
+            //             return false;
+            //         }
 
-                    var args = scope.items[i] switch
-                    {
-                        ParsedCommand cmd => cmd.CreateQuashArgs(ValueParser, context.Variables),
-                        ParsedPromptInput input => [new QuashArgument(ValueParser, input.input)],
-                        _ => [],
-                    };
+            //         var args = scope.items[i] switch
+            //         {
+            //             ParsedCommand cmd => cmd.CreateQuashArgs(ValueParser, context.Variables),
+            //             ParsedPromptInput input => [new QuashArgument(ValueParser, input.input)],
+            //             _ => [],
+            //         };
 
-                    var inputString = scope.items[i] switch
-                    {
-                        ParsedPromptInput input => input.input,
-                        ParsedCommand cmd => ConvertToString(cmd.commandName, args),
-                        _ => string.Empty,
-                    };
+            //         var inputString = scope.items[i] switch
+            //         {
+            //             ParsedPromptInput input => input.input,
+            //             ParsedCommand cmd => ConvertToString(cmd.commandName, args),
+            //             _ => string.Empty,
+            //         };
 
-                    if (!prompt.ParseArguments)
-                        args = [new QuashArgument(ValueParser, inputString)];
+            //         if (!prompt.ParseArguments)
+            //             args = [new QuashArgument(ValueParser, inputString)];
                     
-                    prompt.CommandContext.args = args;
-                    prompt.CommandContext.inputString = inputString;
-                    commandContext = prompt.CommandContext as qConsoleCommandContext;
-                    return true;
-                }
+            //         prompt.CommandContext.args = args;
+            //         prompt.CommandContext.inputString = inputString;
+            //         commandContext = prompt.CommandContext as qConsoleCommandContext;
+            //         return true;
+            //     }
 
-                // Set this to false when finished with executing from command prompts
-                data.executePromptSelf = false;
+            //     // Set this to false when finished with executing from command prompts
+            //     data.executePromptSelf = false;
 
-                if (scope.items[i] is ParsedCommand parsedCommand)
-                {
-                    commandContext = context.CreateCommandContext();
-                    commandContext.commandName = parsedCommand.commandName;
-                    commandContext.args = parsedCommand.CreateQuashArgs(ValueParser, context.Variables);
-                    commandContext.inputString = ConvertToString(commandContext.commandName, commandContext.args);
-                    data.scopeStack.Push((scope, i + 1));
-                    data.executePromptSelf = !parsedCommand.askForUserInput;
-                    return true;
-                }
-            }
+            //     if (scope.items[i] is ParsedCommand parsedCommand)
+            //     {
+            //         commandContext = context.CreateCommandContext();
+            //         commandContext.commandName = parsedCommand.commandName;
+            //         commandContext.args = parsedCommand.CreateQuashArgs(ValueParser, context.Variables);
+            //         commandContext.inputString = ConvertToString(commandContext.commandName, commandContext.args);
+            //         data.scopeStack.Push((scope, i + 1));
+            //         data.executePromptSelf = !parsedCommand.askForUserInput;
+            //         return true;
+            //     }
+            // }
         }
 
         return false;
@@ -167,165 +167,182 @@ public class QuashParser : ConsoleParser
     private static ReadTokenArgs Ta_CommandEnd = ReadTokenArgs.ForSpecificTokens(";", "\n");
     #endregion
 
-    #region Parsing
+    #region Lexer
     /// <summary>Converts a queue of characters to a parsed code scope.</summary>
     /// <param name="q">Queue of characters, typically made from a string containing the code.</param>
     /// <returns>Returns the parsed code scope.</returns>
-    /// <exception cref="NotImplementedException">Should probably never be thrown :P</exception>
-    public static ParsedCodeScope QToScope(Queue<char> q)
+    public static List<LexItem> Lex(Queue<char> q)
     {
-        var scope = new ParsedCodeScope();
+        var items = Lex_Stage1(q);
+        items = Lex_Stage2(items);
+
+        return items;
+    }
+
+    /// <summary>Does the initial lexing - converts a queue of characters to a parserd code scope.</summary>
+    /// <param name="q"></param>
+    /// <returns></returns>
+    protected static List<LexItem> Lex_Stage1(Queue<char> q)
+    {
+        var items = new List<LexItem>();
         while (q.Count > 0)
         {
             // Read white
-            ReadToken(q, Ta_WhiteSpace, out _);
+            ReadToken(q, Ta_WhiteSpace, out var readWhite);
+            if (readWhite.Length > 0)
+            {
+                items.Add(new LexWhiteSpace(readWhite));
+                continue;
+            }
 
             // If immedietally ends after white space, end
-            if (ReadToken(q, Ta_CommandEnd, out _).Length > 0)
+            ReadToken(q, Ta_CommandEnd, out var readEnd);
+            if (readEnd.Length > 0)
             {
-                scope.items.Add(new ParsedEmpty());
-                continue;
-            }
-            
-            // Comment
-            if (ReadToken(q, Ta_CommentStart, out _).Length > 0)
-            {
-                scope.items.Add(new ParsedComment()
-                {
-                    comment = ReadToken(q, Ta_CommentEnd, out _).ToString(),
-                });
+                items.Add(new LexEnd(readEnd));
                 continue;
             }
 
-            // Prompt input
-            if (ReadToken(q, Ta_PromptInputStart, out _).Length > 0)
+            // Try read token for arguments
+            var argsToken = ReadToken(q, ReadTokenArgs.ForSpecificTokens("^^"), out var readArgsToken);
+            if (readArgsToken.Length > 0)
             {
-                scope.items.Add(new ParsedPromptInput()
-                {
-                    input = ReadToken(q, Ta_PromptInputEnd, out _).ToString(),
-                });
+                items.Add(new LexSpecialToken(argsToken.ToString(), readArgsToken));
+                while (TryReadArg()) { }
                 continue;
             }
 
-            // Command
+            // Try read token for reading the entire line
+            var tokenLine = ReadToken(q, ReadTokenArgs.ForSpecificTokens("#", "^"), out var readTokenLine);
+            if (readTokenLine.Length > 0)
             {
-                var command = new ParsedCommand();
+                items.Add(new LexSpecialToken(tokenLine.ToString(), readTokenLine));
+                items.Add(new LexCodeText(ReadToken(q, Ta_CommentEnd, out var readLine).ToString(), readLine));
+                continue;
+            }
 
-                // Command modifiers
-                var modifierToken = ReadToken(q, Ta_CommandModifiers, out _);
-                while (modifierToken.Length > 0)
+            // Try read token for reading only arguments
+            bool readCommandName = true;
+
+            // Reading command name
+            if (readCommandName)
+            {
+                var tokenCommand = ReadToken(q, ReadTokenArgs.ForSpecificTokens("@"), out var readTokenCommand);
+                if (readTokenCommand.Length > 0)
+                    items.Add(new LexSpecialToken(tokenCommand.ToString(), readTokenCommand));
+
+                var command = ReadToken(q, Ta_CommandStart, out var readCommand);
+                if (readCommand.Length > 0)
+                    items.Add(new LexCodeText(command.ToString(), readCommand));
+                
+                ReadToken(q, Ta_WhiteSpace, out var readCommandWhite);
+                if (readCommandWhite.Length > 0)
+                    items.Add(new LexWhiteSpace(readCommandWhite));
+
+                var varSet = ReadToken(q, ReadTokenArgs.ForSpecificTokens("="), out var readVarSet);
+                if (readVarSet.Length > 0)
                 {
-                    switch (modifierToken.ToString())
-                    {
-                        case "@":
-                            command.askForUserInput = true;
-                            break;
-                        default:
-                            throw new NotImplementedException("Read an unknown command modifier");
-                    }
-
-                    modifierToken = ReadToken(q, Ta_CommandModifiers, out _);
-                }
-
-                // Command name
-                command.commandName = ReadToken(q, Ta_CommandStart, out _).ToString();
-
-                // If this is a variable
-                if (ReadToken(q, Ta_CommandVariableSet, out _).Length > 0)
-                {
-                    scope.items.Add(new ParsedVariableSet()
-                    {
-                        variableName = command.commandName,
-                        value = ReadArgument(new(), out _),
-                    });
+                    items.Add(new LexSpecialToken(varSet.ToString(), readVarSet));
+                    TryReadArg();
                     continue;
                 }
-
-                // White space
-                ReadToken(q, Ta_WhiteSpace, out var whiteBefore);
-
-                while (q.Count > 0)
-                {
-                    // End if reached end
-                    if (ReadToken(q, Ta_CommandEnd, out _).Length > 0)
-                        break;
-
-                    // Read arg
-                    var argument = ReadArgument(whiteBefore, out var endCommand);
-                    command.arguments.Add(argument);
-
-                    // End if ended
-                    if (endCommand)
-                        break;
-
-                    // Set next argument's white before to this argument's white after
-                    whiteBefore = argument.whiteAfter;
-                }
-
-                // Add command and an empty space after it.
-                scope.items.Add(command);
-                scope.items.Add(new ParsedEmpty());
             }
+
+            // White after
+            ReadToken(q, Ta_WhiteSpace, out var readPostWhite);
+            if (readPostWhite.Length > 0)
+                items.Add(new LexWhiteSpace(readPostWhite));
+
+            // Reading arguments
+            while (TryReadArg()) { }
         }
 
-        return scope;
+        return items;
 
 
-        ParsedArgument ReadArgument(StringBuilder whiteBefore, out bool endOfCommand)
+        bool TryReadArg()
         {
-            endOfCommand = false;
-            var argument = new ParsedArgument()
-            {
-                whiteBefore = whiteBefore,
-                whiteAfter = new(),
-            };
-
-            char? wrap = null;
+            char? curWrap = null;
             while (q.Count > 0)
             {
-                // Check for end
-                if (wrap == null && ReadToken(q, Ta_WhiteSpace, out argument.whiteAfter).Length > 0) break;
+                var ta = curWrap == null ? 
+                    ReadTokenArgs.ForNonWhite(['\n', ';', '$', '"', '\'', '`',]) :
+                    new() { endChars = ['$', '"', '\'', '`'] };
 
-                if (wrap == null && ReadToken(q, Ta_CommandEnd, out _).Length > 0)
-                {
-                    endOfCommand = true;
-                    break;
-                }
-
-                // Check if it's a variable
-                var varStartToken = ReadToken(q, Ta_ArgVariableStart, out var varStartString);
-                if (varStartToken.Length > 0)
-                {
-                    var varNameToken = ReadToken(q, Ta_ArgVariableName, out var varNameString);
-                    varStartString.Append(varNameString);
-
-                    argument.parts.Add(new ParsedArgument.ParsedVariable(varNameToken.ToString(), varStartString));
-                    continue;
-                }
-
-                // Check for wrapping
-                var wrapToken = ReadToken(q, Ta_CommandArgWrap, out var wrapString);
-                if (wrapToken.Length > 0)
-                {
-                    // Treat as normal text if the character used to wrap is different
-                    if (wrap != null && wrap != wrapToken[0])
-                    {
-                        argument.parts.Add(new ParsedArgument.ParsedText(wrapToken.ToString(), wrapString));
-                        continue;
-                    }
-
-                    argument.parts.Add(new ParsedArgument.ParsedText("", wrapString));
-                    wrap = wrap == null ? wrapToken[0] : null;
-                    continue;
-                }
+                // Argument
+                var argument = ReadToken(q, ta.WithEscapeCharacters(), out var readArgument);
+                if (readArgument.Length > 0)
+                    items.Add(new LexCodeText(argument.ToString(), readArgument));
                 
-                // Add as normal text
-                argument.parts.Add(new ParsedArgument.ParsedText(ReadToken(q, wrap == null ? Ta_CommandArgUnwrapped : Ta_CommandArgWrapped, out var argString).ToString(), argString));
+                // Wrap character
+                var wrapToken = ReadToken(q, ReadTokenArgs.ForSpecificTokens("\"", "'", "`"), out var readWrapToken);
+                if (readWrapToken.Length > 0)
+                {
+                    items.Add(curWrap == null || wrapToken[0] == curWrap ?
+                        new LexSpecialToken(wrapToken.ToString(), readWrapToken) :
+                        new LexCodeText(wrapToken.ToString(), readWrapToken));
+                    
+                    curWrap = curWrap == null ? wrapToken[0] : (curWrap == wrapToken[0] ? null : curWrap);
+                    continue;
+                }
+
+                // Variable
+                var varToken = ReadToken(q, ReadTokenArgs.ForSpecificTokens("$"), out var readVarToken);
+                if (readVarToken.Length > 0)
+                {
+                    var varName = ReadToken(q, ReadTokenArgs.ForWord(true, ['_']), out var readVarName);
+                    items.Add(new LexSpecialToken(varToken.ToString(), readVarToken));
+                    items.Add(new LexCodeText(varName.ToString(), readVarName));
+                    items.Add(new LexBreak());
+                    continue;
+                }
+
+                if (curWrap == null)
+                {
+                    // White after
+                    ReadToken(q, Ta_WhiteSpace, out var readPostWhite);
+                    if (readPostWhite.Length > 0)
+                    {
+                        items.Add(new LexWhiteSpace(readPostWhite));
+                        return true;
+                    }
+                }
+
+                ReadToken(q, ReadTokenArgs.ForSpecificTokens("\n", ";"), out var readEndToken);
+                if (readEndToken.Length > 0)
+                {
+                    items.Add(new LexEnd(readEndToken));
+                    return false;
+                }
             }
 
-            return argument;
+            return false;
         }
     }
+
+    protected static List<LexItem> Lex_Stage2(List<LexItem> items)
+    {
+        for (int i = 1; i < items.Count; i++)
+        {
+            switch (items[i-1], items[i])
+            {
+                case (LexCodeText code1, LexCodeText code2):
+                    code1.readString.Append(code2.readString);
+                    code1.text += code2.text;
+                    items.RemoveAt(i);
+                    i--;
+                    break;
+                case (LexWhiteSpace space1, LexWhiteSpace space2):
+                    space1.readString.Append(space2.readString);
+                    items.RemoveAt(i);
+                    i--;
+                    break;
+            }
+        }
+
+        return items;
+    }
+
 
     /// <summary>Reads a part of the queue.</summary>
     /// <param name="q">Queue of characters, typically made from a string containing the code.</param>
@@ -367,7 +384,7 @@ public class QuashParser : ConsoleParser
             if (args.endOnWhite && char.IsWhiteSpace(c))
                 break;
             
-            if ((args.validChars != null && !args.validChars.Contains(c)) || (args.endOnNonWhite && !char.IsWhiteSpace(c)) || (args.endOnNonLetter && !char.IsLetterOrDigit(c)))
+            if ((args.validChars != null || args.endOnNonWhite || args.endOnNonLetter) && (args.validChars == null || !args.validChars.Contains(c)) && (!args.endOnNonWhite || !char.IsWhiteSpace(c)) && (!args.endOnNonLetter || !char.IsLetterOrDigit(c)))
                 break;
 
             //Escape characters
@@ -391,6 +408,193 @@ public class QuashParser : ConsoleParser
             var c = q.Dequeue();
             read.Append(c);
             return c;
+        }
+    }
+    #endregion
+
+    #region Parser
+    public static ParsedCodeScope ParseFromLexer(List<LexItem> items)
+    {
+        var scope = new ParsedCodeScope();
+        for (int i = 0; i < items.Count; i++)
+            scope.items.AddRange(ReadForI(ref i));
+
+        return scope;
+
+
+        List<ParsedItem> ReadForI(ref int i)
+        {
+            var list = new List<ParsedItem>();
+            var varSetList = new List<ParsedVariableSet>();
+            switch (items[i])
+            {
+                case LexSpecialToken token:
+                    if (token.token == "@")
+                    {
+                        bool success = TryReadCode(ref i, out var cmd);
+
+                        // If the thing is in front of a command,
+                        // have the command first, then the ask
+                        if (cmd is ParsedCommand)
+                        {
+                            list.Add(cmd);
+                            list.Add(new ParsedInputAsk());
+                            break;
+                        }
+
+                        if (cmd is ParsedVariableSet varSet)
+                            varSetList.Add(varSet);
+                        
+                        // Otherwise, just ask for input
+                        list.Add(new ParsedInputAsk());
+
+                        // And if we read something, add it after
+                        if (success)
+                            list.Add(cmd);
+                        
+                        break;
+                    }
+
+                    if (token.token == "^")
+                    {
+                        var response = new ParsedPromptLineResponse();
+                        if (i+1 < items.Count && items[i+1] is LexCodeText line)
+                        {
+                            i++;
+                            response.line = line.text;
+                            response.inputString = line.readString;
+                        }
+
+                        response.inputString ??= new();
+                        list.Add(response);
+                    }
+
+                    if (token.token == "^^")
+                    {
+                        var response = new ParsedPromptArgsResponse();
+                        if (i+1 < items.Count && items[i+1] is LexWhiteSpace space)
+                        {
+                            response.whiteBefore = space.readString;
+                            i++;
+                        }
+                        
+                        response.whiteBefore ??= new();
+                        response.arguments = ReadArguments(ref i);
+                        list.Add(response);
+                    }
+
+                    if (token.token == "#")
+                    {
+                        if (i+1 < items.Count && items[i+1] is LexCodeText)
+                            i++;
+                    }
+                    break;
+                case LexCodeText:
+                    {
+                        if (TryReadCode(ref i, out var code))
+                            list.Add(code);
+                    }
+                    break;
+            }
+            
+            return list;
+        }
+
+        bool TryReadCode(ref int i, out ParsedItem item)
+        {
+            item = null;
+            if (items[i] is not LexCodeText cmdText) return false;
+
+            var cmd = new ParsedCommand()
+            {
+                commandName = cmdText.text,
+            };
+
+            item = cmd;
+
+            i++;
+
+            if (i < items.Count && items[i] is LexWhiteSpace cmdWhite)
+            {
+                cmd.whiteAfter = cmdWhite.readString;
+                i++;
+            }
+
+            if (i < items.Count && items[i] is LexSpecialToken token && token.token == "=")
+            {
+                ReadSingleArgument(ref i, out var varSetArg);
+                var varSet = new ParsedVariableSet()
+                {
+                    variableName = cmd.commandName,
+                    argument = varSetArg,
+                };
+
+                item = varSet;
+                return true;
+            }
+            
+            cmd.whiteAfter ??= new();
+            cmd.arguments = ReadArguments(ref i);
+            return true;
+        }
+
+        List<ParsedCommand.Argument> ReadArguments(ref int i)
+        {
+            var list = new List<ParsedCommand.Argument>();
+            ParsedCommand.Argument arg;
+            while (ReadSingleArgument(ref i, out arg))
+                list.Add(arg);
+            
+            if (arg != null)
+                list.Add(arg);
+
+            return list;
+        }
+
+        bool ReadSingleArgument(ref int i, out ParsedCommand.Argument arg)
+        {
+            arg = null;
+            while (i < items.Count)
+            {
+                switch (items[i])
+                {
+                    case LexCodeText codeText:
+                        arg ??= new();
+                        arg.parts.Add(new ParsedCommand.Argument.TextPart(codeText.text, codeText.readString));
+                        break;
+                    case LexSpecialToken token:
+                        arg ??= new();
+
+                        if (token.token == "$" && i+1 < items.Count && items[i+1] is LexCodeText varName)
+                        {
+                            arg.parts.Add(new ParsedCommand.Argument.VariablePart(varName.text));
+                            i++;
+                            break;
+                        }
+
+                        arg.parts.Add(new ParsedCommand.Argument.TextPart(string.Empty, token.readString));
+                        break;
+                    case LexWhiteSpace white:
+                        if (arg != null)
+                        {
+                            arg.whiteAfter = white.readString;
+                            return true;
+                        }
+                        break;
+                    case LexEnd:
+                        if (arg != null)
+                        {
+                            arg.whiteAfter = new();
+                            return true;
+                        }
+
+                        return false;
+                }
+
+                i++;
+            }
+
+            return false;
         }
     }
     #endregion
@@ -490,9 +694,14 @@ public class QuashParser : ConsoleParser
     }
     #endregion
 
-    public class QuashArgument : qCommandArgument
+    public class QuashArgument(ModularParser parser, string arg, params object[] values) : qCommandArgument(parser, arg, values)
     {
-        public QuashArgument(ModularParser parser, string arg, params object[] values) : base(parser, arg, values) { }
+        public QuashArgument(ModularParser parser, string arg, string unparsedArgString, string whiteBefore, string whiteAfter, params object[] values) : this(parser, arg, values)
+        {
+            UnparsedArgString = unparsedArgString;
+            WhiteBefore = whiteBefore;
+            WhiteAfter = whiteAfter;
+        }
 
         public string UnparsedArgString { get; set; }
         public string WhiteBefore { get; set; }
@@ -537,100 +746,131 @@ public class QuashParser : ConsoleParser
             new() { endOnNonLetter = true, validChars = otherValidChars, endChars = otherEndChars, endOnNonDigit = canWordsHaveDigits, };
     }
 
-    #region Parsed Objects
+    #region Lexed Objects
+    public abstract class LexItem(StringBuilder readString)
+    {
+        public readonly StringBuilder readString = readString;
+    }
+
+    public class LexSpecialToken(string token, StringBuilder readString) : LexItem(readString)
+    {
+        public string token = token;
+    }
+
+    public class LexWhiteSpace(StringBuilder readString) : LexItem(readString) { }
+
+    public class LexCodeText(string text, StringBuilder readString) : LexItem(readString)
+    {
+        public string text = text;
+    }
+
+    public class LexEnd(StringBuilder readString) : LexItem(readString) { }
+
+    public class LexBreak() : LexItem(new()) { }
+    #endregion
+
     public class ParsedCodeScope
     {
-        public List<ParsedCodeScope> methods = new List<ParsedCodeScope>();
-        public List<ParsedScopeItem> items = new List<ParsedScopeItem>();
+        public readonly List<ParsedItem> items = [];
     }
 
-    public abstract class ParsedScopeItem
+    public abstract class ParsedItem
     {
         
     }
 
-    public class ParsedCommand : ParsedScopeItem
+    public class ParsedCommand : ParsedItem
     {
         public string commandName;
-        public List<ParsedArgument> arguments = [];
-        public bool askForUserInput;
-
-        public QuashArgument[] CreateQuashArgs(ModularParser parser, qConsoleVariableList variables) =>
-            arguments
-                .Select(x => x.ToQuashArgument(parser, variables))
-                .ToArray();
-    }
-
-    public class ParsedArgument
-    {
-        public StringBuilder whiteBefore;
         public StringBuilder whiteAfter;
-        public List<ParsedPart> parts = [];
+        public List<Argument> arguments = [];
 
-        public QuashArgument ToQuashArgument(ModularParser parser, qConsoleVariableList variables)
+        public QuashArgument[] GetArguments(ModularParser parser, qConsoleVariableList variables)
         {
-            var readString = new StringBuilder();
-            var arg = new StringBuilder();
-            foreach (var item in parts)
+            var args = new QuashArgument[arguments.Count];
+
+            for (int i = 0; i < arguments.Count; i++)
             {
-                readString.Append(item.readString);
-                arg.Append(item.ToArgPart(parser, variables));
+                var whiteBefore = (i == 0 ? this.whiteAfter : arguments[i-1].whiteAfter).ToString();
+                var whiteAfter = arguments[i].whiteAfter.ToString();
+
+                var arg = new StringBuilder();
+                var inputString = new StringBuilder();
+
+                foreach (var item in arguments[i].parts)
+                {
+                    arg.Append(item.GetArg(parser, variables));
+                    inputString.Append(item.GetInputString(parser, variables));
+                }
+
+                var objs = Array.Empty<object>();
+
+                if (arguments[i].parts.Count == 1 && arguments[i].parts[0].TryGetObj(parser, variables, out object obj))
+                    objs = [obj];
+
+                args[i] = new QuashArgument(parser, arg.ToString(), inputString.ToString(), whiteBefore, whiteAfter, objs);
             }
-            
-            return new QuashArgument(parser, arg.ToString(), parts.Count == 1 && parts[0] is ParsedVariable var && variables != null ? [variables.Get(var.variableName)] : [])
+
+            return args;
+        }
+    
+        public class Argument
+        {
+            public StringBuilder whiteAfter;
+            public List<ArgumentPart> parts = [];
+
+            public abstract class ArgumentPart
             {
-                UnparsedArgString = readString?.ToString(),
-                WhiteBefore = whiteBefore.ToString(),
-                WhiteAfter = whiteAfter.ToString(),
-            };
-        }
+                public abstract string GetArg(ModularParser parser, qConsoleVariableList variables);
+                public abstract string GetInputString(ModularParser parser, qConsoleVariableList variables);
+                public virtual bool TryGetObj(ModularParser parser, qConsoleVariableList variables, out object obj)
+                {
+                    obj = null;
+                    return false;
+                }
+            }
 
-
-        public abstract class ParsedPart(StringBuilder readString)
-        {
-            public StringBuilder readString = readString;
-
-            public abstract string ToArgPart(ModularParser parser, qConsoleVariableList variables);
-        }
-        
-        public class ParsedText(string text, StringBuilder readString) : ParsedPart(readString)
-        {
-            public string text = text;
-
-            public override string ToArgPart(ModularParser parser, qConsoleVariableList variables) =>
-                text;
-        }
-
-        public class ParsedVariable(string variableName, StringBuilder readString) : ParsedPart(readString)
-        {
-            public string variableName = variableName;
-
-            public override string ToArgPart(ModularParser parser, qConsoleVariableList variables)
+            public class TextPart(string text, StringBuilder inputString) : ArgumentPart
             {
-                if (variables == null)
-                    return variableName;
+                public string text = text;
+                public StringBuilder inputString = inputString;
 
-                return parser?.ConvertToString(variables.Get(variableName)) ?? variables.Get(variableName).ToString();
+                public override string GetArg(ModularParser parser, qConsoleVariableList variables) => text;
+                public override string GetInputString(ModularParser parser, qConsoleVariableList variables) => inputString.ToString();
+            }
+
+            public class VariablePart(string variableName) : ArgumentPart
+            {
+                public string variableName = variableName;
+
+                public override string GetArg(ModularParser parser, qConsoleVariableList variables) => variables.Get(variableName).ToString();
+                public override string GetInputString(ModularParser parser, qConsoleVariableList variables) => $"${variables.Get(variableName)}";
+                public override bool TryGetObj(ModularParser parser, qConsoleVariableList variables, out object obj)
+                {
+                    obj = variables.Get(variableName);
+                    return true;
+                }
             }
         }
     }
 
-    public class ParsedPromptInput : ParsedScopeItem
-    {
-        public string input;
-    }
-
-    public class ParsedComment : ParsedScopeItem
-    {
-        public string comment;
-    }
-
-    public class ParsedVariableSet : ParsedScopeItem
+    public class ParsedVariableSet : ParsedItem
     {
         public string variableName;
-        public ParsedArgument value;
+        public ParsedCommand.Argument argument;
     }
 
-    public class ParsedEmpty : ParsedScopeItem { }
-    #endregion
+    public class ParsedInputAsk : ParsedItem { }
+
+    public class ParsedPromptLineResponse : ParsedItem
+    {
+        public StringBuilder inputString;
+        public string line;
+    }
+
+    public class ParsedPromptArgsResponse : ParsedItem
+    {
+        public StringBuilder whiteBefore;
+        public List<ParsedCommand.Argument> arguments = [];
+    }
 }
