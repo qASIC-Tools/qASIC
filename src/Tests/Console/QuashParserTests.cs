@@ -44,10 +44,22 @@ dont_ask
             SysConsole.ResetColor();
             switch (item)
             {
-                case QuashParser.LexCodeText:
+                case QuashParser.LexCodeText codeText:
+                    SysConsole.ForegroundColor = codeText.type switch
+                    {
+                        QuashParser.LexCodeText.Type.Command => ConsoleColor.Blue,
+                        QuashParser.LexCodeText.Type.ArgumentPart => ConsoleColor.Green,
+                        QuashParser.LexCodeText.Type.VarGet => ConsoleColor.Yellow,
+                        QuashParser.LexCodeText.Type.VarSet => ConsoleColor.DarkYellow,
+                        QuashParser.LexCodeText.Type.ResponseArgsPart => ConsoleColor.Magenta,
+                        QuashParser.LexCodeText.Type.ResponseArgsVarGet => ConsoleColor.Yellow,
+                        QuashParser.LexCodeText.Type.ResponseLine => ConsoleColor.DarkBlue,
+                        QuashParser.LexCodeText.Type.Comment => ConsoleColor.DarkGray,
+                        _ => SysConsole.ForegroundColor,
+                    };
                     break;
                 case QuashParser.LexEnd:
-                    SysConsole.BackgroundColor = ConsoleColor.DarkRed;
+                    SysConsole.ForegroundColor = ConsoleColor.Black;
                     SysConsole.Write('&');
                     SysConsole.ResetColor();
                     break;
@@ -55,7 +67,7 @@ dont_ask
                     SysConsole.ForegroundColor = ConsoleColor.Yellow;
                     break;
                 case QuashParser.LexWhiteSpace:
-                    SysConsole.BackgroundColor = ConsoleColor.DarkBlue;
+                    SysConsole.BackgroundColor = ConsoleColor.Black;
                     break;
             }
 

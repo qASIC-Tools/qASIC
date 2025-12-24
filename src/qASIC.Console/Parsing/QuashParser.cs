@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -175,6 +176,7 @@ public class QuashParser : ConsoleParser
     {
         var items = Lex_Stage1(q);
         items = Lex_Stage2(items);
+        items = Lex_Stage3(items);
 
         return items;
     }
@@ -343,6 +345,53 @@ public class QuashParser : ConsoleParser
         return items;
     }
 
+    protected static List<LexItem> Lex_Stage3(List<LexItem> items)
+    {
+        var nextType = LexCodeText.Type.Command;
+        for (int i = 0; i < items.Count; i++)
+        {
+            switch (items[i])
+            {
+                case LexCodeText codeText:
+                    codeText.type = nextType;
+                    if (nextType is LexCodeText.Type.Command or LexCodeText.Type.VarGet)
+                        nextType = LexCodeText.Type.ArgumentPart;
+                    break;
+                case LexSpecialToken token:
+                    switch (token.token)
+                    {
+                        case "=":
+                            if (i-1 > 0 && items[i-1] is LexCodeText varSet)
+                                varSet.type = LexCodeText.Type.VarSet;
+                            else if (i-2 > 0 && items[i-1] is LexWhiteSpace && items[i-2] is LexCodeText varSet2)
+                                varSet2.type = LexCodeText.Type.VarSet;
+                            break;
+                            case "$":
+                                nextType = nextType == LexCodeText.Type.ResponseArgsPart ?
+                                    LexCodeText.Type.ResponseArgsVarGet :
+                                    LexCodeText.Type.VarGet;
+                                break;
+                            case "#":
+                                nextType = LexCodeText.Type.Comment;
+                                break;
+                            case "^":
+                                nextType = LexCodeText.Type.ResponseLine;
+                                break;
+                            case "^^":
+                                nextType = LexCodeText.Type.ResponseArgsPart;
+                                break;
+                    }
+
+                    break;
+                case LexEnd:
+                    nextType = LexCodeText.Type.Command;
+                    break;
+            }
+        }
+
+        return items;
+    }
+
 
     /// <summary>Reads a part of the queue.</summary>
     /// <param name="q">Queue of characters, typically made from a string containing the code.</param>
@@ -415,186 +464,130 @@ public class QuashParser : ConsoleParser
     #region Parser
     public static ParsedCodeScope ParseFromLexer(List<LexItem> items)
     {
+        var q = new Queue<LexItem>(items);
         var scope = new ParsedCodeScope();
-        for (int i = 0; i < items.Count; i++)
-            scope.items.AddRange(ReadForI(ref i));
-
-        return scope;
-
-
-        List<ParsedItem> ReadForI(ref int i)
+        while (q.TryDequeue(out var item))
         {
-            var list = new List<ParsedItem>();
-            var varSetList = new List<ParsedVariableSet>();
-            switch (items[i])
+            switch (item)
             {
+                case LexCodeText codeText:
+                    switch (codeText.type)
+                    {
+                        case LexCodeText.Type.Command:
+                            ReadSingleCommand(codeText);
+                            break;
+                        case LexCodeText.Type.VarSet:
+                            ReadVarSet(codeText);
+                            break;
+                        case LexCodeText.Type.ResponseLine:
+                            scope.items.Add(new ParsedPromptLineResponse()
+                            {
+                                line = codeText.text,
+                                inputString = codeText.readString,
+                            });
+                            break;
+                    }
+                    break;
                 case LexSpecialToken token:
                     if (token.token == "@")
                     {
-                        bool success = TryReadCode(ref i, out var cmd);
-
-                        // If the thing is in front of a command,
-                        // have the command first, then the ask
-                        if (cmd is ParsedCommand)
-                        {
-                            list.Add(cmd);
-                            list.Add(new ParsedInputAsk());
-                            break;
-                        }
-
-                        if (cmd is ParsedVariableSet varSet)
-                            varSetList.Add(varSet);
+                        if (q.TryPeek(out var nextItem) && nextItem is LexCodeText nextCode && nextCode.type == LexCodeText.Type.Command)
+                            ReadSingleCommand(nextCode);
                         
-                        // Otherwise, just ask for input
-                        list.Add(new ParsedInputAsk());
-
-                        // And if we read something, add it after
-                        if (success)
-                            list.Add(cmd);
-                        
-                        break;
-                    }
-
-                    if (token.token == "^")
-                    {
-                        var response = new ParsedPromptLineResponse();
-                        if (i+1 < items.Count && items[i+1] is LexCodeText line)
-                        {
-                            i++;
-                            response.line = line.text;
-                            response.inputString = line.readString;
-                        }
-
-                        response.inputString ??= new();
-                        list.Add(response);
+                        scope.items.Add(new ParsedInputAsk());
                     }
 
                     if (token.token == "^^")
                     {
                         var response = new ParsedPromptArgsResponse();
-                        if (i+1 < items.Count && items[i+1] is LexWhiteSpace space)
-                        {
-                            response.whiteBefore = space.readString;
-                            i++;
-                        }
+                        if (q.TryPeek(out var nextItem) && nextItem is LexWhiteSpace whiteBefore)
+                            response.whiteBefore = whiteBefore.readString;
                         
                         response.whiteBefore ??= new();
-                        response.arguments = ReadArguments(ref i);
-                        list.Add(response);
-                    }
-
-                    if (token.token == "#")
-                    {
-                        if (i+1 < items.Count && items[i+1] is LexCodeText)
-                            i++;
-                    }
-                    break;
-                case LexCodeText:
-                    {
-                        if (TryReadCode(ref i, out var code))
-                            list.Add(code);
+                        response.arguments = ReadArguments();
+                        scope.items.Add(response);
                     }
                     break;
             }
-            
-            return list;
         }
 
-        bool TryReadCode(ref int i, out ParsedItem item)
-        {
-            item = null;
-            if (items[i] is not LexCodeText cmdText) return false;
+        return scope;
 
+
+        void ReadSingleCommand(LexCodeText commandCode)
+        {
             var cmd = new ParsedCommand()
             {
-                commandName = cmdText.text,
+                commandName = commandCode.text,
             };
 
-            item = cmd;
-
-            i++;
-
-            if (i < items.Count && items[i] is LexWhiteSpace cmdWhite)
+            if (q.TryPeek(out var cmdWhite) && cmdWhite is LexWhiteSpace)
             {
+                q.Dequeue();
                 cmd.whiteAfter = cmdWhite.readString;
-                i++;
             }
 
-            if (i < items.Count && items[i] is LexSpecialToken token && token.token == "=")
-            {
-                ReadSingleArgument(ref i, out var varSetArg);
-                var varSet = new ParsedVariableSet()
-                {
-                    variableName = cmd.commandName,
-                    argument = varSetArg,
-                };
-
-                item = varSet;
-                return true;
-            }
-            
             cmd.whiteAfter ??= new();
-            cmd.arguments = ReadArguments(ref i);
-            return true;
+            cmd.arguments = ReadArguments();
+
+            scope.items.Add(cmd);
         }
 
-        List<ParsedCommand.Argument> ReadArguments(ref int i)
+        List<ParsedCommand.Argument> ReadArguments()
         {
             var list = new List<ParsedCommand.Argument>();
-            ParsedCommand.Argument arg;
-            while (ReadSingleArgument(ref i, out arg))
-                list.Add(arg);
-            
-            if (arg != null)
+
+            while (TryReadSingleArgumentParts(out var arg))
                 list.Add(arg);
 
             return list;
         }
 
-        bool ReadSingleArgument(ref int i, out ParsedCommand.Argument arg)
+        bool TryReadSingleArgumentParts(out ParsedCommand.Argument arg)
         {
             arg = null;
-            while (i < items.Count)
+            while (q.TryPeek(out var item))
             {
-                switch (items[i])
+                switch (item)
                 {
-                    case LexCodeText codeText:
-                        arg ??= new();
-                        arg.parts.Add(new ParsedCommand.Argument.TextPart(codeText.text, codeText.readString));
-                        break;
-                    case LexSpecialToken token:
-                        arg ??= new();
-
-                        if (token.token == "$" && i+1 < items.Count && items[i+1] is LexCodeText varName)
-                        {
-                            arg.parts.Add(new ParsedCommand.Argument.VariablePart(varName.text));
-                            i++;
-                            break;
-                        }
-
-                        arg.parts.Add(new ParsedCommand.Argument.TextPart(string.Empty, token.readString));
-                        break;
-                    case LexWhiteSpace white:
-                        if (arg != null)
-                        {
-                            arg.whiteAfter = white.readString;
-                            return true;
-                        }
-                        break;
                     case LexEnd:
-                        if (arg != null)
+                        return arg != null;
+                    case LexCodeText code:
+                        switch (code.type)
                         {
-                            arg.whiteAfter = new();
-                            return true;
+                            case LexCodeText.Type.ResponseArgsPart:
+                            case LexCodeText.Type.ArgumentPart:
+                                arg ??= new();
+                                arg.parts.Add(new ParsedCommand.Argument.TextPart(code.text, code.readString));
+                                break;
+                            case LexCodeText.Type.ResponseArgsVarGet:
+                            case LexCodeText.Type.VarGet:
+                                arg ??= new();
+                                arg.parts.Add(new ParsedCommand.Argument.VariablePart(code.text));
+                                break;
                         }
-
-                        return false;
+                        break;
+                    case LexWhiteSpace argWhite:
+                        arg?.whiteAfter = argWhite.readString;
+                        q.Dequeue();
+                        return arg != null;
                 }
 
-                i++;
+                q.Dequeue();
             }
 
-            return false;
+            return arg != null;
+        }
+    
+        void ReadVarSet(LexCodeText codeStart)
+        {
+            var varSet = new ParsedVariableSet()
+            {
+                variableName = codeStart.text,
+                argument = TryReadSingleArgumentParts(out var arg) ? arg : new(),
+            };
+            
+            scope.items.Add(varSet);
         }
     }
     #endregion
@@ -761,7 +754,21 @@ public class QuashParser : ConsoleParser
 
     public class LexCodeText(string text, StringBuilder readString) : LexItem(readString)
     {
+        public enum Type
+        {
+            Unknown,
+            Command,
+            ArgumentPart,
+            VarGet,
+            VarSet,
+            Comment,
+            ResponseLine,
+            ResponseArgsPart,
+            ResponseArgsVarGet,
+        }
+
         public string text = text;
+        public Type type;
     }
 
     public class LexEnd(StringBuilder readString) : LexItem(readString) { }
