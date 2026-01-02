@@ -11,8 +11,9 @@ public class TestProgram
     {
         while (true)
         {
-            SysConsole.WriteLine("[1] Test QuashParse");
-            SysConsole.WriteLine("[2] Exit");
+            SysConsole.WriteLine("[1] Test Quash Parsing");
+            SysConsole.WriteLine("[2] Test Quash Character Info");
+            SysConsole.WriteLine("[3] Exit");
             SysConsole.WriteLine();
             SysConsole.Write("Select option: ");
 
@@ -25,6 +26,9 @@ public class TestProgram
                     QuashTester.ParseVisually(QuashParserTests.TEST_SCRIPT);
                     break;
                 case '2':
+                    QuashTester.TestCharacterInfo();
+                    break;
+                case '3':
                     return;
                 default:
                     SysConsole.WriteLine("Unknown option");

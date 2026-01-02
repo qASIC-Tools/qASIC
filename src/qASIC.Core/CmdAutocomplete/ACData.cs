@@ -35,6 +35,8 @@ public class ACData : IEnumerable<ACVariant>
         List<ACVariant> variants = [];
         variants.AddRange(Do(Variants.Where(x => x.Arguments.Count == args.Length), 0));
         variants.AddRange(Do(Variants.Where(x => x.Arguments.Count > args.Length), 0));
+        return variants;
+
 
         IEnumerable<ACVariant> Do(IEnumerable<ACVariant> v, int i)
         {
@@ -45,7 +47,7 @@ public class ACData : IEnumerable<ACVariant>
                 .Concat(args[i].Parser.Select(x => x.ValueType))
                 .Distinct();
 
-            List<ACVariant> res = new List<ACVariant>();
+            var res = new List<ACVariant>();
 
             foreach (var t in types)
             {
@@ -60,7 +62,5 @@ public class ACData : IEnumerable<ACVariant>
 
             return res;
         }
-
-        return variants;
     }
 }

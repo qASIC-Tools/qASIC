@@ -1,3 +1,4 @@
+using System.Text;
 using System.Xml.Serialization;
 using qASIC.Console.Parsing;
 
@@ -28,6 +29,8 @@ dont_ask
 @
 ";
 
+    public QuashParser Parser { get; } = new();
+
     public List<QuashParser.LexItem> ParseVisually(string txt)
     {
         SysConsole.WriteLine("Parsing script:");
@@ -42,29 +45,25 @@ dont_ask
         foreach (var item in result)
         {
             SysConsole.ResetColor();
+            SysConsole.ForegroundColor = item.type switch
+            {
+                QuashParser.LexItem.Type.Command => ConsoleColor.Blue,
+                QuashParser.LexItem.Type.ArgumentPart => ConsoleColor.Green,
+                QuashParser.LexItem.Type.VarGet => ConsoleColor.Yellow,
+                QuashParser.LexItem.Type.VarSet => ConsoleColor.DarkYellow,
+                QuashParser.LexItem.Type.ResponseArgsPart => ConsoleColor.Magenta,
+                QuashParser.LexItem.Type.ResponseArgsVarGet => ConsoleColor.Yellow,
+                QuashParser.LexItem.Type.ResponseLine => ConsoleColor.DarkBlue,
+                QuashParser.LexItem.Type.Comment => ConsoleColor.DarkGray,
+                QuashParser.LexItem.Type.End => ConsoleColor.Black,
+                _ => SysConsole.ForegroundColor,
+            };
+            
             switch (item)
             {
-                case QuashParser.LexCodeText codeText:
-                    SysConsole.ForegroundColor = codeText.type switch
-                    {
-                        QuashParser.LexCodeText.Type.Command => ConsoleColor.Blue,
-                        QuashParser.LexCodeText.Type.ArgumentPart => ConsoleColor.Green,
-                        QuashParser.LexCodeText.Type.VarGet => ConsoleColor.Yellow,
-                        QuashParser.LexCodeText.Type.VarSet => ConsoleColor.DarkYellow,
-                        QuashParser.LexCodeText.Type.ResponseArgsPart => ConsoleColor.Magenta,
-                        QuashParser.LexCodeText.Type.ResponseArgsVarGet => ConsoleColor.Yellow,
-                        QuashParser.LexCodeText.Type.ResponseLine => ConsoleColor.DarkBlue,
-                        QuashParser.LexCodeText.Type.Comment => ConsoleColor.DarkGray,
-                        _ => SysConsole.ForegroundColor,
-                    };
-                    break;
                 case QuashParser.LexEnd:
-                    SysConsole.ForegroundColor = ConsoleColor.Black;
                     SysConsole.Write('&');
                     SysConsole.ResetColor();
-                    break;
-                case QuashParser.LexSpecialToken:
-                    SysConsole.ForegroundColor = ConsoleColor.Yellow;
                     break;
                 case QuashParser.LexWhiteSpace:
                     SysConsole.BackgroundColor = ConsoleColor.Black;
@@ -141,6 +140,84 @@ dont_ask
                 SysConsole.ResetColor();
                 SysConsole.WriteLine();
             }
+        }
+    }
+
+    public void TestCharacterInfo()
+    {
+        var info = new CmdCharacterInfo();
+
+        string txt = "";
+        var i = 0;
+
+        WriteInfo(false);
+
+        var read = SysConsole.ReadKey();
+        while (read.Key != ConsoleKey.Escape)
+        {
+            var clearEnd = false;
+            if (char.IsWhiteSpace(read.KeyChar) || char.IsLetterOrDigit(read.KeyChar) || char.IsSymbol(read.KeyChar) || char.IsPunctuation(read.KeyChar))
+            {
+                txt = $"{txt[..i]}{read.KeyChar}{txt[i..]}";
+                i++;
+            }
+            
+            if (read.Key == ConsoleKey.Backspace && i > 0)
+            {
+                txt = $"{txt[..(i-1)]}{txt[i..]}";
+                i--;
+                clearEnd = true;
+            }
+
+            if (read.Key == ConsoleKey.Delete && i < txt.Length)
+            {
+                txt = $"{txt[..i]}{txt[(i+1)..]}";
+                clearEnd = true;
+            }
+            
+            if (read.Key == ConsoleKey.LeftArrow && i > 0) i--;
+            if (read.Key == ConsoleKey.RightArrow && i < txt.Length) i++;
+
+            info = Parser.GetCharacterInfo(txt, i);
+
+            SysConsole.Write("\u001b[F");
+            WriteInfo(clearEnd);
+            read = SysConsole.ReadKey();
+        }
+
+
+        void WriteInfo(bool clearEnd)
+        {
+            var width = SysConsole.BufferWidth;
+            var infoTxt = new StringBuilder();
+            infoTxt.Append(info.scope switch
+            {
+                CmdCharacterInfo.Scope.Nothing => "NOTHING",
+                CmdCharacterInfo.Scope.Argument => "ARG",
+                CmdCharacterInfo.Scope.CommandName => "CMD",
+                CmdCharacterInfo.Scope.Variable => "VAR",
+                _ => "IDK",
+            });
+
+            infoTxt.Append(' ');
+
+            infoTxt.Append(info.scope switch
+            {
+                CmdCharacterInfo.Scope.CommandName => info.commandName,
+                CmdCharacterInfo.Scope.Argument => $"{info.commandName} {info.argumentIndex}:{info.argument}",
+                CmdCharacterInfo.Scope.Variable => info.variableName,
+                _ => ""
+            });
+
+            infoTxt.Append(new string(' ', Math.Max(0, width - infoTxt.Length)));
+
+            SysConsole.WriteLine(infoTxt);
+            SysConsole.Write(txt);
+
+            if (clearEnd)
+                SysConsole.Write(" \b");
+
+            SysConsole.Write(new string('\b', txt.Length - i));
         }
     }
 }

@@ -21,19 +21,16 @@ public abstract class ConsoleParser
     /// <param name="inputString">The input string.</param>
     /// <param name="characterIndex">Index of the character.</param>
     /// <returns>Returns information about the specified character.</returns>
-    public abstract CmdCharacterInfo GetCharacterInfo(string inputString, int characterIndex);
-    
-    /// <summary>Finalizes executing of an input string.</summary>
-    /// <param name="context">The context.</param>
-    /// <param name="returnedValue">The last returned value by a command.</param>
-    protected static void FinishExecuting(qConsoleContext context, object returnedValue = null)
-    {
-        if (returnedValue is CommandPrompt prompt)
+    public virtual CmdCharacterInfo GetCharacterInfo(string inputString, int characterIndex) =>
+        new()
         {
-            prompt.ParserData = context.ParserData;
-            return;
-        }
+            scope = CmdCharacterInfo.Scope.Nothing,
+        };
 
-        context.ParserData.Logs.StartClosing();
+    public virtual string ReplaceCharacterInfo(CmdCharacterInfo info, string newValue, out int position, out int length)
+    {
+        position = 0;
+        length = 0;
+        return string.Empty;
     }
 }

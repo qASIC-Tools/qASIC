@@ -360,44 +360,60 @@ public sealed class QuashParser : ConsoleParser
     /// <returns>Returns the supplied parameter <paramref name="items"/>.</returns>
     private static List<LexItem> Lex_Stage3(List<LexItem> items)
     {
-        var nextType = LexCodeText.Type.Command;
+        var nextType = LexItem.Type.Command;
         for (int i = 0; i < items.Count; i++)
         {
+            items[i].type = nextType;
             switch (items[i])
             {
-                case LexCodeText codeText:
-                    codeText.type = nextType;
-                    if (nextType is LexCodeText.Type.Command or LexCodeText.Type.VarGet)
-                        nextType = LexCodeText.Type.ArgumentPart;
+                case LexBreak:
+                    if (nextType is LexItem.Type.VarGet)
+                    {
+                        items[i].type = LexItem.Type.ArgumentPart;
+                        nextType = LexItem.Type.ArgumentPart;
+                    }
+                    break;
+                case LexWhiteSpace:
+                    items[i].type = LexItem.Type.Space;
+
+                    if (nextType is LexItem.Type.Command)
+                        nextType = LexItem.Type.ArgumentPart;
                     break;
                 case LexSpecialToken token:
                     switch (token.token)
                     {
-                        case "=":
+                        case "=":   
+                            token.type = LexItem.Type.VarSet;
                             if (i-1 > 0 && items[i-1] is LexCodeText varSet)
-                                varSet.type = LexCodeText.Type.VarSet;
+                                varSet.type = LexItem.Type.VarSet;
                             else if (i-2 > 0 && items[i-1] is LexWhiteSpace && items[i-2] is LexCodeText varSet2)
-                                varSet2.type = LexCodeText.Type.VarSet;
+                                varSet2.type = LexItem.Type.VarSet;
                             break;
-                            case "$":
-                                nextType = nextType == LexCodeText.Type.ResponseArgsPart ?
-                                    LexCodeText.Type.ResponseArgsVarGet :
-                                    LexCodeText.Type.VarGet;
-                                break;
-                            case "#":
-                                nextType = LexCodeText.Type.Comment;
-                                break;
-                            case "^":
-                                nextType = LexCodeText.Type.ResponseLine;
-                                break;
-                            case "^^":
-                                nextType = LexCodeText.Type.ResponseArgsPart;
-                                break;
+                        case "$":
+                            nextType = nextType == LexItem.Type.ResponseArgsPart ?
+                                LexItem.Type.ResponseArgsVarGet :
+                                LexItem.Type.VarGet;
+                            
+                            token.type = nextType;
+                            break;
+                        case "#":
+                            nextType = LexItem.Type.Comment;
+                            token.type = nextType;
+                            break;
+                        case "^":
+                            nextType = LexItem.Type.ResponseLine;
+                            token.type = nextType;
+                            break;
+                        case "^^":
+                            nextType = LexItem.Type.ResponseArgsPart;
+                            token.type = nextType;
+                            break;
                     }
 
                     break;
                 case LexEnd:
-                    nextType = LexCodeText.Type.Command;
+                    items[i].type = LexItem.Type.End;
+                    nextType = LexItem.Type.Command;
                     break;
             }
         }
@@ -646,7 +662,188 @@ public sealed class QuashParser : ConsoleParser
     #region Other overrides
     public override CmdCharacterInfo GetCharacterInfo(string cmd, int characterIndex)
     {
-        return new();
+        var data = new CharacterInfoData(Lex(new(cmd)));
+        var info = new CmdCharacterInfo()
+        {
+            ParserData = data,
+            avaliableVariables = from item in data.lexedItems
+                where item is LexCodeText { type: LexItem.Type.VarGet }
+                select (item as LexCodeText).text
+        };
+
+        var charI = 0;
+
+        var commandName = new StringBuilder();
+        var argumentVal = new StringBuilder();
+        var argIndex = -1;
+        var varName = new StringBuilder();
+        var argIsNothing = false;
+
+        LexItem startItem = null;
+        LexItem endItem = null;
+        for (int i = 0; i < data.lexedItems.Count; i++)
+        {
+            var item = data.lexedItems[i];
+            charI += item.readString.Length;
+            
+            startItem ??= item;
+            if (startItem.type != item.type)
+                startItem = item;
+
+            switch (item, item.type)
+            {
+                default:
+                    commandName.Clear();
+                    argumentVal.Clear();
+                    argIndex = -1;
+                    break;
+                case (_, LexItem.Type.Space):
+                    argumentVal.Clear();
+                    argIndex += 1;
+                    argIsNothing = false;
+                    continue;
+                case (LexCodeText cmdCode, LexItem.Type.Command):
+                    commandName.Append(cmdCode.text);
+                    break;
+                case (LexCodeText argCode, LexItem.Type.ArgumentPart):
+                    argumentVal.Append(argCode.text);
+                    break;
+                case (LexCodeText varCode, LexItem.Type.VarGet):
+                    varName.Clear();
+                    varName.Append(varCode.text);
+                    argIsNothing = true;
+                    break;
+                case (_, LexItem.Type.ArgumentPart or LexItem.Type.Command or LexItem.Type.VarGet):
+                    break;
+            }
+
+            if (characterIndex <= charI)
+            {
+                endItem = item;
+                break;
+            }
+        }
+
+        // If we are at the end of a "line"
+        // line meaning a command with arguments
+        if (endItem == null)
+        {
+            info.scope = commandName.Length == 0 ?
+                CmdCharacterInfo.Scope.CommandName :
+                CmdCharacterInfo.Scope.Argument;
+            
+            info.commandName = commandName.ToString();
+            info.argumentIndex = argIndex;
+            return info;
+        }
+
+        var startIndex = data.lexedItems.IndexOf(startItem);
+        var endIndex = data.lexedItems.IndexOf(endItem);
+        for (; endIndex < data.lexedItems.Count-1; endIndex++)
+        {
+            // If the next thing after an argument part is a
+            // var get -> stop trying to handle an argument
+            if (endItem.type is LexItem.Type.ArgumentPart && data.lexedItems[endIndex+1].type is LexItem.Type.VarGet)
+                argIsNothing = true;
+
+            if (endItem.type != data.lexedItems[endIndex+1].type) break;
+            endItem = data.lexedItems[endIndex+1];
+
+            if (endItem is LexCodeText codeText)
+            {
+                var str = endItem.type switch
+                {
+                    LexItem.Type.ArgumentPart => argumentVal,
+                    LexItem.Type.Command => commandName,
+                    LexItem.Type.VarGet => varName,
+                    _ => null,
+                };
+
+                str?.Append(codeText.text);
+            }
+        }
+
+        data.index = startIndex;
+        data.length = endIndex - startIndex + 1;
+
+        if (endItem.type == LexItem.Type.ArgumentPart && !argIsNothing)
+        {
+            info.scope = CmdCharacterInfo.Scope.Argument;
+            info.commandName = commandName.ToString();
+            info.argument = argumentVal.ToString();
+            info.argumentIndex = argIndex;
+            return info;
+        }
+
+        if (endItem.type == LexItem.Type.Command)
+        {
+            info.scope = CmdCharacterInfo.Scope.CommandName;
+            info.commandName = commandName.ToString();
+            return info;
+        }
+        
+        if (endItem.type == LexItem.Type.VarGet)
+        {
+            data.index++;
+            data.length--;
+            info.scope = CmdCharacterInfo.Scope.Variable;
+            info.variableName = varName.ToString();
+            return info;
+        }
+
+        info.scope = CmdCharacterInfo.Scope.Nothing;
+        return info;
+    }
+
+    public override string ReplaceCharacterInfo(CmdCharacterInfo info, string newValue, out int position, out int length)
+    {
+        position = 0;
+        length = 0;
+        if (info.ParserData is not CharacterInfoData data) return string.Empty;
+        var txt = new StringBuilder();
+
+        var type = data.lexedItems[data.index].type;
+        data.lexedItems.RemoveRange(data.index, data.length);
+
+        LexItem target;
+        
+        switch (type)
+        {
+            case LexItem.Type.ArgumentPart:
+                var inputStr = newValue.Replace(" ", "\\ ")
+                    .Replace("\"", "\\\"")
+                    .Replace("`", "\\`")
+                    .Replace("'", "\\'");
+
+                target = new LexCodeText(newValue, new(inputStr))
+                {
+                    type = type,
+                };
+                break;
+            default:
+                target = new LexCodeText(newValue, new(newValue))
+                {
+                    type = type,
+                };
+                break;
+        }
+
+        data.lexedItems.Insert(data.index, target);
+        length = target.readString.Length;
+
+        var addPos = true;
+        foreach (var item in data.lexedItems)
+        {
+            if (item == target)
+                addPos = false;
+            
+            if (addPos)
+                position += item.readString.Length;
+            
+            txt.Append(item.readString);
+        }
+
+        return txt.ToString();
     }
 
     public override string ConvertToString(string commandName, qCommandArgument[] arguments)
@@ -701,11 +898,35 @@ public sealed class QuashParser : ConsoleParser
         public bool executePromptSelf = false;
         public Stack<(ParsedCodeScope, int)> scopeStack = [];
     }
+    
+    public class CharacterInfoData(List<LexItem> lexedItems)
+    {
+        public List<LexItem> lexedItems = lexedItems;
+        public int index;
+        public int length;
+    }
     #endregion
 
     #region Lexed Items
     public abstract class LexItem(StringBuilder readString)
     {
+        public enum Type
+        {
+            Unknown,
+            Space,
+            End,
+            Command,
+            ArgumentPart,
+            VarGet,
+            VarSet,
+            Comment,
+            ResponseLine,
+            ResponseArgsPart,
+            ResponseArgsVarGet,
+            Other,
+        }
+
+        public Type type;
         public readonly StringBuilder readString = readString;
     }
 
@@ -718,21 +939,7 @@ public sealed class QuashParser : ConsoleParser
 
     public class LexCodeText(string text, StringBuilder readString) : LexItem(readString)
     {
-        public enum Type
-        {
-            Unknown,
-            Command,
-            ArgumentPart,
-            VarGet,
-            VarSet,
-            Comment,
-            ResponseLine,
-            ResponseArgsPart,
-            ResponseArgsVarGet,
-        }
-
         public string text = text;
-        public Type type;
     }
 
     public class LexEnd(StringBuilder readString) : LexItem(readString) { }

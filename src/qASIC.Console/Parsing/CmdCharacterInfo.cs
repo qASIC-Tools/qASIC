@@ -1,31 +1,24 @@
+using System.Collections.Generic;
+
 namespace qASIC.Console.Parsing;
 
-public struct CmdCharacterInfo(string prefix, string postfix, string commandName, qCommandArgument[] arguments)
+public struct CmdCharacterInfo
 {
     public enum Scope
     {
+        Nothing,
         CommandName,
         Argument,
+        Variable,
     }
 
-    public CmdCharacterInfo WithScope(Scope scope, int scopedPosition) =>
-        WithScope(scope, scopedPosition, 0);
+    public Scope scope;
+    public int argumentIndex;
+    public IEnumerable<string> avaliableVariables;
 
-    public CmdCharacterInfo WithScope(Scope scope, int scopedPosition, int argumentIndex)
-    {
-        this.scope = scope;
-        this.scopedPosition = scopedPosition;
-        this.argumentIndex = argumentIndex;
-        return this;
-    }
+    public string commandName;
+    public string argument;
+    public string variableName;
 
-    public Scope scope = Scope.CommandName;
-    public int scopedPosition = 0;
-    public int argumentIndex = 0;
-
-    public string commandName = commandName;
-    public qCommandArgument[] arguments = arguments;
-
-    public string prefix = prefix;
-    public string postfix = postfix;
+    public object ParserData { get; set; }
 }
