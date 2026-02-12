@@ -36,15 +36,15 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
     public ModularParser Parser { get; private set; }
 
     #region Entries
-    public qARKEntry GetEntry(string path) =>
+    public qARKEntry GetEntry(string path, bool includeWithoutValue = false) =>
         Entries.TryGetValue($"{PathPrefix}{path}", out var val) ?
-        val.FirstOrDefault(x => !x.IsArrayStart) :
+        val.FirstOrDefault(x => includeWithoutValue || !x.IsArrayStart) :
         null;
 
-    public qARKEntry[] GetEntries(string path) =>
+    public qARKEntry[] GetEntries(string path, bool includeWithoutValue = false) =>
         Entries.TryGetValue($"{PathPrefix}{path}", out var val) ?
-        val.Where(x => !x.IsArrayStart).ToArray() :
-        [];
+            val.Where(x => includeWithoutValue || !x.IsArrayStart).ToArray() :
+            [];
 
     public T GetLastElementOfType<T>() where T : qARKElement
     {

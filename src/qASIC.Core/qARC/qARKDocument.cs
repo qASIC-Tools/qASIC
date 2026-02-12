@@ -127,10 +127,11 @@ public class qARKDocument : qARKHolder
 
     public qARKDocument SetValues(string path, object[] values)
     {
-        var entries = GetEntries(path);
-        int min = Math.Min(values.Length, entries.Length);
-        int max = Math.Max(values.Length, entries.Length);
-        bool moreValues = values.Length > entries.Length;
+        var entries = GetEntries(path, includeWithoutValue: true);
+        var valueEntries = entries.Where(x => !x.IsArrayStart).ToArray();
+        int min = Math.Min(values.Length, valueEntries.Length);
+        int max = Math.Max(values.Length, valueEntries.Length);
+        bool moreValues = values.Length > valueEntries.Length;
 
         //If there are no existing values
         if (entries.Length == 0)
@@ -171,11 +172,11 @@ public class qARKDocument : qARKHolder
         }
 
         for (int i = 0; i < min; i++)
-            entries[i].Value = values[i]?.ToString() ?? string.Empty;
+            valueEntries[i].Value = values[i]?.ToString() ?? string.Empty;
 
         if (moreValues)
         {
-            var target = entries.Last();
+            var target = valueEntries.LastOrDefault();
             var index = Elements.IndexOf(target) + 1;
 
             for (int i = min; i < max; i++)
@@ -194,7 +195,7 @@ public class qARKDocument : qARKHolder
         }
 
         for (int i = min; i < max; i++)
-            Elements.Remove(entries[i]);
+            Elements.Remove(valueEntries[i]);
 
         return this;
     }
