@@ -3,15 +3,9 @@
 namespace qASIC.Options;
 
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class)]
-public class OptionAttribute : Attribute
+public class OptionAttribute(string name) : Attribute
 {
     public OptionAttribute() : this(null) { }
-
-    public OptionAttribute(string name)
-    {
-        Name = name;
-    }
-
     public OptionAttribute(string name, object defaultValue) : this(name)
     {
         HasDefaultValue = true;
@@ -20,7 +14,7 @@ public class OptionAttribute : Attribute
 
     public OptionAttribute(object defaultValue) : this(null, defaultValue) { }
 
-    public string Name { get; private set; }
+    public string Name { get; private set; } = name;
 
     public bool HasDefaultValue { get; private set; }
     public object DefaultValue { get; private set; }

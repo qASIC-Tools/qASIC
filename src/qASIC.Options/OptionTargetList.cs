@@ -21,7 +21,7 @@ public class OptionTargetList : IEnumerable<KeyValuePair<string, OptionTargetLis
 
     public BindingFlags Flags { get; set; } = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-    Dictionary<string, List<Target>> Targets { get; set; } = new Dictionary<string, List<Target>>();
+    Dictionary<string, List<Target>> Targets { get; set; } = [];
 
     public qRegisteredObjects RegisteredObjects { get; private set; }
 
@@ -169,6 +169,7 @@ public class OptionTargetList : IEnumerable<KeyValuePair<string, OptionTargetLis
 
         var items = this[name];
 
+        // Try get default value set in attribute
         foreach (var item in items)
         {
             if (!item.HasDefaultValue) continue;
@@ -177,6 +178,7 @@ public class OptionTargetList : IEnumerable<KeyValuePair<string, OptionTargetLis
             return true;
         }
 
+        // Try get default value set by target
         foreach (var item in items)
         {
             if (!item.CanGetValue) continue;
@@ -192,18 +194,14 @@ public class OptionTargetList : IEnumerable<KeyValuePair<string, OptionTargetLis
                 continue;
             }
 
-            var targets = RegisteredObjects.Where(x => x?.GetType() == item.DeclaringType);
-
-            foreach (var obj in targets)
+            try
             {
-                try
-                {
-                    var val = item.GetValue(obj);
-                    value = val;
-                    return true;
-                }
-                catch { }
+                var obj = TypeFinder.CreateConstructorFromType(item.DeclaringType);
+                var val = item.GetValue(obj);
+                value = val;
+                return true;
             }
+            catch { }
         }
 
         foreach (var item in items)

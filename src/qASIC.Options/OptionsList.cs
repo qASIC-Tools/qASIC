@@ -25,9 +25,9 @@ public class OptionsList : IEnumerable<KeyValuePair<string, OptionsList.ListItem
     {
         key = OptionsManager.FormatKeyString(key);
 
-        if (Values.ContainsKey(key))
+        if (Values.TryGetValue(key, out var item))
         {
-            Values[key].value = value;
+            item.value = value;
             return this;
         }
 
@@ -44,16 +44,8 @@ public class OptionsList : IEnumerable<KeyValuePair<string, OptionsList.ListItem
     public IEnumerator<KeyValuePair<string, ListItem>> GetEnumerator() =>
         Values.GetEnumerator();
 
-    public bool Remove(string key)
-    {
-        key = OptionsManager.FormatKeyString(key);
-        if (!Values.ContainsKey(key))
-            return false;
-
-        var value = Values[key];
-
-        return Values.Remove(key);
-    }
+    public bool Remove(string key) =>
+        Values.Remove(OptionsManager.FormatKeyString(key));
 
     /// <summary>Gets the value associated with the specified key.</summary>
     /// <returns><c>true</c> if the <see cref="OptionsList"/> contains an element with the specified key; otherwise, <c>false</c>.</returns>
@@ -67,7 +59,7 @@ public class OptionsList : IEnumerable<KeyValuePair<string, OptionsList.ListItem
     /// <summary>Merge items of a different list into this one.</summary>
     /// <param name="list">List to merge with this one.</param>
     /// <param name="silent">When true, this method won't invoke any events.</param>
-    public void LoadFromList(OptionsList list)
+    public void MergeFromOther(OptionsList list)
     {
         foreach (var item in list)
         {
@@ -84,22 +76,15 @@ public class OptionsList : IEnumerable<KeyValuePair<string, OptionsList.ListItem
     }
 
     [Serializable]
-    public class ListItem
+    public class ListItem(string name, object value, object defaultValue)
     {
         public ListItem(string name) : this(name, default, default) { }
         public ListItem(string name, object value) : this(name, value, value) { }
 
-        public ListItem(string name, object value, object defaultValue)
-        {
-            this.name = name;
-            this.value = value;
-            this.defaultValue = defaultValue;
-        }
-
         /// <summary>Name of the item.</summary>
-        public string name;
-        public object value;
-        public object defaultValue;
+        public string name = name;
+        public object value = value;
+        public object defaultValue = defaultValue;
 
         public override string ToString() =>
             $"{name}: {value} (default: {defaultValue})";
