@@ -4,26 +4,27 @@ using System.Linq;
 
 namespace qASIC.qARK;
 
+/// <summary>Element that represents an entry.</summary>
 public class qARKEntry : qARKElement
 {
     public qARKEntry() : base() { }
     public qARKEntry(string relativePath, string value) : this(relativePath, relativePath, value) { }
 
-    public qARKEntry(string path, string relativePath, string value)
+    public qARKEntry(string absolutePath, string relativePath, string value)
     {
-        Path = path;
+        AbsolutePath = absolutePath;
         RelativePath = relativePath;
         Value = value;
     }
 
-    public string Path { get; set; }
+    public string AbsolutePath { get; set; }
     public string RelativePath { get; set; }
 
     private string value;
     public string Value
     {
         get => value;
-        set => this.value = qARKUtility.FormatString(value);
+        set => this.value = qARKUtility.FormatStringValue(value);
     }
 
     public bool IsArrayItem { get; set; }
@@ -79,8 +80,11 @@ public class qARKEntry : qARKElement
     }
     #endregion
 
-    public override string CreateContent()
+    public override string CreateContent(SerializationStyle style = SerializationStyle.Normal)
     {
+        if (style == SerializationStyle.RawData)
+            return $"{AbsolutePath} = {qARKUtility.PrepareValueStringForExport(Value)}\n";
+
         if (IsArrayStart)
             return $"{RelativePath}|\n";
 
@@ -90,13 +94,13 @@ public class qARKEntry : qARKElement
         return $"{RelativePath} = {qARKUtility.PrepareValueStringForExport(Value)}\n";
     }
 
-    public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc)
+    public override bool ShouldParse(qARKTextRead processed, qARKDocument doc)
     {
         var line = processed.PeekLine();
         return line.Contains('=') || line.TrimEnd().EndsWith('|') || line.TrimStart().StartsWith('*');
     }
 
-    public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
+    public override void Parse(qARKTextRead processed, qARKDocument doc)
     {
         var line = processed.GetLine();
 
@@ -145,5 +149,5 @@ public class qARKEntry : qARKElement
     }
 
     public override string ToString() =>
-        $"qARK Entry '{CreateContent().Trim()}' (fullPath: {Path})";
+        $"qARK Entry '{CreateContent().Trim()}' (fullPath: {AbsolutePath})";
 }

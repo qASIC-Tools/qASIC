@@ -3,6 +3,7 @@ using System.Text;
 
 namespace qASIC.qARK;
 
+/// <summary>Converts a <see cref="qARKDocument"/> to text and the other way around.</summary>
 public class qARKSerializer
 {
     public qARKSerializer() : this(new ModularParser()) { }
@@ -11,22 +12,24 @@ public class qARKSerializer
         Parser = parser;
     }
 
-    public qARKElement[] DeserializeElements { get; set; } = new qARKElement[]
-    {
+    public qARKElement[] DeserializeElements { get; set; } =
+    [
         new qARKSpace(),
         new qARKComment(),
         new qARKGroupBorder(),
         new qARKEntry(),
-    };
+    ];
 
     public ModularParser Parser { get; set; }
+
+    public SerializationStyle SerializationStyle { get; set; } = SerializationStyle.Normal;
 
     public string Serialize(qARKDocument document)
     {
         var txt = new StringBuilder();
 
         foreach (var element in document)
-            txt.Append(element.CreateContent());
+            txt.Append(element.CreateContent(SerializationStyle));
 
         var finalTxt = txt.ToString();
 
@@ -38,7 +41,7 @@ public class qARKSerializer
 
     public qARKDocument Deserialize(string txt)
     {
-        var processed = new qARKProcessedDocument(txt);
+        var processed = new qARKTextRead(txt);
         var doc = new qARKDocument(Parser);
 
         while (!processed.FinishedReading)

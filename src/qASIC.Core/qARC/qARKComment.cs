@@ -3,6 +3,7 @@ using System.Text;
 
 namespace qASIC.qARK;
 
+/// <summary>Element that represents a comment.</summary>
 public class qARKComment : qARKElement
 {
     public qARKComment() : base() { }
@@ -15,16 +16,16 @@ public class qARKComment : qARKElement
     public string Comment
     {
         get => comment;
-        set => comment = qARKUtility.FormatString(value);
+        set => comment = qARKUtility.FormatStringValue(value);
     }
 
-    public override string CreateContent() =>
-        $"# {Comment.Replace("\n", "\n# ")}\n";
+    public override string CreateContent(SerializationStyle style = SerializationStyle.Normal) =>
+        style == SerializationStyle.RawData ? string.Empty : $"# {Comment.Replace("\n", "\n# ")}\n";
 
-    public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc) =>
+    public override bool ShouldParse(qARKTextRead processed, qARKDocument doc) =>
         processed.PeekLine().Trim().StartsWith("#");
 
-    public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
+    public override void Parse(qARKTextRead processed, qARKDocument doc)
     {
         var comment = new StringBuilder();
         while (!processed.FinishedReading && processed.PeekLine().TrimStart().StartsWith("#"))

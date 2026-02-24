@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace qASIC.qARK;
 
+/// <summary>A document containing qARK entries, used for serialization.</summary>
 public class qARKDocument : qARKHolder
 {
     public const string FILE_EXTENSION = "qark";
@@ -14,29 +15,58 @@ public class qARKDocument : qARKHolder
     public qARKDocument(IEnumerable<qARKElement> elements) : base(elements) { }
     public qARKDocument(ModularParser parser, IEnumerable<qARKElement> elements) : base(parser, elements) { }
 
-    public string NewElementPrefix { get; private set; }
+    public string NewElementPathPrefix { get; private set; }
 
     #region Adding
     public qARKDocument AddElement(qARKElement element)
     {
+        if (element is qARKGroupBorder group)
+        {
+            NewElementPathPrefix = string.IsNullOrWhiteSpace(group.AbsolutePath) ?
+                string.Empty :
+                $"{group.AbsolutePath}.";
+        }
+
+        if (element is qARKEntry entry)
+        {
+            // Additional logic for array item entry
+            if (entry.IsArrayItem)
+            {
+                entry.RelativePath = string.Empty;
+                var prevEntry = GetLastElementOfType<qARKEntry>();
+
+                if (prevEntry != null)
+                {
+                    // If previous entry's path starts differently than
+                    // the non-relative path of this element, reset
+                    // the path prefix by closing the group
+                    if (!prevEntry.AbsolutePath.StartsWith(NewElementPathPrefix))
+                        AddElement(new qARKGroupBorder());
+
+                    // Copy relative path from previous entry
+                    prevEntry.RelativePath = prevEntry.AbsolutePath[NewElementPathPrefix.Length..];
+                }
+            }
+
+            // For any type of entry
+            entry.AbsolutePath = $"{NewElementPathPrefix}{entry.RelativePath}";
+            entry.Parser = Parser;
+        }
+
         Add(element);
         return this;
     }
 
     public qARKDocument AddEntry(string path, object value) =>
-        AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, Parser?.ConvertToString(value) ?? string.Empty)
-        {
-            Parser = Parser,
-        });
+        AddElement(new qARKEntry(path, Parser?.ConvertToString(value) ?? string.Empty));
 
     public qARKDocument StartArrayEntry(string path) =>
-        AddElement(new qARKEntry($"{NewElementPrefix}{path}", path, string.Empty)
+        AddElement(new qARKEntry(path, string.Empty)
         {
-            Parser = Parser,
             IsArrayStart = true
         });
 
-    public qARKDocument AddArrayEntry(string path, IEnumerable<object> values)
+    public qARKDocument AddArrayEntryFromValues(string path, IEnumerable<object> values)
     {
         StartArrayEntry(path);
         foreach (var item in values)
@@ -45,27 +75,17 @@ public class qARKDocument : qARKHolder
         return this;
     }
 
-    public qARKDocument AddArrayItem(object value)
-    {
-        var prevEntry = GetLastElementOfType<qARKEntry>();
-        return AddElement(new qARKEntry(prevEntry?.Path ?? string.Empty, prevEntry?.RelativePath ?? string.Empty, Parser?.ConvertToString(value) ?? string.Empty)
+    public qARKDocument AddArrayItem(object value) =>
+        AddElement(new qARKEntry(string.Empty, Parser?.ConvertToString(value) ?? string.Empty)
         {
-            Parser = Parser,
             IsArrayItem = true,
         });
-    }
 
-    public qARKDocument StartGroup(string groupPath)
-    {
-        NewElementPrefix = string.IsNullOrWhiteSpace(groupPath) ?
-            string.Empty :
-            $"{groupPath}.";
+    public qARKDocument AddGroupStart(string groupPath) =>
+        AddElement(new qARKGroupBorder(groupPath));
 
-        return AddElement(new qARKGroupBorder(groupPath));
-    }
-
-    public qARKDocument FinishGroup() =>
-        StartGroup(string.Empty);
+    public qARKDocument AddGroupEnd() =>
+        AddGroupStart(string.Empty);
 
     public qARKDocument AddComment(string comment) =>
         AddElement(new qARKComment(comment));
@@ -92,9 +112,9 @@ public class qARKDocument : qARKHolder
                     break;
                 case qARKGroupBorder border:
                     if (border.IsEnding)
-                        FinishGroup();
+                        AddGroupEnd();
                     else
-                        StartGroup(border.RelativePath);
+                        AddGroupStart(border.RelativePath);
                     break;
                 case qARKComment comment:
                     AddComment(comment.Comment);
@@ -138,11 +158,11 @@ public class qARKDocument : qARKHolder
         {
             var group = Elements.Where(x => x is qARKGroupBorder)
                 .Select(x => x as qARKGroupBorder)
-                .Where(x => !x.IsEnding && path.StartsWith($"{x.Path}."))
-                .MaxBy(x => x.Path.Split('.').Length);
+                .Where(x => !x.IsEnding && path.StartsWith($"{x.AbsolutePath}."))
+                .MaxBy(x => x.AbsolutePath.Split('.').Length);
 
             int index = NewElementInGroupIndex(group);
-            var prefixLength = group?.Path.Length + 1 ?? 0;
+            var prefixLength = group?.AbsolutePath.Length + 1 ?? 0;
             var relativePath = path[prefixLength..];
             Entries.Add(path, []);
 
@@ -181,7 +201,7 @@ public class qARKDocument : qARKHolder
 
             for (int i = min; i < max; i++)
             {
-                var entry = new qARKEntry(target.Path, target.RelativePath, Parser.ConvertToString(values[i]))
+                var entry = new qARKEntry(target.AbsolutePath, target.RelativePath, Parser.ConvertToString(values[i]))
                 {
                     Parser = Parser,
                     IsArrayItem = target.IsArrayItem || target.IsArrayStart,

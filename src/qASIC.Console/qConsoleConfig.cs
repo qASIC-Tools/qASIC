@@ -37,7 +37,7 @@ public class qConsoleConfig : IConfigurable
             .AddEntry("isMain", isMain)
             .AddSpace()
             .AddComment("LOGGING")
-            .StartGroup("logging")
+            .AddGroupStart("logging")
                 .AddEntry("saveLogs", saveLogs)
                 .AddEntry("logFilePath", logFilePath)
                 .AddEntry("logFileFormat", logFileFormat)
@@ -45,20 +45,20 @@ public class qConsoleConfig : IConfigurable
                 .AddEntry("logQDebug", logQDebug)
                 .AddEntry("traceInCommandExceptions", traceInCommandExceptions)
                 .AddEntry("traceInUnknownExceptions", traceInUnknownExceptions)
-            .FinishGroup()
+            .AddGroupEnd()
             .AddSpace()
             .AddComment("THEME")
-            .StartGroup("logTheme")
+            .AddGroupStart("logTheme")
                 .AddFromOther(theme?.CreateConfig())
-            .FinishGroup()
+            .AddGroupEnd()
             .AddSpace()
             .AddComment("COMMANDS")
-            .StartGroup("commandList")
+            .AddGroupStart("commandList")
                 .AddEntry("addBuiltIn", addBuiltInCommands)
                 .AddEntry("findCommands", findCommands)
                 .AddEntry("findAttributeCommands", findAttributeCommands)
-                .AddArrayEntry("commands", commands)
-            .FinishGroup();
+                .AddArrayEntryFromValues("commands", commands)
+            .AddGroupEnd();
 
     public void LoadConfig(string path) =>
         LoadConfig(new qARKSerializer().Deserialize(File.ReadAllText(path)));

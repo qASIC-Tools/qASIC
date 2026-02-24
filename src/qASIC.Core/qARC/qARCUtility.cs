@@ -1,14 +1,15 @@
 namespace qASIC.qARK;
 
-public static class qARKUtility
+/// <summary>General utility methods used by qARK.</summary>
+public static partial class qARKUtility
 {
-    public static string FormatString(string s) =>
+    public static string FormatStringValue(string s) =>
         (s ?? string.Empty)
         .Replace("\r\n", "\n")
         .Replace("\r", "\n");
 
     public static string PrepareValueStringForExport(string s) =>
-        (s.Contains("\n") || s.StartsWith(" ") || s.EndsWith(" ")) ?
+        (s.Contains('\n') || s.StartsWith(' ') || s.EndsWith(' ')) ?
         $"\"{s.Replace("\"", "\"\"")}\"" :
         s.Replace("\"", "\"\"");
 }

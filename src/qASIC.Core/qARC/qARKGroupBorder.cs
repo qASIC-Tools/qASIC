@@ -1,31 +1,37 @@
 namespace qASIC.qARK;
 
+/// <summary>Element that represents a group border.</summary>
 public class qARKGroupBorder : qARKElement
 {
     public qARKGroupBorder() : base() { }
     public qARKGroupBorder(string relativePath) : this(relativePath, relativePath) { }
 
-    public qARKGroupBorder(string path, string relativePath)
+    public qARKGroupBorder(string absolutePath, string relativePath)
     {
-        Path = path;
+        AbsolutePath = absolutePath;
         RelativePath = relativePath;
     }
 
-    public string Path { get; set; }
+    public string AbsolutePath { get; set; }
     public string RelativePath { get; set; }
 
     public bool IsEnding =>
-        string.IsNullOrWhiteSpace(Path);
+        string.IsNullOrWhiteSpace(AbsolutePath);
 
-    public override string CreateContent() =>
-        IsEnding ?
-        "---\n" :
-        $"--- {RelativePath} ---\n";
+    public override string CreateContent(SerializationStyle style = SerializationStyle.Normal)
+    {
+        if (style == SerializationStyle.RawData)
+            return string.Empty;
 
-    public override bool ShouldParse(qARKProcessedDocument processed, qARKDocument doc) =>
+        return IsEnding ?
+            "---\n" :
+            $"--- {RelativePath} ---\n";
+    }
+
+    public override bool ShouldParse(qARKTextRead processed, qARKDocument doc) =>
         processed.PeekLine().TrimStart().StartsWith('-');
 
-    public override void Parse(qARKProcessedDocument processed, qARKDocument doc)
+    public override void Parse(qARKTextRead processed, qARKDocument doc)
     {
         var relativePath = processed.GetLine()
             .Trim()
@@ -48,5 +54,5 @@ public class qARKGroupBorder : qARKElement
     }
 
     public override string ToString() =>
-        $"qARK Group Border '{CreateContent().Trim()}' (fullPath: {Path})";
+        $"qARK Group Border '{CreateContent().Trim()}' (fullPath: {AbsolutePath})";
 }

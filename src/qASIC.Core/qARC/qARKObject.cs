@@ -2,6 +2,7 @@ using System.Collections.Generic;
 
 namespace qASIC.qARK;
 
+/// <summary>Represents a container of qARK elements that have the same starting path.</summary>
 public class qARKObject : qARKHolder
 {
     public qARKObject() : this(string.Empty, []) { }

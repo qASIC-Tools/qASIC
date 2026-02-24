@@ -6,6 +6,7 @@ using System.Linq;
 
 namespace qASIC.qARK;
 
+/// <summary>Represents a generic container of qARK elements.</summary>
 public abstract class qARKHolder : IEnumerable<qARKElement>
 {
     public qARKHolder() : this(new ModularParser()) { }
@@ -25,7 +26,7 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
         Entries = elements
             .Where(x => x is qARKEntry)
             .Select(x => x as qARKEntry)
-            .GroupBy(x => x.Path)
+            .GroupBy(x => x.AbsolutePath)
             .ToDictionary(x => x.Key, x => x.ToList());
     }
 
@@ -62,10 +63,10 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
         Elements.Add(element);
         if (element is qARKEntry entry)
         {
-            if (!Entries.ContainsKey(entry.Path))
-                Entries.Add(entry.Path, new List<qARKEntry>());
+            if (!Entries.ContainsKey(entry.AbsolutePath))
+                Entries.Add(entry.AbsolutePath, new List<qARKEntry>());
 
-            Entries[entry.Path].Add(entry);
+            Entries[entry.AbsolutePath].Add(entry);
         }
     }
 
@@ -77,10 +78,10 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
 
         foreach (var entry in entries)
         {
-            if (!Entries.ContainsKey(entry.Path))
-                Entries.Add(entry.Path, new List<qARKEntry>());
+            if (!Entries.ContainsKey(entry.AbsolutePath))
+                Entries.Add(entry.AbsolutePath, new List<qARKEntry>());
 
-            Entries[entry.Path].Add(entry);
+            Entries[entry.AbsolutePath].Add(entry);
         }
     }
     #endregion

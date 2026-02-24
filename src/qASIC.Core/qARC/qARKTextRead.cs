@@ -1,13 +1,15 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
 namespace qASIC.qARK;
 
-public class qARKProcessedDocument : IEnumerable<string>
+/// <summary>Contains unprocessed text used for deserializing a <see cref="qARK Document"/>.</summary>
+public class qARKTextRead : IEnumerable<string>
 {
-    public qARKProcessedDocument(string txt) : this(qARKUtility.FormatString(txt).Split("\n")) { }
-    public qARKProcessedDocument(string[] lines)
+    public qARKTextRead(string txt) : this(qARKUtility.FormatStringValue(txt).ReplaceLineEndings().Split(Environment.NewLine)) { }
+    public qARKTextRead(string[] lines)
     {
         Lines = lines;
     }

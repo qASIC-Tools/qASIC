@@ -99,13 +99,13 @@ public class qConsoleTheme : INetworkSerializable, IConfigurable
         {
             if (item is qARKEntry entry)
             {
-                if (entry.Path == qDebug.DEFAULT_TAG ||
-                    entry.Path == qDebug.WARNING_TAG ||
-                    entry.Path == qDebug.ERROR_TAG)
+                if (entry.AbsolutePath == qDebug.DEFAULT_TAG ||
+                    entry.AbsolutePath == qDebug.WARNING_TAG ||
+                    entry.AbsolutePath == qDebug.ERROR_TAG)
                     continue;
 
                 if (entry.TryGetValue(out qColor color))
-                    customColors.SetOrAdd(entry.Path, color);
+                    customColors.SetOrAdd(entry.AbsolutePath, color);
             }
         }
     }
@@ -121,12 +121,12 @@ public class qConsoleTheme : INetworkSerializable, IConfigurable
         {
             if (item is qARKEntry entry)
             {
-                if (entry.Path == qDebug.DEFAULT_TAG ||
-                    entry.Path == qDebug.WARNING_TAG ||
-                    entry.Path == qDebug.ERROR_TAG)
+                if (entry.AbsolutePath == qDebug.DEFAULT_TAG ||
+                    entry.AbsolutePath == qDebug.WARNING_TAG ||
+                    entry.AbsolutePath == qDebug.ERROR_TAG)
                     continue;
 
-                doc.AddEntry(entry.Path, entry.Value);
+                doc.AddEntry(entry.AbsolutePath, entry.Value);
             }
         }
 
@@ -162,9 +162,9 @@ public class qConsoleTheme : INetworkSerializable, IConfigurable
         customColors.Clear();
         foreach (var item in data)
             if (item is qARKEntry entry &&
-                !nonCustom.Contains(entry.Path) &&
-                !customColors.ContainsKey(entry.Path) &&
+                !nonCustom.Contains(entry.AbsolutePath) &&
+                !customColors.ContainsKey(entry.AbsolutePath) &&
                 entry.TryGetValue(out qColor col))
-                customColors.Add(entry.Path, col);
+                customColors.Add(entry.AbsolutePath, col);
     }
 }
