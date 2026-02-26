@@ -17,8 +17,8 @@ public class qARKEntry : qARKElement
         Value = value;
     }
 
-    public string AbsolutePath { get; set; }
-    public string RelativePath { get; set; }
+    public string AbsolutePath { get; set; } = "";
+    public string RelativePath { get; set; } = "";
 
     private string value;
     public string Value

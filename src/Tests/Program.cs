@@ -1,1 +1,1 @@
-﻿new Tests.TestProgram().Run();
+﻿new Tests.TestsRunnerProgram().Run();

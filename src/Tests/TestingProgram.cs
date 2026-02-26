@@ -3,12 +3,16 @@ namespace Tests;
 using Tests.Console;
 using SysConsole = System.Console;
 
-public class TestProgram
+public class TestingProgram
 {
     public QuashParserTests QuashTester { get; } = new();
 
+    
+
     public void Run()
     {
+
+
         while (true)
         {
             SysConsole.WriteLine("[1] Test Quash Parsing");

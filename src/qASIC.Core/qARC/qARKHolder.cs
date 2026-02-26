@@ -34,7 +34,7 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
     protected List<qARKElement> Elements { get; set; }
     protected Dictionary<string, List<qARKEntry>> Entries { get; set; }
 
-    public ModularParser Parser { get; private set; }
+    public ModularParser Parser { get; protected set; }
 
     #region Entries
     public qARKEntry GetEntry(string path, bool includeWithoutValue = false) =>
@@ -47,9 +47,12 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
             val.Where(x => includeWithoutValue || !x.IsArrayStart).ToArray() :
             [];
 
-    public T GetLastElementOfType<T>() where T : qARKElement
+    public T GetLastElementOfType<T>() where T : qARKElement =>
+        GetLastElementOfType<T>(Elements.Count);
+
+    public T GetLastElementOfType<T>(int startIndex) where T : qARKElement
     {
-        for (int i = Elements.Count - 1; i >= 0; i--)
+        for (int i = startIndex - 1; i >= 0; i--)
         {
             if (Elements[i] is T el)
                 return el;
@@ -58,31 +61,60 @@ public abstract class qARKHolder : IEnumerable<qARKElement>
         return null;
     }
 
-    public void Add(qARKElement element)
+    protected virtual qARKElement PrepareElementForHolder(qARKElement element, int index)
     {
-        Elements.Add(element);
         if (element is qARKEntry entry)
         {
             if (!Entries.ContainsKey(entry.AbsolutePath))
-                Entries.Add(entry.AbsolutePath, new List<qARKEntry>());
+                Entries.Add(entry.AbsolutePath, []);
 
             Entries[entry.AbsolutePath].Add(entry);
         }
+
+        return element;
     }
 
-    public void AddRange(IEnumerable<qARKElement> elements)
+    protected void UpdateCachedEntry(qARKEntry entry, string prevPath)
     {
-        Elements.AddRange(elements);
-        var entries = elements.Where(x => x is qARKEntry)
-            .Select(x => x as qARKEntry);
-
-        foreach (var entry in entries)
+        var prevList = Entries[prevPath];
+        prevList.Remove(entry);
+        if (prevList.Count == 0)
+            Entries.Remove(prevPath);
+        
+        if (!Entries.TryGetValue(entry.AbsolutePath, out var newList))
         {
-            if (!Entries.ContainsKey(entry.AbsolutePath))
-                Entries.Add(entry.AbsolutePath, new List<qARKEntry>());
-
-            Entries[entry.AbsolutePath].Add(entry);
+            newList = [];
+            Entries.Add(entry.AbsolutePath, newList);
         }
+
+        newList.Add(entry);
+    }
+
+    public virtual void Add(qARKElement element) =>
+        Elements.Add(PrepareElementForHolder(element, Elements.Count));
+
+    public virtual void AddRange(IEnumerable<qARKElement> elements)
+    {
+        foreach (var item in elements)
+            Add(item);
+    }
+
+    public virtual void Insert(int index, qARKElement element) =>
+        Elements.Insert(index, PrepareElementForHolder(element, index));
+
+    public virtual void Remove(qARKElement element)
+    {
+        if (element is qARKEntry entry)
+        {
+            if (Entries.TryGetValue(entry.AbsolutePath, out var entries))
+            {
+                entries.Remove(entry);
+                if (entries.Count == 0)
+                    Entries.Remove(entry.AbsolutePath);
+            }
+        }
+
+        Elements.Remove(element);
     }
     #endregion
 

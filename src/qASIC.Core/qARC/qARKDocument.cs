@@ -10,30 +10,70 @@ public class qARKDocument : qARKHolder
 {
     public const string FILE_EXTENSION = "qark";
 
-    public qARKDocument() : base() { }
-    public qARKDocument(ModularParser parser) : base(parser) { }
-    public qARKDocument(IEnumerable<qARKElement> elements) : base(elements) { }
-    public qARKDocument(ModularParser parser, IEnumerable<qARKElement> elements) : base(parser, elements) { }
+    public qARKDocument() : this(new(), []) { }
+    public qARKDocument(ModularParser parser) : this(parser, []) { }
+    public qARKDocument(IEnumerable<qARKElement> elements) : this(new(), elements) { }
+    public qARKDocument(ModularParser parser, IEnumerable<qARKElement> elements) : base()
+    {
+        Parser = parser;
+        foreach (var item in elements)
+            Add(item);
+    }
 
-    public string NewElementPathPrefix { get; private set; }
+    public string NewElementPathPrefix { get; private set; } = "";
 
     #region Adding
-    public qARKDocument AddElement(qARKElement element)
+    protected override qARKElement PrepareElementForHolder(qARKElement element, int index)
     {
-        if (element is qARKGroupBorder group)
+        switch (element)
         {
-            NewElementPathPrefix = string.IsNullOrWhiteSpace(group.AbsolutePath) ?
-                string.Empty :
-                $"{group.AbsolutePath}.";
+            case qARKEntry entry:
+                HandleEntry(entry);
+                break;
+            case qARKGroupBorder group:
+                HandleGroup(group);
+                break;
         }
 
-        if (element is qARKEntry entry)
+        return base.PrepareElementForHolder(element, index);
+
+
+        void HandleGroup(qARKGroupBorder group)
+        {
+            var thisGroupPrefix = string.IsNullOrWhiteSpace(group.AbsolutePath) ?
+                string.Empty :
+                $"{group.AbsolutePath}.";
+
+            var lastGroup = GetLastElementOfType<qARKGroupBorder>(index);
+
+            // If this is going to be the last group, change element path prefix
+            if (Elements.IndexOf(lastGroup) < index)
+                NewElementPathPrefix = thisGroupPrefix;
+            
+            // Update absolute paths of proceeding entries
+            for (int i = index; i < Elements.Count; i++)
+            {
+                switch (Elements[i])
+                {
+                    case qARKEntry entr:
+                        var prevAbs = entr.AbsolutePath;
+                        entr.AbsolutePath = $"{thisGroupPrefix}{entr.RelativePath}";
+                        UpdateCachedEntry(entr, prevAbs);
+                        break;
+                    case qARKGroupBorder:
+                        // Finish
+                        return;
+                }
+            }
+        }
+
+        void HandleEntry(qARKEntry entry)
         {
             // Additional logic for array item entry
             if (entry.IsArrayItem)
             {
                 entry.RelativePath = string.Empty;
-                var prevEntry = GetLastElementOfType<qARKEntry>();
+                var prevEntry = GetLastElementOfType<qARKEntry>(index);
 
                 if (prevEntry != null)
                 {
@@ -44,7 +84,7 @@ public class qARKDocument : qARKHolder
                         AddElement(new qARKGroupBorder());
 
                     // Copy relative path from previous entry
-                    prevEntry.RelativePath = prevEntry.AbsolutePath[NewElementPathPrefix.Length..];
+                    entry.RelativePath = prevEntry.AbsolutePath[NewElementPathPrefix.Length..];
                 }
             }
 
@@ -52,13 +92,16 @@ public class qARKDocument : qARKHolder
             entry.AbsolutePath = $"{NewElementPathPrefix}{entry.RelativePath}";
             entry.Parser = Parser;
         }
+    }
 
+    public qARKDocument AddElement(qARKElement element)
+    {
         Add(element);
         return this;
     }
 
     public qARKDocument AddEntry(string path, object value) =>
-        AddElement(new qARKEntry(path, Parser?.ConvertToString(value) ?? string.Empty));
+        AddElement(new qARKEntry(path, Parser.ConvertToString(value)));
 
     public qARKDocument StartArrayEntry(string path) =>
         AddElement(new qARKEntry(path, string.Empty)
@@ -76,7 +119,7 @@ public class qARKDocument : qARKHolder
     }
 
     public qARKDocument AddArrayItem(object value) =>
-        AddElement(new qARKEntry(string.Empty, Parser?.ConvertToString(value) ?? string.Empty)
+        AddElement(new qARKEntry(string.Empty, Parser.ConvertToString(value))
         {
             IsArrayItem = true,
         });
@@ -122,22 +165,26 @@ public class qARKDocument : qARKHolder
                 case qARKSpace space:
                     AddSpace(space.Count);
                     break;
-                default:
-                    AddElement(item);
-                    break;
             }
         }
         return this;
     }
     #endregion
 
-    #region Setting Single Value
+    #region Setting Values
     public qARKDocument SetValue(string path, object value)
     {
         var entry = GetEntry(path);
         if (entry == null)
         {
-            AddEntry(path, value);
+            // If the path under the current group would be incorrect, finish group
+            if (!path.StartsWith(NewElementPathPrefix))
+            {
+                AddGroupEnd();
+                AddSpace();
+            }
+
+            AddEntry(path[NewElementPathPrefix.Length..], value);
             return this;
         }
 
@@ -145,117 +192,56 @@ public class qARKDocument : qARKHolder
         return this;
     }
 
-    public qARKDocument SetValues(string path, object[] values)
+    public qARKDocument SetValues(string path, params object[] values)
     {
         var entries = GetEntries(path, includeWithoutValue: true);
-        var valueEntries = entries.Where(x => !x.IsArrayStart).ToArray();
-        int min = Math.Min(values.Length, valueEntries.Length);
-        int max = Math.Max(values.Length, valueEntries.Length);
-        bool moreValues = values.Length > valueEntries.Length;
 
-        //If there are no existing values
+        // If there are no existing entries
         if (entries.Length == 0)
         {
-            var group = Elements.Where(x => x is qARKGroupBorder)
-                .Select(x => x as qARKGroupBorder)
-                .Where(x => !x.IsEnding && path.StartsWith($"{x.AbsolutePath}."))
-                .MaxBy(x => x.AbsolutePath.Split('.').Length);
-
-            int index = NewElementInGroupIndex(group);
-            var prefixLength = group?.AbsolutePath.Length + 1 ?? 0;
-            var relativePath = path[prefixLength..];
-            Entries.Add(path, []);
-
-            var start = new qARKEntry(path, relativePath, string.Empty)
+            // Ensure path will be correct
+            if (!path.StartsWith(NewElementPathPrefix))
             {
-                Parser = Parser,
-                IsArrayStart = true,
-            };
-
-            Elements.Insert(index, start);
-            Entries[path].Add(start);
-
-            for (int i = 0; i < values.Length; i++)
-            {
-                var entry = new qARKEntry(path, relativePath, Parser.ConvertToString(values))
-                {
-                    Parser = Parser,
-                };
-
-                Elements.Insert(index + i + 1, entry);
-                Entries[path].Add(entry);
+                AddGroupEnd();
+                AddSpace();
             }
 
-            Elements.Insert(index + values.Length + 1, new qARKSpace());
-
+            // Add entries
+            AddArrayEntryFromValues(path[NewElementPathPrefix.Length..], values);
             return this;
         }
 
-        for (int i = 0; i < min; i++)
-            valueEntries[i].Value = values[i]?.ToString() ?? string.Empty;
-
-        if (moreValues)
-        {
-            var target = valueEntries.LastOrDefault();
-            var index = Elements.IndexOf(target) + 1;
-
-            for (int i = min; i < max; i++)
-            {
-                var entry = new qARKEntry(target.AbsolutePath, target.RelativePath, Parser.ConvertToString(values[i]))
-                {
-                    Parser = Parser,
-                    IsArrayItem = target.IsArrayItem || target.IsArrayStart,
-                };
-
-                Elements.Insert(index + i, entry);
-                Entries[path].Add(entry);
-            }
-
-            return this;
-        }
-
-        for (int i = min; i < max; i++)
-            Elements.Remove(valueEntries[i]);
+        var valueEntries = entries.Where(x => !x.IsArrayStart).ToArray();
+        FillExistingValues();
+        AppendNewValues();
+        RemoveAdditionalValues();
 
         return this;
-    }
-    #endregion
 
-    #region Modifying
-    private int NewElementInGroupIndex(qARKGroupBorder group)
-    {
-        if (group?.IsEnding == false)
-            group = FindEndOfGroup(group);
 
-        if (group == null || Elements.Contains(group))
-            return PreviousNonSpaceElement(Elements.Count - 1) + 1;
+        void FillExistingValues()
+        {
+            var length = Math.Min(values.Length, valueEntries.Length);
+            for (int i = 0; i < length; i++)
+                valueEntries[i].Value = Parser.ConvertToString(values[i]);
+        }
 
-        return Elements.IndexOf(group);
-    }
+        void AppendNewValues()
+        {
+            var last = entries.Last();
+            var index = Elements.IndexOf(last);
+            for (int i = valueEntries.Length; i < values.Length; i++)
+            {
+                index++;
+                Insert(index, new qARKEntry(last.RelativePath, Parser.ConvertToString(index)) { IsArrayItem = true, });
+            }
+        }
 
-    private int PreviousNonSpaceElement(int index)
-    {
-        while (index >= 0 && Elements[index] is qARKSpace)
-            index--;
-
-        return index;
-    }
-
-    private qARKGroupBorder FindEndOfGroup(qARKGroupBorder group)
-    {
-        if (group == null)
-            return null;
-
-        int index = Elements.IndexOf(group);
-        if (index == -1) return null;
-
-        for (index += 1; index < Elements.Count; index++)
-            if (Elements[index] is qARKGroupBorder)
-                break;
-
-        return index < Elements.Count ?
-            Elements[index] as qARKGroupBorder :
-            null;
+        void RemoveAdditionalValues()
+        {
+            for (int i = values.Length; i < valueEntries.Length; i++)
+                Remove(valueEntries[i]);
+        }
     }
     #endregion
 }

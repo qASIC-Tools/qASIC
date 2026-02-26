@@ -12,8 +12,8 @@ public class qARKGroupBorder : qARKElement
         RelativePath = relativePath;
     }
 
-    public string AbsolutePath { get; set; }
-    public string RelativePath { get; set; }
+    public string AbsolutePath { get; set; } = "";
+    public string RelativePath { get; set; } = "";
 
     public bool IsEnding =>
         string.IsNullOrWhiteSpace(AbsolutePath);

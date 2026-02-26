@@ -12,7 +12,7 @@ public class qARKComment : qARKElement
         Comment = comment;
     }
 
-    private string comment;
+    private string comment = "";
     public string Comment
     {
         get => comment;
