@@ -1,92 +1,89 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace qASIC.Options;
 
-[Serializable]
-public class OptionsList : IEnumerable<KeyValuePair<string, OptionsList.ListItem>>
+/// <summary>A list of all options.</summary>
+public class OptionsList : IEnumerable<Option>
 {
-    private Dictionary<string, ListItem> Values { get; set; } = [];
+    /// <summary>Invoked when an option's value is changed.</summary>
+    public event Action<Option> OnOptionValueChanged;
 
-    #region Dictionary
-    public ListItem this[string key]
+    private Dictionary<string, Option> _options = new();
+
+    public Option this[string optionName]
     {
-        get => Values[OptionsManager.FormatKeyString(key)];
+        get => _options[optionName];
     }
 
-    public int Count => Values.Count;
-
-    /// <summary>Sets the value of a specified item.</summary>
-    /// <param name="key">Name of the item.</param>
-    /// <param name="value">Value to set.</param>
-    /// <param name="silent">When true, this method won't invoke any events.</param>
-    public OptionsList Set(string key, object value)
+    /// <summary>Adds a new option to the list.</summary>
+    /// <param name="option">The new option.</param>
+    public void Add(Option option)
     {
-        key = OptionsManager.FormatKeyString(key);
+        ArgumentNullException.ThrowIfNull(option);
+        if (_options.ContainsKey(option.OptionName))
+            throw new ArgumentException($"Option '{option.OptionName}' already exists!", nameof(option));
+        
+        _options.Add(option.OptionName, option);
+        option.OnValueChanged += Option_OnValueChanged;
+    }
 
-        if (Values.TryGetValue(key, out var item))
+    /// <summary>Removes an option.</summary>
+    /// <param name="optionName">The name of the option.</param>
+    /// <returns>Returns true if the option was successfully found and removed.</returns>
+    public bool Remove(string optionName)
+    {
+        ArgumentNullException.ThrowIfNull(optionName);
+        if (_options.TryGetValue(optionName, out var option))
+            option.OnValueChanged -= Option_OnValueChanged;
+        
+        return _options.Remove(optionName);
+    }
+
+    /// <summary>Checks if an option exists.</summary>
+    /// <param name="optionName">The name of the option.</param>
+    /// <returns>Returns true if the option exists.</returns>
+    public bool Contains(string optionName)
+    {
+        ArgumentNullException.ThrowIfNull(optionName);
+        return _options.ContainsKey(optionName);
+    }
+
+    /// <summary>Tries to retrieve an option from the list.</summary>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="result">The resulting option if found, otherwise <see cref="null"/>.</param>
+    /// <returns>Returns true if it was successfull.</returns>
+    public bool TryGetOption(string optionName, out Option result)
+    {
+        ArgumentNullException.ThrowIfNull(optionName);
+        if (!_options.ContainsKey(optionName))
         {
-            item.value = value;
-            return this;
+            result = null;
+            return false;
         }
 
-        Values.Add(key, new ListItem(key, value));
-        return this;
+        result = _options[optionName];
+        return true;
     }
 
-    public void Clear() =>
-        Values.Clear();
-
-    public bool ContainsKey(string key) =>
-        Values.ContainsKey(OptionsManager.FormatKeyString(key));
-
-    public IEnumerator<KeyValuePair<string, ListItem>> GetEnumerator() =>
-        Values.GetEnumerator();
-
-    public bool Remove(string key) =>
-        Values.Remove(OptionsManager.FormatKeyString(key));
-
-    /// <summary>Gets the value associated with the specified key.</summary>
-    /// <returns><c>true</c> if the <see cref="OptionsList"/> contains an element with the specified key; otherwise, <c>false</c>.</returns>
-    public bool TryGetValue(string key, out ListItem value) =>
-        Values.TryGetValue(OptionsManager.FormatKeyString(key), out value);
-
-    IEnumerator IEnumerable.GetEnumerator() =>
-        Values.GetEnumerator();
-    #endregion
-
-    /// <summary>Merge items of a different list into this one.</summary>
-    /// <param name="list">List to merge with this one.</param>
-    /// <param name="silent">When true, this method won't invoke any events.</param>
-    public void MergeFromOther(OptionsList list)
+    /// <summary>Retrieves an option.</summary>
+    /// <param name="optionName">Name of the option.</param>
+    /// <returns>Returns the option if found, otherwise <see cref="null"/>.</returns>
+    public Option GetOption(string optionName)
     {
-        foreach (var item in list)
-        {
-            //Set only value if item already exists
-            if (ContainsKey(item.Value.name))
-            {
-                Set(item.Value.name, item.Value);
-                continue;
-            }
-
-            //Set the entire item (including default) if doesn't exists
-            Set(item.Value.name, item);
-        }
+        ArgumentNullException.ThrowIfNull(optionName);
+        return _options.TryGetValue(optionName, out var result) ? result : null;
     }
 
-    [Serializable]
-    public class ListItem(string name, object value, object defaultValue)
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    public IEnumerator<Option> GetEnumerator() => _options.Select(x => x.Value)
+        .ToList()
+        .GetEnumerator();
+    
+    private void Option_OnValueChanged(Option option)
     {
-        public ListItem(string name) : this(name, default, default) { }
-        public ListItem(string name, object value) : this(name, value, value) { }
-
-        /// <summary>Name of the item.</summary>
-        public string name = name;
-        public object value = value;
-        public object defaultValue = defaultValue;
-
-        public override string ToString() =>
-            $"{name}: {value} (default: {defaultValue})";
+        OnOptionValueChanged?.Invoke(option);
     }
 }
