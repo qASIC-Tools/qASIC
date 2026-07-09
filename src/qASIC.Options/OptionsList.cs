@@ -6,12 +6,12 @@ using System.Linq;
 namespace qASIC.Options;
 
 /// <summary>A list of all options.</summary>
-public class OptionsList : IEnumerable<Option>
+public sealed class OptionsList : IOptionsList
 {
     /// <summary>Invoked when an option's value is changed.</summary>
-    public event Action<Option> OnOptionValueChanged;
+    public event Action<IOption> OnOptionValueChanged;
 
-    private Dictionary<string, Option> _options = new();
+    private Dictionary<string, Option> _options = [];
 
     public Option this[string optionName]
     {
@@ -77,8 +77,16 @@ public class OptionsList : IEnumerable<Option>
         return _options.TryGetValue(optionName, out var result) ? result : null;
     }
 
+    IOption IOptionsList.GetOption(string optionName) => GetOption(optionName);
+    bool IOptionsList.TryGetOption(string optionName, out IOption result)
+    {
+        var val = TryGetOption(optionName, out var option);
+        result = option;
+        return val;
+    }
+
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    public IEnumerator<Option> GetEnumerator() => _options.Select(x => x.Value)
+    public IEnumerator<IOption> GetEnumerator() => _options.Select(x => x.Value)
         .ToList()
         .GetEnumerator();
     

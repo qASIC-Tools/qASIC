@@ -6,7 +6,7 @@ namespace qASIC.Options;
 /// <param name="optionName">Name of the option.</param>
 /// <param name="defaultValue">The default value of the option.</param>
 /// <param name="value">The current value the option is set to.</param>
-public class Option(string optionName, object defaultValue, object value)
+public sealed class Option(string optionName, object defaultValue, object value) : IOption
 {
     /// <summary>Creates a new instance.</summary>
     /// <param name="optionName">Name of the option.</param>
@@ -32,26 +32,4 @@ public class Option(string optionName, object defaultValue, object value)
 
     /// <summary>Invoked when <see cref="Value"/> is changed.</summary>
     public event Action<Option> OnValueChanged;
-
-    /// <summary>Tries to retrieve the option's value of the provided type.</summary>
-    /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
-    /// <param name="result">The resulted value if successfull, otherwise <see cref="default"/>.</param>
-    /// <returns>Returns true if <see cref="Value"/> is of type <see cref="T"/>.</returns>
-    public bool TryGetValue<T>(out T result)
-    {
-        if (Value is T val)
-        {
-            result = val;
-            return true;
-        }
-
-        result = default;
-        return false;
-    }
-
-    /// <summary>Retrieves the option's value of the provided type.</summary>
-    /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>
-    /// <returns>Returns <see cref="Value"/> cast to type <see cref="T"/>.</returns>
-    public T GetValue<T>() =>
-        (T)Value;
 }

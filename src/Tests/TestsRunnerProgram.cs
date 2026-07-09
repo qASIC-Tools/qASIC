@@ -39,7 +39,6 @@ public class TestsRunnerProgram
 
     public void RunTests(IEnumerable<UnitTestHolderBase> holders)
     {
-        SysConsole.Clear();
         SysConsole.WriteLine("Running tests...");
 
         var logsBuffer = new StringBuilder();
