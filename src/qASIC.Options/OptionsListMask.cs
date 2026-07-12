@@ -5,19 +5,24 @@ using System.Linq;
 
 namespace qASIC.Options;
 
-public sealed class OptionsListMask : IOptionsList
+public sealed class OptionsListMask : IOptionsList, IOptionsListMask
 {
     public OptionsListMask(IOptionsList target)
     {
         Target = target;
-        target.OnOptionValueChanged += Target_OnOptionValueChanged;
+        target.OnOptionValuesChanged += Target_OnOptionValuesChanged;
     }
 
+    /// <inheritdoc/>
     public IOptionsList Target { get; set; }
-    public event Action<IOption> OnOptionValueChanged;
 
+    /// <inheritdoc/>
+    public event Action<IEnumerable<IOption>> OnOptionValuesChanged;
+
+    private bool _supressEvents;
     private Dictionary<string, OptionMask> _masks = [];
 
+    /// <inheritdoc/>
     public void AddMask(string optionName, object value)
     {
         ArgumentNullException.ThrowIfNull(optionName);
@@ -34,9 +39,12 @@ public sealed class OptionsListMask : IOptionsList
         newMask.OnValueChanged += OptionMask_OnValueChanged;
         newMask.OnApply += OptionMask_OnApply;
         _masks.Add(optionName, newMask);
-        OnOptionValueChanged?.Invoke(newMask);
+        
+        if (!_supressEvents)
+            OnOptionValuesChanged?.Invoke([newMask]);
     }
 
+    /// <inheritdoc/>
     public bool RemoveMask(string optionName)
     {
         ArgumentNullException.ThrowIfNull(optionName);
@@ -50,9 +58,18 @@ public sealed class OptionsListMask : IOptionsList
         return _masks.Remove(optionName);
     }
 
+    /// <inheritdoc/>
     public IEnumerable<OptionMask> GetMasks() =>
         _masks.Select(x => x.Value).ToList();
+    
+    /// <inheritdoc/>
+    public bool Contains(string optionName)
+    {
+        ArgumentNullException.ThrowIfNull(optionName);
+        return Target.Contains(optionName);
+    }
 
+    /// <inheritdoc/>
     public IOption GetOption(string optionName)
     {
         ArgumentNullException.ThrowIfNull(optionName);
@@ -62,6 +79,7 @@ public sealed class OptionsListMask : IOptionsList
         return Target.GetOption(optionName);
     }
 
+    /// <inheritdoc/>
     public bool TryGetOption(string optionName, out IOption result)
     {
         ArgumentNullException.ThrowIfNull(optionName);
@@ -76,22 +94,59 @@ public sealed class OptionsListMask : IOptionsList
         return val;
     }
 
+    /// <inheritdoc/>
+    public void ApplyMask()
+    {
+        var masksToApply = _masks.Select(x => new KeyValuePair<string, object>(x.Key, x.Value))
+            .ToList();
+        
+        _masks.Clear();
+        Target.ApplyOtherMask(masksToApply);
+    }
+
+    /// <inheritdoc/>
+    public void ApplyOtherMask(IEnumerable<KeyValuePair<string, object>> values)
+    {
+        if (values.Any(x => !Target.Contains(x.Key)))
+            throw new ArgumentException("Cannot apply options that don't exist!", nameof(values));
+
+        var existingMasks = values.Where(x => _masks.ContainsKey(x.Key))
+            .Select(x => new KeyValuePair<OptionMask, object>(_masks[x.Key], x.Value))
+            .ToList();
+        
+        var newMasks = values.GroupBy(x => x.Key)
+            .Last()
+            .Where(x => !_masks.ContainsKey(x.Key))
+            .ToList();
+        
+        _supressEvents = true;
+        foreach (var item in existingMasks) item.Key.Value = item.Value;
+        foreach (var item in newMasks) AddMask(item.Key, item.Value);
+        _supressEvents = false;
+
+        OnOptionValuesChanged?.Invoke(values.Select(x => _masks[x.Key]).ToList());
+    }
+
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<IOption> GetEnumerator() =>
         Target.Select(x => _masks.TryGetValue(x.OptionName, out var val) ? val : x)
             .ToList()
             .GetEnumerator();
     
-    private void Target_OnOptionValueChanged(IOption option)
+    private void Target_OnOptionValuesChanged(IEnumerable<IOption> options)
     {
-        // Ignore if mask exists
-        if (_masks.ContainsKey(option.OptionName)) return;
-        OnOptionValueChanged?.Invoke(option);
+        // Ignore masked options
+        var targets = options.Where(x => !_masks.ContainsKey(x.OptionName))
+            .ToList();
+
+        if (targets.Count == 0) return;
+        OnOptionValuesChanged?.Invoke(targets);
     }
 
     private void OptionMask_OnValueChanged(OptionMask option)
     {
-        OnOptionValueChanged?.Invoke(option);
+        if (_supressEvents) return;
+        OnOptionValuesChanged?.Invoke([option]);
     }
 
     private void OptionMask_OnApply(OptionMask option)

@@ -5,12 +5,13 @@ using System.Linq;
 
 namespace qASIC.Options;
 
-/// <summary>A list of all options.</summary>
+/// <summary>Holds options and their values.</summary>
 public sealed class OptionsList : IOptionsList
 {
-    /// <summary>Invoked when an option's value is changed.</summary>
-    public event Action<IOption> OnOptionValueChanged;
+    /// <inheritdoc/>
+    public event Action<IEnumerable<IOption>> OnOptionValuesChanged;
 
+    private bool _supressEvents;
     private Dictionary<string, Option> _options = [];
 
     public Option this[string optionName]
@@ -42,9 +43,7 @@ public sealed class OptionsList : IOptionsList
         return _options.Remove(optionName);
     }
 
-    /// <summary>Checks if an option exists.</summary>
-    /// <param name="optionName">The name of the option.</param>
-    /// <returns>Returns true if the option exists.</returns>
+    /// <inheritdoc/>
     public bool Contains(string optionName)
     {
         ArgumentNullException.ThrowIfNull(optionName);
@@ -85,6 +84,22 @@ public sealed class OptionsList : IOptionsList
         return val;
     }
 
+    /// <inheritdoc/>
+    public void ApplyOtherMask(IEnumerable<KeyValuePair<string, object>> values)
+    {
+        if (values.Any(x => !_options.ContainsKey(x.Key)))
+            throw new ArgumentException("Cannot apply options that don't exist!", nameof(values));
+        
+        var targets = values.Select(x => new KeyValuePair<IOption, object>(_options[x.Key], x.Value));
+
+        _supressEvents = true;
+        foreach (var item in targets)
+            item.Key.Value = item.Value;
+        _supressEvents = false;
+
+        OnOptionValuesChanged?.Invoke(targets.Select(x => x.Key).ToList());
+    }
+
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     public IEnumerator<IOption> GetEnumerator() => _options.Select(x => x.Value)
         .ToList()
@@ -92,6 +107,7 @@ public sealed class OptionsList : IOptionsList
     
     private void Option_OnValueChanged(Option option)
     {
-        OnOptionValueChanged?.Invoke(option);
+        if (_supressEvents) return;
+        OnOptionValuesChanged?.Invoke([option]);
     }
 }
