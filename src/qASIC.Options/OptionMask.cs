@@ -2,7 +2,7 @@ using System;
 
 namespace qASIC.Options;
 
-public sealed class OptionMask(IOption target, object value) : IOption
+public class OptionMask(IOption target, object value) : IOption
 {
     public OptionMask(IOption target) : this(target, target.Value) { }
 
@@ -18,10 +18,18 @@ public sealed class OptionMask(IOption target, object value) : IOption
         get;
         set
         {
+            if (!IsValidValue(value))
+                throw new ArgumentException($"Value needs to be of type '{ValueType}'.");
+            
             field = value;
             OnValueChanged?.Invoke(this);
         }
     } = value;
+    /// <inheritdoc/>
+    public Type ValueType => Target.ValueType;
+
+    /// <inheritdoc/>
+    public bool IsValidValue(object value) => Target.IsValidValue(value);
 
     /// <summary>Invoked when the value of the mask is changed.</summary>
     public event Action<OptionMask> OnValueChanged;

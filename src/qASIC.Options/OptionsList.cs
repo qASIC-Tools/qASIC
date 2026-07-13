@@ -6,7 +6,7 @@ using System.Linq;
 namespace qASIC.Options;
 
 /// <summary>Holds options and their values.</summary>
-public sealed class OptionsList : IOptionsList
+public class OptionsList : IOptionsList
 {
     /// <inheritdoc/>
     public event Action<IEnumerable<IOption>> OnOptionValuesChanged;

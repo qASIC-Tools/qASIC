@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace qASIC.Options;
 
-public sealed class OptionsListMask : IOptionsList, IOptionsListMask
+public class OptionsListMask : IOptionsList, IOptionsListMask
 {
     public OptionsListMask(IOptionsList target)
     {
@@ -97,7 +97,7 @@ public sealed class OptionsListMask : IOptionsList, IOptionsListMask
     /// <inheritdoc/>
     public void ApplyMask()
     {
-        var masksToApply = _masks.Select(x => new KeyValuePair<string, object>(x.Key, x.Value))
+        var masksToApply = _masks.Select(x => new KeyValuePair<string, object>(x.Key, x.Value.Value))
             .ToList();
         
         _masks.Clear();
