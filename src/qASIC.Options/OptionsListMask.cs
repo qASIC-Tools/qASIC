@@ -143,7 +143,7 @@ public class OptionsListMask : IOptionsList, IOptionsListMask
         OnOptionValuesChanged?.Invoke(targets);
     }
 
-    private void OptionMask_OnValueChanged(OptionMask option)
+    private void OptionMask_OnValueChanged(IOption option)
     {
         if (_supressEvents) return;
         OnOptionValuesChanged?.Invoke([option]);

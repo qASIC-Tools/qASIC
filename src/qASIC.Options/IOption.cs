@@ -17,4 +17,7 @@ public interface IOption
     /// <param name="value">Value to check.</param>
     /// <returns>Returns true if the <see cref="value"/> can be assigned to <see cref="IOption.Value"/>.</returns>
     bool IsValidValue(object value);
+
+    /// <summary>Invoked when <see cref="Value"/> is changed.</summary>
+    event Action<IOption> OnValueChanged;
 }

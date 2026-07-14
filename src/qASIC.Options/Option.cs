@@ -36,8 +36,8 @@ public class Option(Type valueType, string optionName, object defaultValue, obje
     /// <inheritdoc/>
     public Type ValueType { get; } = valueType;
 
-    /// <summary>Invoked when <see cref="Value"/> is changed.</summary>
-    public event Action<Option> OnValueChanged;
+    /// <inheritdoc/>
+    public event Action<IOption> OnValueChanged;
 
     /// <inheritdoc/>
     public bool IsValidValue(object value) =>
@@ -57,4 +57,14 @@ public class Option<T> : Option
     /// <returns>Returns <see cref="Option.Value"/> cast into <see cref="T"/>.</returns>
     public T GetValue() =>
         this.GetValue<T>();
+    
+    /// <summary>Registers an event that is invoked when <see cref="Value"/> is changed.</summary>
+    /// <param name="onValueChanged">The event to register.</param>
+    public void RegisterValueListener(Action<T> onValueChanged) =>
+        this.RegisterValueListener<T>(onValueChanged);
+
+    /// <summary>Unregisters an event that was previously registered using <see cref="RegisterValueListener"/>.</summary>
+    /// <param name="onValueChanged">The event to unregister.</param>
+    public void UnregisterValueListener(Action<T> onValueChanged) =>
+        this.UnregisterValueListener<T>(onValueChanged);
 }

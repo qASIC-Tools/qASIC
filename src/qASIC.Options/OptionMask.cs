@@ -32,7 +32,7 @@ public class OptionMask(IOption target, object value) : IOption
     public bool IsValidValue(object value) => Target.IsValidValue(value);
 
     /// <summary>Invoked when the value of the mask is changed.</summary>
-    public event Action<OptionMask> OnValueChanged;
+    public event Action<IOption> OnValueChanged;
     /// <summary>Invoked when the value of the mask is applied to the target option.</summary>
     public event Action<OptionMask> OnApply;
 

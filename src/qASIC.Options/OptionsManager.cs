@@ -1,31 +1,44 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace qASIC.Options;
 
+/// <summary>Integrates many parts of the options system into one complete package.</summary>
 public class OptionsManager
 {
-    public OptionsManager() : this(new OptionsListMask(new OptionsList())) { }
+    public OptionsManager() : this(new OptionsList()) { }
     public OptionsManager(IOptionsList list)
     {
-        List = list;
-        BaseList = list;
-        while (BaseList is IOptionsListMask mask)
-            BaseList = mask.Target;
-        
-        ArgumentNullException.ThrowIfNull(List);
-        ArgumentNullException.ThrowIfNull(BaseList);
+        ArgumentNullException.ThrowIfNull(list);
 
-        BaseList.OnOptionValuesChanged += BaseList_OnOptionValuesChanged;
+        SavedList = list;
+        List = new OptionsListMask(list);
+
+        SavedList.OnOptionValuesChanged += SavedList_OnOptionValuesChanged;
+        List.OnOptionValuesChanged += List_OnOptionValuesChanged;
     }
 
-    public IOptionsList BaseList { get; }
-    public IOptionsList List { get; private set; }
+    public qInstance Instance { get; set; }
 
+    /// <summary>An options list containing values that are saved on disk.</summary>
+    public IOptionsList SavedList { get; }
+    /// <summary>The main options list used by the options manager.</summary>
+    public OptionsListMask List { get; }
+
+    /// <summary>Used when writing changes to disk.</summary>
     public IOptionsSaveManager SaveManager { get; set; }
+    /// <summary>Contains custom change listeners.</summary>
+    public OptionChangeListenerCollection ChangeListeners { get; set; }
 
-    private void BaseList_OnOptionValuesChanged(IEnumerable<IOption> options)
+    private void List_OnOptionValuesChanged(IEnumerable<IOption> options)
     {
-        SaveManager?.Save(BaseList, options);
+        foreach (var item in ChangeListeners.ToList())
+            item.HandleOptionValueChange(List, options);
+    }
+
+    private void SavedList_OnOptionValuesChanged(IEnumerable<IOption> options)
+    {
+        SaveManager?.Save(SavedList, options);
     }
 }

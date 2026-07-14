@@ -105,7 +105,7 @@ public class OptionsList : IOptionsList
         .ToList()
         .GetEnumerator();
     
-    private void Option_OnValueChanged(Option option)
+    private void Option_OnValueChanged(IOption option)
     {
         if (_supressEvents) return;
         OnOptionValuesChanged?.Invoke([option]);
