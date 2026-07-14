@@ -8,10 +8,10 @@ using qASIC.qARK;
 
 namespace qASIC.Options;
 
-public class qARKOptionsSaveManager : IOptionsSaveManager
+public class qARKOptionsSaveManager(string path) : IOptionsSaveManager
 {
     public qARKSerializer Serializer { get; set; } = new();
-    public string Path { get; set; }
+    public string Path { get; set; } = path;
 
     public virtual void Load(IOptionsList list)
     {

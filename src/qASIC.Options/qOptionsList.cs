@@ -6,22 +6,21 @@ using System.Linq;
 namespace qASIC.Options;
 
 /// <summary>Holds options and their values.</summary>
-public class qOptionsList : IOptionsList
+public class qOptionsList : IModifiableOptionsList
 {
     /// <inheritdoc/>
     public event Action<IEnumerable<IOption>> OnOptionValuesChanged;
 
     private bool _supressEvents;
-    private Dictionary<string, qOption> _options = [];
+    private Dictionary<string, IOption> _options = [];
 
-    public qOption this[string optionName]
+    public IOption this[string optionName]
     {
         get => _options[optionName];
     }
 
-    /// <summary>Adds a new option to the list.</summary>
-    /// <param name="option">The new option.</param>
-    public void Add(qOption option)
+    /// <inheritdoc/>
+    public void Add(IOption option)
     {
         ArgumentNullException.ThrowIfNull(option);
         if (_options.ContainsKey(option.OptionName))
@@ -31,9 +30,7 @@ public class qOptionsList : IOptionsList
         option.OnValueChanged += Option_OnValueChanged;
     }
 
-    /// <summary>Removes an option.</summary>
-    /// <param name="optionName">The name of the option.</param>
-    /// <returns>Returns true if the option was successfully found and removed.</returns>
+    /// <inheritdoc/>
     public bool Remove(string optionName)
     {
         ArgumentNullException.ThrowIfNull(optionName);
@@ -54,7 +51,7 @@ public class qOptionsList : IOptionsList
     /// <param name="optionName">Name of the option.</param>
     /// <param name="result">The resulting option if found, otherwise <see cref="null"/>.</param>
     /// <returns>Returns true if it was successfull.</returns>
-    public bool TryGetOption(string optionName, out qOption result)
+    public bool TryGetOption(string optionName, out IOption result)
     {
         ArgumentNullException.ThrowIfNull(optionName);
         if (!_options.ContainsKey(optionName))
@@ -70,18 +67,10 @@ public class qOptionsList : IOptionsList
     /// <summary>Retrieves an option.</summary>
     /// <param name="optionName">Name of the option.</param>
     /// <returns>Returns the option if found, otherwise <see cref="null"/>.</returns>
-    public qOption GetOption(string optionName)
+    public IOption GetOption(string optionName)
     {
         ArgumentNullException.ThrowIfNull(optionName);
         return _options.TryGetValue(optionName, out var result) ? result : null;
-    }
-
-    IOption IOptionsList.GetOption(string optionName) => GetOption(optionName);
-    bool IOptionsList.TryGetOption(string optionName, out IOption result)
-    {
-        var val = TryGetOption(optionName, out var option);
-        result = option;
-        return val;
     }
 
     /// <inheritdoc/>
