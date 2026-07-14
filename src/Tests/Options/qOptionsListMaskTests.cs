@@ -109,9 +109,10 @@ public class qOptionsListMaskTests : UnitTestHolderBase
         {
             new qOption<float>("test"),
             new qOption<float>("test2"),
+            new qOption<float>("test3"),
         });
         mask.AddMask("test", 1f);
-        mask.ApplyOtherMask([new("test", 2f), new("test2", 3f)]);
+        mask.ApplyOtherMask([new("test", 2f), new("test2", 3f), new("test3", 4f)]);
         qAssert.IsTrue(mask.GetOption("test") is qOptionMask { Value: 2f });
         qAssert.IsTrue(mask.GetOption("test2") is qOptionMask { Value: 3f });
     }

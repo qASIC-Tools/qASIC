@@ -44,7 +44,7 @@ public class qOptionsManager : IService
     /// <summary>Used when writing changes to disk.</summary>
     public IOptionsSaveManager SaveManager { get; set; } = new qARKOptionsSaveManager(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "options.qark"));
     /// <summary>Contains custom change listeners.</summary>
-    public qOptionChangeListenerCollection ChangeListeners { get; set; }
+    public qOptionChangeListenerCollection ChangeListeners { get; } = [];
 
     public void RegisterCustomOptions(IUsesCustomOptions obj) =>
         RegisterCustomOptions(obj.CustomOptions);

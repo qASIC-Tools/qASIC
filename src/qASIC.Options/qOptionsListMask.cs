@@ -115,7 +115,7 @@ public class qOptionsListMask : IOptionsList, IOptionsListMask
             .ToList();
         
         var newMasks = values.GroupBy(x => x.Key)
-            .Last()
+            .Select(x => x.Last())
             .Where(x => !_masks.ContainsKey(x.Key))
             .ToList();
         
