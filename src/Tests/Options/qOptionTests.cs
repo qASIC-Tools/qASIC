@@ -1,9 +1,10 @@
+using qASIC;
 using qASIC.Options;
 
 namespace Tests.Options;
 
-[UnitTest("Option")]
-public class OptionTest : UnitTestHolderBase
+[UnitTest(nameof(qOption))]
+public class qOptionTest : UnitTestHolderBase
 {
     [UnitTest]
     public void Constructor()
@@ -28,5 +29,22 @@ public class OptionTest : UnitTestHolderBase
         var option = new qOption<float>("test", 0f);
         option.OnValueChanged += opt => qAssert.IsTrue(opt is qOption { OptionName: "test", Value: 1f });
         option.Value = 1f;
+    }
+
+    [UnitTest]
+    public void IsValidValue1()
+    {
+        var option = new qOption<float>("test", 0f);
+        qAssert.IsTrue(!option.IsValidValue(null));
+        qAssert.IsTrue(option.IsValidValue(0f));
+        qAssert.IsTrue(!option.IsValidValue(0));
+    }
+
+    [UnitTest]
+    public void IsValidValue2()
+    {
+        var option = new qOption<qLog>("test", default);
+        qAssert.IsTrue(option.IsValidValue(null));
+        qAssert.IsTrue(option.IsValidValue(new qLog()));
     }
 }

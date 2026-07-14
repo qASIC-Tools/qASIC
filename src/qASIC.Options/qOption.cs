@@ -3,12 +3,14 @@ using System;
 namespace qASIC.Options;
 
 /// <summary>Represents a single option.</summary>
+/// <param name="valueType">Type of value the option contains.</param>
 /// <param name="optionName">Name of the option.</param>
 /// <param name="defaultValue">The default value of the option.</param>
 /// <param name="value">The current value the option is set to.</param>
 public class qOption(Type valueType, string optionName, object defaultValue, object value) : IOption
 {
     /// <summary>Creates a new instance.</summary>
+    /// <param name="valueType">Type of value the option contains.</param>
     /// <param name="optionName">Name of the option.</param>
     /// <param name="defaultValue">The default and current value the option is set to.</param>
     public qOption(Type valueType, string optionName, object defaultValue) : this(valueType, optionName, defaultValue, defaultValue) { }
@@ -42,16 +44,24 @@ public class qOption(Type valueType, string optionName, object defaultValue, obj
     /// <inheritdoc/>
     public bool IsValidValue(object value) =>
         value == null ?
-            (!ValueType.IsValueType && Nullable.GetUnderlyingType(ValueType) != null) :
-            value.GetType().IsAssignableTo(ValueType);
+            (!ValueType.IsValueType || Nullable.GetUnderlyingType(ValueType) != null) :
+            ValueType.IsInstanceOfType(value);
 }
 
 public class qOption<T> : qOption
 {
-    /// <inheritdoc/>
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="defaultValue">The default value the option is set to.</param>
+    /// <param name="value">The current value the option is set to.</param>
     public qOption(string optionName, T defaultValue, T value) : base(typeof(T), optionName, defaultValue, value) { }
-    /// <inheritdoc/>
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="defaultValue">The default and current value the option is set to.</param>
     public qOption(string optionName, T defaultValue) : base(typeof(T), optionName, defaultValue) { }
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="optionName">Name of the option.</param>
+    public qOption(string optionName) : base(typeof(T), optionName, default(T), default(T)) { }
 
     /// <summary>Retrieves the value cast into the option's type.</summary>
     /// <returns>Returns <see cref="qOption.Value"/> cast into <see cref="T"/>.</returns>

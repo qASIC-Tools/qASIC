@@ -2,8 +2,8 @@ using qASIC.Options;
 
 namespace Tests.Options;
 
-[UnitTest("OptionMask")]
-public class OptionMaskTests : UnitTestHolderBase
+[UnitTest(nameof(qOptionMask))]
+public class qOptionMaskTests : UnitTestHolderBase
 {
     [UnitTest]
     public void Constructor1()

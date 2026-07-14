@@ -2,7 +2,7 @@ using qASIC.Options;
 
 namespace Tests.Options;
 
-[UnitTest("qARKOptionsSaveManager")]
+[UnitTest(nameof(qARKOptionsSaveManager))]
 public class qARKOptionsSaveManagerTests : UnitTestHolderBase
 {
     [UnitTest]
