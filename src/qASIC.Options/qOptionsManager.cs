@@ -5,15 +5,15 @@ using System.Linq;
 namespace qASIC.Options;
 
 /// <summary>Integrates many parts of the options system into one complete package.</summary>
-public class OptionsManager
+public class qOptionsManager
 {
-    public OptionsManager() : this(new OptionsList()) { }
-    public OptionsManager(IOptionsList list)
+    public qOptionsManager() : this(new qOptionsList()) { }
+    public qOptionsManager(IOptionsList list)
     {
         ArgumentNullException.ThrowIfNull(list);
 
         SavedList = list;
-        List = new OptionsListMask(list);
+        List = new qOptionsListMask(list);
 
         SavedList.OnOptionValuesChanged += SavedList_OnOptionValuesChanged;
         List.OnOptionValuesChanged += List_OnOptionValuesChanged;
@@ -24,12 +24,12 @@ public class OptionsManager
     /// <summary>An options list containing values that are saved on disk.</summary>
     public IOptionsList SavedList { get; }
     /// <summary>The main options list used by the options manager.</summary>
-    public OptionsListMask List { get; }
+    public qOptionsListMask List { get; }
 
     /// <summary>Used when writing changes to disk.</summary>
     public IOptionsSaveManager SaveManager { get; set; }
     /// <summary>Contains custom change listeners.</summary>
-    public OptionChangeListenerCollection ChangeListeners { get; set; }
+    public qOptionChangeListenerCollection ChangeListeners { get; set; }
 
     private void List_OnOptionValuesChanged(IEnumerable<IOption> options)
     {

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace qASIC.Options;
 
-/// <summary>Allows you to register a custom listener in <see cref="OptionChangeListenerCollection"/>.</summary>
+/// <summary>Allows you to register a custom listener in <see cref="qOptionChangeListenerCollection"/>.</summary>
 public interface IOptionChangeListener
 {
     /// <summary>Handles change value events from an options list.</summary>

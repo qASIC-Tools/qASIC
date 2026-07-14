@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace qASIC.Options;
 
 /// <summary>A collection of <see cref="IOptionChangeListener"/>s.</summary>
-public class OptionChangeListenerCollection : IEnumerable<IOptionChangeListener>
+public class qOptionChangeListenerCollection : IEnumerable<IOptionChangeListener>
 {
     private List<IOptionChangeListener> _list = [];
 

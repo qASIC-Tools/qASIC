@@ -5,9 +5,9 @@ using System.Linq;
 
 namespace qASIC.Options;
 
-public class OptionsListMask : IOptionsList, IOptionsListMask
+public class qOptionsListMask : IOptionsList, IOptionsListMask
 {
-    public OptionsListMask(IOptionsList target)
+    public qOptionsListMask(IOptionsList target)
     {
         Target = target;
         target.OnOptionValuesChanged += Target_OnOptionValuesChanged;
@@ -20,7 +20,7 @@ public class OptionsListMask : IOptionsList, IOptionsListMask
     public event Action<IEnumerable<IOption>> OnOptionValuesChanged;
 
     private bool _supressEvents;
-    private Dictionary<string, OptionMask> _masks = [];
+    private Dictionary<string, qOptionMask> _masks = [];
 
     /// <inheritdoc/>
     public void AddMask(string optionName, object value)
@@ -35,7 +35,7 @@ public class OptionsListMask : IOptionsList, IOptionsListMask
         if (!Target.TryGetOption(optionName, out var option))
             throw new ArgumentException($"Option '{optionName}' doesn't exist in target option list!", nameof(optionName));
         
-        var newMask = new OptionMask(option, value);
+        var newMask = new qOptionMask(option, value);
         newMask.OnValueChanged += OptionMask_OnValueChanged;
         newMask.OnApply += OptionMask_OnApply;
         _masks.Add(optionName, newMask);
@@ -59,7 +59,7 @@ public class OptionsListMask : IOptionsList, IOptionsListMask
     }
 
     /// <inheritdoc/>
-    public IEnumerable<OptionMask> GetMasks() =>
+    public IEnumerable<qOptionMask> GetMasks() =>
         _masks.Select(x => x.Value).ToList();
     
     /// <inheritdoc/>
@@ -111,7 +111,7 @@ public class OptionsListMask : IOptionsList, IOptionsListMask
             throw new ArgumentException("Cannot apply options that don't exist!", nameof(values));
 
         var existingMasks = values.Where(x => _masks.ContainsKey(x.Key))
-            .Select(x => new KeyValuePair<OptionMask, object>(_masks[x.Key], x.Value))
+            .Select(x => new KeyValuePair<qOptionMask, object>(_masks[x.Key], x.Value))
             .ToList();
         
         var newMasks = values.GroupBy(x => x.Key)
@@ -149,7 +149,7 @@ public class OptionsListMask : IOptionsList, IOptionsListMask
         OnOptionValuesChanged?.Invoke([option]);
     }
 
-    private void OptionMask_OnApply(OptionMask option)
+    private void OptionMask_OnApply(qOptionMask option)
     {
         option.OnValueChanged -= OptionMask_OnValueChanged;
         option.OnApply -= OptionMask_OnApply;

@@ -3,7 +3,7 @@ using System;
 namespace qASIC.Options;
 
 /// <summary>Contains useful extensions for classes and interfaces related to the options system.</summary>
-public static class OptionExtensions
+public static class qOptionExtensions
 {
     /// <summary>Tries to retrieve the option's value of the provided type.</summary>
     /// <typeparam name="T">The type of <see cref="Value"/>.</typeparam>

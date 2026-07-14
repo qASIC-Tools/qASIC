@@ -6,12 +6,12 @@ namespace qASIC.Options;
 /// <param name="optionName">Name of the option.</param>
 /// <param name="defaultValue">The default value of the option.</param>
 /// <param name="value">The current value the option is set to.</param>
-public class Option(Type valueType, string optionName, object defaultValue, object value) : IOption
+public class qOption(Type valueType, string optionName, object defaultValue, object value) : IOption
 {
     /// <summary>Creates a new instance.</summary>
     /// <param name="optionName">Name of the option.</param>
     /// <param name="defaultValue">The default and current value the option is set to.</param>
-    public Option(Type valueType, string optionName, object defaultValue) : this(valueType, optionName, defaultValue, defaultValue) { }
+    public qOption(Type valueType, string optionName, object defaultValue) : this(valueType, optionName, defaultValue, defaultValue) { }
 
     /// <inheritdoc/>
     public string OptionName { get; } = optionName;
@@ -46,15 +46,15 @@ public class Option(Type valueType, string optionName, object defaultValue, obje
             value.GetType().IsAssignableTo(ValueType);
 }
 
-public class Option<T> : Option
+public class qOption<T> : qOption
 {
     /// <inheritdoc/>
-    public Option(string optionName, T defaultValue, T value) : base(typeof(T), optionName, defaultValue, value) { }
+    public qOption(string optionName, T defaultValue, T value) : base(typeof(T), optionName, defaultValue, value) { }
     /// <inheritdoc/>
-    public Option(string optionName, T defaultValue) : base(typeof(T), optionName, defaultValue) { }
+    public qOption(string optionName, T defaultValue) : base(typeof(T), optionName, defaultValue) { }
 
     /// <summary>Retrieves the value cast into the option's type.</summary>
-    /// <returns>Returns <see cref="Option.Value"/> cast into <see cref="T"/>.</returns>
+    /// <returns>Returns <see cref="qOption.Value"/> cast into <see cref="T"/>.</returns>
     public T GetValue() =>
         this.GetValue<T>();
     

@@ -2,9 +2,9 @@ using System;
 
 namespace qASIC.Options;
 
-public class OptionMask(IOption target, object value) : IOption
+public class qOptionMask(IOption target, object value) : IOption
 {
-    public OptionMask(IOption target) : this(target, target.Value) { }
+    public qOptionMask(IOption target) : this(target, target.Value) { }
 
     /// <summary>The target option.</summary>
     public IOption Target { get; } = target;
@@ -34,7 +34,7 @@ public class OptionMask(IOption target, object value) : IOption
     /// <summary>Invoked when the value of the mask is changed.</summary>
     public event Action<IOption> OnValueChanged;
     /// <summary>Invoked when the value of the mask is applied to the target option.</summary>
-    public event Action<OptionMask> OnApply;
+    public event Action<qOptionMask> OnApply;
 
     /// <summary>Applies the value of the mask to the target option.</summary>
     public void Apply()

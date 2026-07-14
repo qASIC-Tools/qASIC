@@ -4,5 +4,5 @@ namespace qASIC.Options;
 public interface ICanRegisterOptions
 {
     /// <summary>Registers its own custom options.</summary>
-    void RegisterOptions(OptionsList options);
+    void RegisterOptions(qOptionsList options);
 }

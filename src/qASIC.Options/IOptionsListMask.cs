@@ -14,7 +14,7 @@ public interface IOptionsListMask
     
     /// <summary>Retrieves all masked options.</summary>
     /// <returns>Returns a collection containing all masked options in the mask.</returns>
-    IEnumerable<OptionMask> GetMasks();
+    IEnumerable<qOptionMask> GetMasks();
     
     /// <summary>Adds a new masked option or changes the value of an existing one.</summary>
     /// <param name="optionName">Name of the option to mask.</param>

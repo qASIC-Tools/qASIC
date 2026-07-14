@@ -6,22 +6,22 @@ using System.Linq;
 namespace qASIC.Options;
 
 /// <summary>Holds options and their values.</summary>
-public class OptionsList : IOptionsList
+public class qOptionsList : IOptionsList
 {
     /// <inheritdoc/>
     public event Action<IEnumerable<IOption>> OnOptionValuesChanged;
 
     private bool _supressEvents;
-    private Dictionary<string, Option> _options = [];
+    private Dictionary<string, qOption> _options = [];
 
-    public Option this[string optionName]
+    public qOption this[string optionName]
     {
         get => _options[optionName];
     }
 
     /// <summary>Adds a new option to the list.</summary>
     /// <param name="option">The new option.</param>
-    public void Add(Option option)
+    public void Add(qOption option)
     {
         ArgumentNullException.ThrowIfNull(option);
         if (_options.ContainsKey(option.OptionName))
@@ -54,7 +54,7 @@ public class OptionsList : IOptionsList
     /// <param name="optionName">Name of the option.</param>
     /// <param name="result">The resulting option if found, otherwise <see cref="null"/>.</param>
     /// <returns>Returns true if it was successfull.</returns>
-    public bool TryGetOption(string optionName, out Option result)
+    public bool TryGetOption(string optionName, out qOption result)
     {
         ArgumentNullException.ThrowIfNull(optionName);
         if (!_options.ContainsKey(optionName))
@@ -70,7 +70,7 @@ public class OptionsList : IOptionsList
     /// <summary>Retrieves an option.</summary>
     /// <param name="optionName">Name of the option.</param>
     /// <returns>Returns the option if found, otherwise <see cref="null"/>.</returns>
-    public Option GetOption(string optionName)
+    public qOption GetOption(string optionName)
     {
         ArgumentNullException.ThrowIfNull(optionName);
         return _options.TryGetValue(optionName, out var result) ? result : null;

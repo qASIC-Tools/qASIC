@@ -14,16 +14,16 @@ test2 = 3
 ";
 
         var manager = new TestSaveManager();
-        var list = new OptionsList
+        var list = new qOptionsList
         {
-            new Option<float>("test", 0f),
-            new Option<float>("test3", 0f),
+            new qOption<float>("test", 0f),
+            new qOption<float>("test3", 0f),
         };
         
         manager.DeserializePublic(list, txt);
-        qAssert.IsTrue(list.GetOption("test") is Option<float> { Value: 1f });
+        qAssert.IsTrue(list.GetOption("test") is qOption<float> { Value: 1f });
         qAssert.IsFalse(list.TryGetOption("test2", out _));
-        qAssert.IsTrue(list.GetOption("test3") is Option<float> { Value: 0f });
+        qAssert.IsTrue(list.GetOption("test3") is qOption<float> { Value: 0f });
     }
 
     [UnitTest]
@@ -36,9 +36,9 @@ test|
 ";
 
         var manager = new TestSaveManager();
-        var list = new OptionsList
+        var list = new qOptionsList
         {
-            new Option<string[]>("test", []),
+            new qOption<string[]>("test", []),
         };
 
         manager.DeserializePublic(list, txt);
@@ -56,9 +56,9 @@ test|
 ";
 
         var manager = new TestSaveManager();
-        var list = new OptionsList()
+        var list = new qOptionsList()
         {
-            new Option<List<string>>("test", []),
+            new qOption<List<string>>("test", []),
         };
 
         manager.DeserializePublic(list, txt);
@@ -75,14 +75,14 @@ test2 = false
 ";
 
         var manager = new TestSaveManager();
-        var list = new OptionsList()
+        var list = new qOptionsList()
         {
-            new Option<float>("test", 3f),
+            new qOption<float>("test", 3f),
         };
 
         manager.DeserializePublic(list, txt);
         qAssert.IsTrue(list.Count() == 1);
-        qAssert.IsTrue(list.GetOption("test") is Option<float> { Value: 3f });
+        qAssert.IsTrue(list.GetOption("test") is qOption<float> { Value: 3f });
     }
 
     private class TestSaveManager : qARKOptionsSaveManager

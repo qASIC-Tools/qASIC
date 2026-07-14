@@ -65,7 +65,7 @@ public class qARKOptionsSaveManager : IOptionsSaveManager
     protected void Deserialize(IOptionsList list, string txt)
     {
         var doc = Serializer.Deserialize(txt);
-        var mask = new OptionsListMask(list);
+        var mask = new qOptionsListMask(list);
         foreach (var item in list)
         {
             // If it's list
