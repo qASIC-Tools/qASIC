@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace qASIC.Options;
 
@@ -51,5 +53,72 @@ public static class qOptionExtensions
     {
         if (option.Value is T val)
             onValueChanged?.Invoke(val);
+    }
+
+    /// <summary>Retrieves a value of an option from a list.</summary>
+    /// <param name="list">The target list.</param>
+    /// <param name="optionName">Name of the option.</param>
+    /// <returns>Returns the option's value.</returns>
+    public static object GetValue(this IOptionsList list, string optionName) =>
+        list.GetOption(optionName).Value;
+    
+    /// <summary>Tries to retrieve a value of an option from a list.</summary>
+    /// <param name="list">The target list.</param>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="value">When successfull, the retrieved option value. Otherwise <see cref="null"/>.</param>
+    /// <returns>Returns true, if the option was successfully found.</returns>
+    public static bool TryGetValue(this IOptionsList list, string optionName, out object value)
+    {
+        if (list.TryGetOption(optionName, out var option))
+        {
+            value = option.Value;
+            return true;
+        }
+
+        value = null;
+        return false;
+    }
+
+    /// <summary>Retrieves a value of an option from a list.</summary>
+    /// <typeparam name="T">Value type.</typeparam>
+    /// <param name="list">The target list.</param>
+    /// <param name="optionName">Name of the option.</param>
+    /// <returns>Returns the option's value.</returns>
+    public static object GetValue<T>(this IOptionsList list, string optionName) =>
+        list.GetOption(optionName).GetValue<T>();
+    
+    /// <summary>Tries to retrieve a value of an option from a list.</summary>
+    /// <typeparam name="T">Value type.</typeparam>
+    /// <param name="list">The target list.</param>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="value">When successfull, the retrieved option value. Otherwise <see cref="null"/>.</param>
+    /// <returns>Returns true, if the option was successfully found.</returns>
+    public static bool TryGetValue<T>(this IOptionsList list, string optionName, out T value)
+    {
+        if (list.TryGetOption(optionName, out var option) &&
+            option.TryGetValue(out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    /// <summary>Sets the value of an option.</summary>
+    /// <param name="list">The target list.</param>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="value">The new value of option.</param>
+    public static void SetValue(this IOptionsList list, string optionName, object value) =>
+        list.GetOption(optionName).Value = value;
+    
+    /// <summary>Sets the value of an option mask and applies it's value.</summary>
+    /// <param name="mask">The target list mask.</param>
+    /// <param name="optionName">Name of the option.</param>
+    /// <param name="value">The new value of option.</param>
+    public static void SetValueAndApply(this IOptionsListMask mask, string optionName, object value)
+    {
+        mask.AddMask(optionName, value);
+        mask.GetMask(optionName).Apply();
     }
 }

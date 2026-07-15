@@ -46,9 +46,14 @@ public class qOptionsManager : IService
     /// <summary>Contains custom change listeners.</summary>
     public qOptionChangeListenerCollection ChangeListeners { get; } = [];
 
+    /// <summary>Registers custom options that an object might require.</summary>
+    /// <param name="obj">Object from which to get custom options.</param>
     public void RegisterCustomOptions(IUsesCustomOptions obj) =>
         RegisterCustomOptions(obj.CustomOptions);
     
+    /// <summary>Registers custom options: adds non-existing ones and ignores existing ones.</summary>
+    /// <param name="options">Options to register.</param>
+    /// <exception cref="Exception">Thrown when an option already exists, but uses a different value type.</exception>
     public void RegisterCustomOptions(IEnumerable<IOption> options)
     {
         if (SavedList is not IModifiableOptionsList modifiableList) return;
@@ -68,6 +73,12 @@ public class qOptionsManager : IService
 
             modifiableList.Add(item);
         }
+    }
+
+    /// <summary>Loads the options list from disk.</summary>
+    public void Load()
+    {
+        SaveManager.Load(List);
     }
 
     private void RegisteredObjects_OnObjectRegistered(object obj)

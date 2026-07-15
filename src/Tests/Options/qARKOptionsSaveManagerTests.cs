@@ -85,9 +85,28 @@ test2 = false
         qAssert.IsTrue(list.GetOption("test") is qOption<float> { Value: 3f });
     }
 
+    [UnitTest]
+    public void Serialize()
+    {
+        var txt = @"
+test = False
+test1|
+* 1
+* 2";
+
+        var manager = new TestSaveManager();
+        var list = new qOptionsList()
+        {
+            new qOption<bool>("test", false),
+            new qOption<int[]>("test1", [1, 2]),
+        };
+
+        qAssert.IsTrue(txt.Trim() == manager.SerializePublic(null, list, []).Trim());
+    }
+
     private class TestSaveManager : qARKOptionsSaveManager
     {
-        public void SerializePublic(string baseText, IOptionsList list, IEnumerable<IOption> options) =>
+        public string SerializePublic(string baseText, IOptionsList list, IEnumerable<IOption> options) =>
             Serialize(baseText, list, options);
         public void DeserializePublic(IOptionsList list, string txt) =>
             Deserialize(list, txt);

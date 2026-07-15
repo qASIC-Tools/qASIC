@@ -2,6 +2,7 @@ using System;
 
 namespace qASIC.Options;
 
+/// <summary>A single option that holds a value and it's name.</summary>
 public interface IOption
 {
     /// <summary>Name of the option.</summary>

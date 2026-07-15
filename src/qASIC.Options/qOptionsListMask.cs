@@ -59,7 +59,17 @@ public class qOptionsListMask : IOptionsList, IOptionsListMask
     }
 
     /// <inheritdoc/>
-    public IEnumerable<qOptionMask> GetMasks() =>
+    public qOptionMask GetMask(string optionName)
+    {
+        ArgumentNullException.ThrowIfNull(optionName);
+        if (_masks.TryGetValue(optionName, out var mask))
+            return mask;
+        
+        throw new ArgumentException($"Mask for option '{optionName}' doesn't exist!", nameof(optionName));
+    }
+    
+    /// <inheritdoc/>
+    public IEnumerable<qOptionMask> GetAllMasks() =>
         _masks.Select(x => x.Value).ToList();
     
     /// <inheritdoc/>
@@ -67,6 +77,13 @@ public class qOptionsListMask : IOptionsList, IOptionsListMask
     {
         ArgumentNullException.ThrowIfNull(optionName);
         return Target.Contains(optionName);
+    }
+
+    /// <inheritdoc/>
+    public bool ContainsMask(string optionName)
+    {
+        ArgumentNullException.ThrowIfNull(optionName);
+        return _masks.ContainsKey(optionName);
     }
 
     /// <inheritdoc/>
@@ -102,6 +119,20 @@ public class qOptionsListMask : IOptionsList, IOptionsListMask
         
         _masks.Clear();
         Target.ApplyOtherMask(masksToApply);
+    }
+
+    /// <inheritdoc/>
+    public void RevertMask()
+    {
+        var masksToRevert = _masks.Select(x => x.Value)
+            .ToList();
+
+        _supressEvents = true;
+        foreach (var item in masksToRevert)
+            RemoveMask(item.OptionName);
+        _supressEvents = false;
+        
+        OnOptionValuesChanged?.Invoke(masksToRevert);
     }
 
     /// <inheritdoc/>

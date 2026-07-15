@@ -3,34 +3,35 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using qASIC.qARK;
 
 namespace qASIC.Options;
 
+/// <summary>A save manager for the options system that uses qARK for serialization.</summary>
 public class qARKOptionsSaveManager : IOptionsSaveManager
 {
+    /// <summary>Creates a new instance.</summary>
     public qARKOptionsSaveManager() { }
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="path">Path to the save file</param>
     public qARKOptionsSaveManager(string path)
     {
         Path = path;
     }
 
+    /// <summary>The qARK serializer that's used by the save manager.</summary>
     public qARKSerializer Serializer { get; set; } = new();
+    /// <summary>Path to the save file.</summary>
     public string Path { get; set; }
 
+    /// <inheritdoc/>
     public virtual void Load(IOptionsList list)
     {
         if (!File.Exists(Path)) return;
         Deserialize(list, File.ReadAllText(Path));
     }
 
-    public virtual async Task LoadAsync(IOptionsList list)
-    {
-        if (!File.Exists(Path)) return;
-        Deserialize(list, await File.ReadAllTextAsync(Path));
-    }
-
+    /// <inheritdoc/>
     public virtual void Save(IOptionsList list, IEnumerable<IOption> options)
     {
         if (string.IsNullOrWhiteSpace(Path)) return;
@@ -38,31 +39,48 @@ public class qARKOptionsSaveManager : IOptionsSaveManager
         File.WriteAllText(Path, Serialize(File.Exists(Path) ? File.ReadAllText(Path) : string.Empty, list, options)); 
     }
 
-    public virtual async Task SaveAsync(IOptionsList list, IEnumerable<IOption> options)
-    {
-        if (string.IsNullOrWhiteSpace(Path)) return;
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path));
-        await File.WriteAllTextAsync(Path, Serialize(File.Exists(Path) ? await File.ReadAllTextAsync(Path) : string.Empty, list, options)); 
-    }
-
+    /// <summary>Serializes changed values based on the existing save file. If no changes were made or a save file doesn't exist, all values on the list are serialized.</summary>
+    /// <param name="baseText">The text from an existing save file. When it's set to <see cref="null"/>, the method assumes that there is no existing file and serializes the entire list.</param>
+    /// <param name="list">The target options list.</param>
+    /// <param name="options">Collection of changed options.</param>
+    /// <returns>Returns the serialized result.</returns>
     protected string Serialize(string baseText, IOptionsList list, IEnumerable<IOption> options)
     {
-        if (baseText == null)
+        // If a file doesn't already exist or no options were changed,
+        // serialize the entire list
+        if (baseText == null || !options.Any())
         {
             var newDoc = new qARKDocument();
 
             foreach (var item in list.OrderBy(x => x.OptionName))
             {
-                // if ()
+                switch (item.Value)
+                {
+                    case IEnumerable enumerable:
+                        newDoc.AddArrayEntryFromValues(item.OptionName, enumerable.OfType<object>());
+                        break;
+                    default:
+                        newDoc.AddEntry(item.OptionName, item.Value);
+                        break;
+                }
             }
 
             return Serializer.Serialize(newDoc);
         }
 
+        // Change only modified values
         var doc = baseText != null ? Serializer.Deserialize(baseText) : null;
-        foreach (var item in options)
+        foreach (var item in options.OrderBy(x => x.OptionName))
         {
-            
+            switch (item.Value)
+            {
+                case IEnumerable enumerable:
+                    doc.SetValues(item.OptionName, [..enumerable.OfType<object>()]);
+                    break;
+                default:
+                    doc.SetValue(item.OptionName, item.Value);
+                    break;
+            }
         }
 
         return Serializer.Serialize(doc);

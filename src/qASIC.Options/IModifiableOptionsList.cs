@@ -1,5 +1,6 @@
 namespace qASIC.Options;
 
+/// <summary>A variant of <see cref="IOptionsList"/> to which you can also add and remove items dynamically.</summary>
 public interface IModifiableOptionsList : IOptionsList
 {
     /// <summary>Adds a new option to the list.</summary>

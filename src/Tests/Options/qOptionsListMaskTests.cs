@@ -44,7 +44,7 @@ public class qOptionsListMaskTests : UnitTestHolderBase
             new qOption<float>("test2")
         });
         mask.AddMask("test", 1f);
-        var maskedValues = new List<qOptionMask>(mask.GetMasks());
+        var maskedValues = new List<qOptionMask>(mask.GetAllMasks());
         qAssert.IsTrue(maskedValues.Count == 1);
         qAssert.IsTrue(maskedValues[0] is qOptionMask { OptionName: "test" });
     }
@@ -99,7 +99,7 @@ public class qOptionsListMaskTests : UnitTestHolderBase
         mask.AddMask("test", 1f);
         mask.ApplyMask();
         qAssert.IsTrue(mask.Target.GetOption("test").Value is float f && f == 1f);
-        qAssert.IsFalse(mask.GetMasks().Any());
+        qAssert.IsFalse(mask.GetAllMasks().Any());
     }
 
     [UnitTest]
@@ -115,5 +115,6 @@ public class qOptionsListMaskTests : UnitTestHolderBase
         mask.ApplyOtherMask([new("test", 2f), new("test2", 3f), new("test3", 4f)]);
         qAssert.IsTrue(mask.GetOption("test") is qOptionMask { Value: 2f });
         qAssert.IsTrue(mask.GetOption("test2") is qOptionMask { Value: 3f });
+        qAssert.IsTrue(mask.GetOption("test3") is qOptionMask { Value: 4f });
     }
 }

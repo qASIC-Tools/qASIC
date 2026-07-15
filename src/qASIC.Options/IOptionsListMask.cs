@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace qASIC.Options;
@@ -11,10 +10,23 @@ public interface IOptionsListMask
 
     /// <summary>Applies all masked values to the target list.</summary>
     void ApplyMask();
+
+    /// <summary>Removed all masked options and reverts their values to the ones in the target list.</summary>
+    void RevertMask();
+
+    /// <summary>Retrieves a mask</summary>
+    /// <param name="optionName">Name of the option the mask is targetting</param>
+    /// <returns>Returns the retrieved mask.</returns>
+    qOptionMask GetMask(string optionName);
     
     /// <summary>Retrieves all masked options.</summary>
     /// <returns>Returns a collection containing all masked options in the mask.</returns>
-    IEnumerable<qOptionMask> GetMasks();
+    IEnumerable<qOptionMask> GetAllMasks();
+
+    /// <summary>Checks if a mask exists in the list.</summary>
+    /// <param name="optionName">Name of the option the mask is targetting.</param>
+    /// <returns>Returns true if the mask exists.</returns>
+    bool ContainsMask(string optionName);
     
     /// <summary>Adds a new masked option or changes the value of an existing one.</summary>
     /// <param name="optionName">Name of the option to mask.</param>
