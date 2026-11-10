@@ -188,7 +188,7 @@ public class qARKDocument : qARKHolder
             return this;
         }
 
-        entry.Value = value?.ToString() ?? string.Empty;
+        entry.Value = Parser.ConvertToString(value);
         return this;
     }
 
