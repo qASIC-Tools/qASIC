@@ -6,6 +6,7 @@ using SysColor = System.Drawing.Color;
 
 namespace qASIC;
 
+/// <summary>Describes a generic color.</summary>
 public enum GenericColor
 {
     Clear,
@@ -19,12 +20,24 @@ public enum GenericColor
     Purple,
 }
 
+/// <summary>Represents an RGB255 color in qASIC.</summary>
 [Serializable]
 public struct qColor : INetworkSerializable
 {
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="red">The value of red from 0 to 255.</param>
+    /// <param name="green">The value of green from 0 to 255.</param>
+    /// <param name="blue">The value of blue from 0 to 255.</param>
     public qColor(byte red, byte green, byte blue) : this(red, green, blue, 255) { }
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="systemColor">The <see cref="System.Drawing.Color"/> to copy values from</param>
     public qColor(SysColor systemColor) : this(systemColor.R, systemColor.G, systemColor.B, systemColor.A) { }
 
+    /// <summary>Creates a new instance.</summary>
+    /// <param name="red">The value of red from 0 to 255.</param>
+    /// <param name="green">The value of green from 0 to 255.</param>
+    /// <param name="blue">The value of blue from 0 to 255.</param>
+    /// <param name="alpha">The value of alpha from 0 to 255.</param>
     public qColor(byte red, byte green, byte blue, byte alpha)
     {
         this.red = red;
@@ -33,21 +46,37 @@ public struct qColor : INetworkSerializable
         this.alpha = alpha;
     }
 
+    /// <summary>A fully transparent color (0, 0, 0, 0).</summary>
     public static qColor Clear => new qColor(0, 0, 0, 0);
+    /// <summary>The color black (0, 0, 0, 255).</summary>
     public static qColor Black => new qColor(0, 0, 0);
+    /// <summary>The color white (255, 255, 255, 255).</summary>
     public static qColor White => new qColor(255, 255, 255);
+    /// <summary>The color red (255, 0, 0, 255).</summary>
     public static qColor Red => new qColor(255, 0, 0);
+    /// <summary>The color red (0, 255, 0, 255).</summary>
     public static qColor Green => new qColor(0, 255, 0);
+    /// <summary>The color red (255, 255, 0, 255).</summary>
     public static qColor Yellow => new qColor(255, 255, 0);
+    /// <summary>The color red (0, 0, 255, 255).</summary>
     public static qColor DarkBlue => new qColor(0, 0, 255);
+    /// <summary>The color red (0, 255, 255, 255).</summary>
     public static qColor Blue => new qColor(0, 255, 255);
+    /// <summary>The color red (255, 0, 255, 255).</summary>
     public static qColor Purple => new qColor(255, 0, 255);
 
+    /// <summary>The value of red, stored as a byte.</summary>
     public byte red;
+    /// <summary>The value of green, stored as a byte.</summary>
     public byte green;
+    /// <summary>The value of blue, stored as a byte.</summary>
     public byte blue;
+    /// <summary>The value of alpha, stored as a byte.</summary>
     public byte alpha;
 
+    /// <summary>Convert a <see cref="GenericColor"/> to <see cref="qColor"/>.</summary>
+    /// <param name="color">The generic color to convert.</param>
+    /// <returns>Returns the generic color's representation as <see cref="qColor"/>.</returns>
     public static qColor GetGenericColor(GenericColor color) =>
         color switch
         {
@@ -63,7 +92,8 @@ public struct qColor : INetworkSerializable
             _ => Clear,
         };
 
-    public void Read(qPacket packet)
+    /// <inheritdoc/>
+    void INetworkSerializable.Read(qPacket packet)
     {
         red = packet.ReadByte();
         green = packet.ReadByte();
@@ -71,7 +101,8 @@ public struct qColor : INetworkSerializable
         alpha = packet.ReadByte();
     }
 
-    public qPacket Write(qPacket packet) =>
+    /// <inheritdoc/>
+    qPacket INetworkSerializable.Write(qPacket packet) =>
         packet
         .Write(red)
         .Write(green)
@@ -84,6 +115,7 @@ public struct qColor : INetworkSerializable
     public static bool operator !=(qColor? left, qColor? right) =>
         !(left == right);
 
+    /// <inheritdoc/>
     public override bool Equals(object obj)
     {
         if (obj is not qColor color)
@@ -95,41 +127,64 @@ public struct qColor : INetworkSerializable
             alpha == color.alpha;
     }
 
+    /// <inheritdoc/>
     public override string ToString() =>
         alpha == 255 ?
             $"rgb({red}, {green}, {blue})" :
             $"rgba({red}, {green}, {blue}, {alpha})";
 
+    /// <inheritdoc/>
     public override int GetHashCode() =>
         ToString().GetHashCode();
 
+    /// <summary>Converts <see cref="qColor"/> to <see cref="SysColor"/>.</summary>
+    /// <returns>Returns this color's representation as a <see cref="SysColor"/>.</returns>
     public SysColor ToSystem() =>
         SysColor.FromArgb(alpha, red, green, blue);
 
-    #region Parsing
+    /// <summary>Tries to parse a color from its name.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <param name="color">The parsed color.</param>
+    /// <returns>Returns true if the string was successfully parsed.</returns>
     public static bool TryParseFromName(string s, out qColor color)
     {
-        var colorNames = new Dictionary<string, qColor>()
+        // A color used to identify unsuccessfull parse
+        // Can be anything, just different from all
+        // possible successfull values
+        var wrongColor = new qColor(13,13,13);
+        color = s.Trim().ToLower() switch
         {
-            ["clear"] = Clear,
-            ["black"] = Black,
-            ["white"] = White,
-            ["red"] = Red,
-            ["green"] = Green,
-            ["yellow"] = Yellow,
-            ["darkBlue"] = DarkBlue,
-            ["blue"] = Blue,
-            ["purple"] = Purple,
+            "clear" => Clear,
+            "black" => Black,
+            "white" => White,
+            "red" => Red,
+            "green" => Green,
+            "yellow" => Yellow,
+            "darkBlue" => DarkBlue,
+            "blue" => Blue,
+            "purple" => Purple,
+            _ => wrongColor,
         };
 
-        return colorNames.TryGetValue(s ?? string.Empty, out color);
+        if (color == wrongColor)
+        {
+            color = new();
+            return false;
+        }
+
+        return true;
     }
 
+    /// <summary>Tries to parse a color from an rgba() string.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <param name="color">The parsed color.</param>
+    /// <returns>Returns true if the string was successfully parsed.</returns>
     public static bool TryParseFromRgba(string s, out qColor color)
     {
         s ??= string.Empty;
         if (s.StartsWith("rgba(") && s.EndsWith(")"))
         {
+            // Extract text inside and split into parts
             var parts = s.Substring(5, s.Length - 5 - 1)
                 .Split(',');
 
@@ -151,11 +206,16 @@ public struct qColor : INetworkSerializable
         return false;
     }
 
+    /// <summary>Tries to parse a color from an rgb() string.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <param name="color">The parsed color.</param>
+    /// <returns>Returns true if the string was successfully parsed.</returns>
     public static bool TryParseFromRgb(string s, out qColor color)
     {
         s ??= string.Empty;
         if (s.StartsWith("rgb(") && s.EndsWith(")"))
         {
+            // Extract text inside and split into parts
             var parts = s.Substring(4, s.Length - 4 - 1)
                 .Split(',');
 
@@ -173,6 +233,10 @@ public struct qColor : INetworkSerializable
         return false;
     }
 
+    /// <summary>Tries to parse a color from an rgba hex string.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <param name="color">The parsed color.</param>
+    /// <returns>Returns true if the string was successfully parsed.</returns>
     public static bool TryParseRgbaFromHex(string s, out qColor color)
     {
         s ??= string.Empty;
@@ -219,6 +283,10 @@ public struct qColor : INetworkSerializable
         return true;
     }
 
+    /// <summary>Tries to parse a color from an rgb hex string.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <param name="color">The parsed color.</param>
+    /// <returns>Returns true if the string was successfully parsed.</returns>
     public static bool TryParseRgbFromHex(string s, out qColor color)
     {
         s ??= string.Empty;
@@ -262,6 +330,10 @@ public struct qColor : INetworkSerializable
         return true;
     }
 
+    /// <summary>Tries to parse a color from a string.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <param name="color">The parsed color.</param>
+    /// <returns>Returns true if the string was successfully parsed.</returns>
     public static bool TryParse(string s, out qColor color) =>
         TryParseFromName(s, out color) ||
         TryParseFromRgba(s, out color) ||
@@ -269,6 +341,10 @@ public struct qColor : INetworkSerializable
         TryParseRgbaFromHex(s, out color) ||
         TryParseRgbFromHex(s, out color);
 
+    /// <summary>Parses a color from a string.</summary>
+    /// <param name="s">String containing the color.</param>
+    /// <returns>Returns the parsed color</returns>
+    /// <exception cref="FormatException">Throws if the color cannot be parsed due to incorrect string formatting.</exception>
     public static qColor Parse(string s)
     {
         if (TryParse(s, out qColor color))
@@ -276,5 +352,4 @@ public struct qColor : INetworkSerializable
 
         throw new FormatException($"Couldn't parse '{s}' to 'qColor'.");
     }
-    #endregion
 }

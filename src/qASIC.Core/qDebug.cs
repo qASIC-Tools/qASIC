@@ -2,6 +2,7 @@
 
 namespace qASIC;
 
+/// <summary>Contains methods for logging debug messages.</summary>
 [qSkipLogModifiers]
 public static partial class qDebug
 {
